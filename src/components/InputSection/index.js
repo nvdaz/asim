@@ -1,7 +1,6 @@
 import { useState } from "react";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import Button from "@mui/material/Button";
-import copy from "copy-to-clipboard";
 import TextareaAutosize from "./textareaAutosize.js";
 import Preview from "./preview";
 
@@ -9,21 +8,28 @@ import styles from "./index.module.css";
 
 const Input = ({ messages, setMessages }) => {
   const [showPreview, setShowPreview] = useState(false);
+  const [message, setMessage] = useState("");
+  /* alternative proposal
   const [message, setMessage] = useState(
-    "we can do canoeing and scuba diving, but it is a little expensive. you think you can afford it?",
+    "we can do canoeing and scuba diving, but it is a little expensive. you think you can afford it?"
   );
 
   const handleMessageChange = (e) => {
     setMessage(e.target.textContent);
+  }; */
+
+  const handleMessageChange = (e) => {
+    setMessage(e.target.value);
   };
 
+  /* alternative proposal
   const handlePaste = (e) => {
     e.preventDefault(); // Prevent default paste behavior
     // Get plain text from clipboard
     const text = (e.clipboardData || window.clipboardData).getData(
-      "text/plain",
+      "text/plain"
     );
-    copy(text);
+    document.execCommand("insertText", false, text);
   };
 
   const content = () => {
@@ -36,11 +42,11 @@ const Input = ({ messages, setMessages }) => {
       </div>
     ) : (
       <div>
-        we can do canoeing and scuba diving, but it is a little expensive. you
-        think you can afford it?
+        we can do canoeing and scuba diving, but it is a little expensive.
+        you think you can afford it?
       </div>
     );
-  };
+  }; */
 
   return (
     <div
@@ -82,7 +88,8 @@ const Input = ({ messages, setMessages }) => {
           className="shrink-0 self-stretch my-auto w-8 aspect-square"
         />
         <div className={styles.inputBubble}>
-          {/* <TextareaAutosize value={message} onChange={handleMessageChange} /> */}
+          <TextareaAutosize value={message} onChange={handleMessageChange} />
+          {/* alternative proposal
           <div
             contentEditable={true}
             className={styles.textArea}
@@ -90,7 +97,7 @@ const Input = ({ messages, setMessages }) => {
             onPaste={handlePaste}
           >
             {content()}
-          </div>
+          </div> */}
           <button
             className={styles.inputArrowBtn}
             style={{
@@ -108,6 +115,7 @@ const Input = ({ messages, setMessages }) => {
                   },
                 ]);
                 setMessage("");
+                setShowPreview(false);
               }}
             />
           </button>

@@ -11,7 +11,6 @@ export default function Messages({ messages, headerHeight, inputHeight }) {
         range.setStartBefore(text);
         range.setEndAfter(text);
         const clientRect = range.getBoundingClientRect();
-        console.log("change width", clientRect.width);
         m.style.width = `${clientRect.width}px`;
       }
     });
