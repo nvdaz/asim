@@ -8,7 +8,6 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-
 import Header from "./components/header";
 import Inputs from "./components/InputSection";
 import Messages from "./components/messages";

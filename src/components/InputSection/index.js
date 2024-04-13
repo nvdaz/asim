@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import Button from "@mui/material/Button";
+import SentimentVerySatisfiedOutlinedIcon from "@mui/icons-material/SentimentVerySatisfiedOutlined";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import EmojiPicker from "emoji-picker-react";
 import TextareaAutosize from "./textareaAutosize.js";
 import Preview from "./preview";
 
@@ -8,7 +11,12 @@ import styles from "./index.module.css";
 
 const Input = ({ messages, setMessages }) => {
   const [showPreview, setShowPreview] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [message, setMessage] = useState("");
+
+  const isMobile = useMediaQuery("(max-width: 400px)");
+  const isDesktop = useMediaQuery("(min-width: 800px)");
+  const divRef = useRef(null);
   /* alternative proposal
   const [message, setMessage] = useState(
     "we can do canoeing and scuba diving, but it is a little expensive. you think you can afford it?"
@@ -18,8 +26,14 @@ const Input = ({ messages, setMessages }) => {
     setMessage(e.target.textContent);
   }; */
 
+  const handleAddEmoji = (e) => {
+    setMessage(message + e.emoji);
+  };
+
   const handleMessageChange = (e) => {
+    console.log("?");
     setMessage(e.target.value);
+    setIsEmojiPickerOpen(false);
   };
 
   /* alternative proposal
@@ -50,6 +64,7 @@ const Input = ({ messages, setMessages }) => {
 
   return (
     <div
+      ref={divRef}
       className={styles.wrapper}
       style={{ borderRadius: showPreview ? "18px 18px 0 0" : 0 }}
     >
@@ -75,19 +90,26 @@ const Input = ({ messages, setMessages }) => {
               color: "#1E1E1E",
             },
           }}
-          onClick={() => setShowPreview(true)}
+          onClick={() => {
+            setShowPreview(true);
+            setIsEmojiPickerOpen(false);
+          }}
         >
           Preview
         </Button>
-
-        <img
-          style={{ marginBottom: "3px" }}
-          alt="emoji"
-          loading="lazy"
-          src="https://cdn.builder.io/api/v1/image/assets/TEMP/fbbd15675a5855099ad8823b00110cc413b4be568307edd3f47f79c662a25943?apiKey=2e75a4c13cd54e0ba9836b7a2442a820&"
-          className="shrink-0 self-stretch my-auto w-8 aspect-square"
+        <SentimentVerySatisfiedOutlinedIcon
+          sx={{
+            marginBottom: "3px",
+            cursor: "pointer",
+            height: "32px",
+            width: "32px",
+          }}
+          onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
         />
-        <div className={styles.inputBubble}>
+        <div
+          className={styles.inputBubble}
+          onClick={() => setIsEmojiPickerOpen(false)}
+        >
           <TextareaAutosize value={message} onChange={handleMessageChange} />
           {/* alternative proposal
           <div
@@ -115,12 +137,36 @@ const Input = ({ messages, setMessages }) => {
                   },
                 ]);
                 setMessage("");
+                setIsEmojiPickerOpen(false);
                 setShowPreview(false);
               }}
             />
           </button>
         </div>
       </div>
+      <EmojiPicker
+        open={isEmojiPickerOpen}
+        width="100%"
+        height={isMobile ? 340 : 300}
+        style={{
+          "--epr-picker-border-radius": "0",
+          "--epr-search-input-bg-color-active": "#333333",
+          "--epr-search-input-height": "34px",
+          "--epr-emoji-padding": "4px",
+          "--epr-header-padding": "7px 10px",
+          "--epr-category-navigation-button-size": isMobile ? "25px" : "20px",
+          "--epr-category-label-height": "30px",
+          "--epr-emoji-size": isMobile ? "30px" : "20px",
+          "--epr-preview-height": "45px",
+        }}
+        theme="dark"
+        previewConfig={{
+          defaultEmoji: "1f604",
+          defaultCaption: "Smile",
+          showPreview: isDesktop ? true : false,
+        }}
+        onEmojiClick={(e) => handleAddEmoji(e)}
+      />
     </div>
   );
 };
