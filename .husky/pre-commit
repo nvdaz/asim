@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+if ! npm run prettierCheck || ! npm run lintCheck
+then
+    npm run lintPrettier && npm run lintFix && echo "Please check the auto fix and commit again" && exit 1
+else
+    echo "pre commit success"
+fi

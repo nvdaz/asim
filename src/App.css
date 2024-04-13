@@ -2,6 +2,14 @@
   text-align: center;
 }
 
+body,
+html {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -35,4 +43,13 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  background-color: #1E1E1E;
+  font-family: Roboto, Open Sans, Lato, sans-serif;
+  line-height: 20px;
+  height: 100vh;
 }

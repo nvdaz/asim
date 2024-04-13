@@ -1,0 +1,118 @@
+.wrapper {
+    background-color: #282828;
+    color: white;
+    border-top: 0;
+}
+
+.textArea {
+    font-family: 'Roboto', 'Open Sans', 'Lato', sans-serif;
+    word-wrap: break-word;
+    font-size: 16px;
+    border-radius: 13px;
+    resize: none;
+    padding: 13px 50px 13px 13px;
+    min-height: 16px;
+    border: none;
+    color: white;
+    background-color: #3C3C43;
+}
+
+.textArea:focus {
+    border: none;
+    outline: none;
+}
+
+.inputArrowBtn {
+    align-items: center;
+    justify-content: center;
+    background-color: #387D21;
+    position: absolute;
+    border: none;
+    height: 27px;
+    width: 27px;
+    right: 7px;
+    border-radius: 50%;
+    color: white;
+    margin-bottom: 5.5px;
+}
+
+.inputBubble {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    width: 100%;
+    position: relative;
+}
+
+.previewBtn {
+    cursor: pointer;
+    height: 35px;
+    background-color: #387D21;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: Roboto, Open Sans, Lato, sans-serif;
+    width: 100px;
+    margin-bottom: 1.5px;
+}
+
+.inputWrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    padding: 0 16px 1.5rem;
+    padding-top: 0;
+    gap: 5px;
+    padding-top: 20px;
+}
+
+.hr {
+    margin: 20px 16px 0;
+    border: #333333 1px solid;
+}
+
+.copyText {
+    margin: 10px;
+    color: black;
+    flex: 1;
+    word-break: break-word;
+}
+
+.copyWrapper {
+    border-radius: 13px;
+    margin: 0 1.5rem;
+    background-color: #E2E1E1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.copyHeader {
+    display: flex;
+    padding: 1.5rem 1.5rem 15px;
+}
+
+@media screen and (min-width: 800px) {
+    .wrapper {
+        margin-right: calc(20% - 16px);
+        margin-left: calc(20% - 16px);
+    }
+
+    .inputBubble textarea {
+        font-size: 0.8rem;
+        line-height: 1.1rem;
+    }
+    .copyHeader, .copyWrapper{
+        font-size: 0.8rem;
+        line-height: 1.2rem;
+    }
+    .copyHeader {
+        font-weight: 550;
+    }
+}
+
+@media screen and (max-width: 400px) {
+    .previewBtn {
+        font-size: 16px;
+    }
+}
