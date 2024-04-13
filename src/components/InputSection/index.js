@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import Button from "@mui/material/Button";
+import copy from "copy-to-clipboard";
 import TextareaAutosize from "./textareaAutosize.js";
 import Preview from "./preview";
 
@@ -8,10 +9,37 @@ import styles from "./index.module.css";
 
 const Input = ({ messages, setMessages }) => {
   const [showPreview, setShowPreview] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(
+    "we can do canoeing and scuba diving, but it is a little expensive. you think you can afford it?",
+  );
 
   const handleMessageChange = (e) => {
-    setMessage(e.target.value);
+    setMessage(e.target.textContent);
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault(); // Prevent default paste behavior
+    // Get plain text from clipboard
+    const text = (e.clipboardData || window.clipboardData).getData(
+      "text/plain",
+    );
+    copy(text);
+  };
+
+  const content = () => {
+    return showPreview ? (
+      <div>
+        we can do canoeing and scuba diving, but it is a little expensive.
+        <div style={{ textDecoration: "underline" }}>
+          you think you can afford it?
+        </div>
+      </div>
+    ) : (
+      <div>
+        we can do canoeing and scuba diving, but it is a little expensive. you
+        think you can afford it?
+      </div>
+    );
   };
 
   return (
@@ -54,7 +82,15 @@ const Input = ({ messages, setMessages }) => {
           className="shrink-0 self-stretch my-auto w-8 aspect-square"
         />
         <div className={styles.inputBubble}>
-          <TextareaAutosize value={message} onChange={handleMessageChange} />
+          {/* <TextareaAutosize value={message} onChange={handleMessageChange} /> */}
+          <div
+            contentEditable={true}
+            className={styles.textArea}
+            onInput={handleMessageChange}
+            onPaste={handlePaste}
+          >
+            {content()}
+          </div>
           <button
             className={styles.inputArrowBtn}
             style={{

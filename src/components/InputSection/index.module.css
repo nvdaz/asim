@@ -10,16 +10,13 @@
   font-size: 16px;
   border-radius: 13px;
   resize: none;
-  padding: 13px 50px 13px 13px;
+  padding: 9px 50px 9px 13px;
   min-height: 16px;
   border: none;
   color: white;
   background-color: #3c3c43;
-}
-
-.textArea:focus {
-  border: none;
-  outline: none;
+  width: 100%;
+  word-break: break-all;
 }
 
 .inputArrowBtn {
@@ -101,8 +98,7 @@
     margin-right: calc(20% - 16px);
     margin-left: calc(20% - 16px);
   }
-
-  .inputBubble textarea {
+  .textArea {
     font-size: 0.8rem;
     line-height: 1.1rem;
   }
@@ -113,6 +109,20 @@
   }
   .copyHeader {
     font-weight: 550;
+  }
+}
+
+@media screen and (min-width: 400px) {
+  .textArea {
+    font-size: 0.8rem;
+    line-height: 1.1rem;
+  }
+
+  .copyHeader,
+  .copyWrapper,
+  .previewBtn {
+    font-size: 0.8rem;
+    line-height: 1.2rem;
   }
 }
 
