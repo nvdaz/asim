@@ -1,8 +1,7 @@
 import { TextareaAutosize as BaseTextareaAutosize } from "@mui/base/TextareaAutosize";
 import { styled } from "@mui/system";
 
-export default function UnstyledTextareaIntroduction({value, onChange, style = 'font-size: 0.8rem;'}) {
-
+export default function UnstyledTextareaIntroduction({ value, onChange }) {
   return (
     <TextareaAutosize
       value={value}
@@ -34,5 +33,5 @@ const TextareaAutosize = styled(BaseTextareaAutosize)(
         border: none;
         outline: none;
     }
-`
+`,
 );

@@ -48,8 +48,12 @@ html {
 .wrapper {
   display: flex;
   flex-direction: column;
-  background-color: #1E1E1E;
-  font-family: Roboto, Open Sans, Lato, sans-serif;
+  background-color: #1e1e1e;
+  font-family:
+    Roboto,
+    Open Sans,
+    Lato,
+    sans-serif;
   line-height: 20px;
   height: 100vh;
 }

@@ -21,7 +21,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "prepare": "husky",
+    "prepare": "husky install",
     "prettierCheck": "prettier -c \"src/**/*.{js,ts,tsx}\" --end-of-line lf",
     "lintCheck": "eslint --cache --ext .js,.jsx,.ts,.tsx --format=pretty ./src",
     "lintPrettier": "prettier -c --write \"src/**/*.{js,ts,tsx}\" --end-of-line lf",
@@ -47,6 +47,8 @@
     ]
   },
   "devDependencies": {
-    "husky": "^9.0.11"
+    "eslint": "^8.57.0",
+    "husky": "^9.0.11",
+    "prettier": "^3.2.5"
   }
 }

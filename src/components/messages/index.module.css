@@ -1,39 +1,39 @@
 .message {
-    max-width: 70%;
-    padding: 7px 10px;
+  max-width: 70%;
+  padding: 7px 10px;
 }
 
 .sendedText {
-    background-color: #666666;
-    color: white;
-    align-self: flex-end;
+  background-color: #666666;
+  color: white;
+  align-self: flex-end;
 }
 
 .receivedText {
-    background-color: #f0f0f0;
-    color: black;
-    align-self: flex-start;
+  background-color: #f0f0f0;
+  color: black;
+  align-self: flex-start;
 }
 
 .messageWrapper {
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem 16px;
-    flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 16px;
+  flex: 1;
 }
 
 @media screen and (min-width: 800px) {
-    .messageWrapper {
-        padding: 1.5rem 20%;
-        font-size: 0.8rem;
-        line-height: 0.9rem;
-    }
+  .messageWrapper {
+    padding: 1.5rem 20%;
+    font-size: 0.8rem;
+    line-height: 0.9rem;
+  }
 }
 
 @media screen and (min-width: 500px) {
-    .messageWrapper {
-        font-size: 0.8rem;
-        line-height: 0.9rem;
-    }
+  .messageWrapper {
+    font-size: 0.8rem;
+    line-height: 0.9rem;
+  }
 }

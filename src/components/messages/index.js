@@ -1,7 +1,4 @@
-import {
-  useState,
-  useEffect,
-} from "react";
+import { useEffect } from "react";
 import styles from "./index.module.css";
 
 export default function Messages({ messages, headerHeight, inputHeight }) {
@@ -43,8 +40,8 @@ export default function Messages({ messages, headerHeight, inputHeight }) {
               message.isSendedText === messages[index + 1].isSendedText
                 ? "20px"
                 : message.isSendedText
-                ? "13px 13px 3px 13px"
-                : "13px 13px 13px 3px",
+                  ? "13px 13px 3px 13px"
+                  : "13px 13px 13px 3px",
           }}
           className={`${styles.message} ${
             message.isSendedText ? styles.sendedText : styles.receivedText

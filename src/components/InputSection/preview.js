@@ -29,7 +29,7 @@ const Preview = ({ setShowPreview }) => {
           cursor: "pointer",
           color: "#387D21",
         }}
-      />
+      />,
     );
     setTimeout(() => {
       setJustCopied(false);
