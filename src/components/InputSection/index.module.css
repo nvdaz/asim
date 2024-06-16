@@ -21,20 +21,6 @@
   outline: none;
 }
 
-.inputArrowBtn {
-  align-items: center;
-  justify-content: center;
-  background-color: #387d21;
-  position: absolute;
-  border: none;
-  height: 27px;
-  width: 27px;
-  right: 7px;
-  border-radius: 50%;
-  color: white;
-  margin-bottom: 5.5px;
-}
-
 .inputBubble {
   display: flex;
   align-items: flex-end;
@@ -43,20 +29,22 @@
   position: relative;
 }
 
-.previewBtn {
-  cursor: pointer;
-  height: 35px;
-  background-color: #387d21;
-  border: none;
-  border-radius: 12px;
-  color: white;
-  font-family:
-    Roboto,
-    Open Sans,
-    Lato,
-    sans-serif;
-  width: 100px;
-  margin-bottom: 1.5px;
+.choicesWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 20px;
+}
+
+.choices {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
+  justify-content: space-evenly;
+  width: 100%;
 }
 
 .inputWrapper {
@@ -67,6 +55,12 @@
   padding-top: 0;
   gap: 5px;
   padding-top: 20px;
+}
+
+.sendButton {
+    border-radius: 12px;
+    padding: 8px;
+    cursor: pointer;
 }
 
 .hr {
@@ -96,7 +90,7 @@
 }
 
 @media screen and (min-width: 800px) {
-  .wrapper {
+  .inputWrapper, .choicesWrapper {
     margin-right: calc(20% - 16px);
     margin-left: calc(20% - 16px);
   }

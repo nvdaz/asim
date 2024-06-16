@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import styles from "./index.module.css";
+import Explanation from "./explaination";
 
 export default function Messages({ messages, headerHeight, inputHeight }) {
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function Messages({ messages, headerHeight, inputHeight }) {
       }}
       className={styles.messageWrapper}
     >
+      <Explanation/>
       {messages?.map((message, index) => (
         <div
           key={index}

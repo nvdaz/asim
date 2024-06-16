@@ -3,7 +3,7 @@ import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import Avatar from "@mui/material/Avatar";
 import pic from "../assets/jimmy.png";
 
-export default function header({ setOpenDrawer }) {
+export default function header() {
   return (
     <div
       style={{
@@ -33,10 +33,7 @@ export default function header({ setOpenDrawer }) {
           <Avatar alt="Jimmy" src={pic} />
           <div>Jimmy</div>
         </div>
-        <MoreHorizIcon
-          onClick={() => setOpenDrawer(true)}
-          style={{ cursor: "pointer" }}
-        />
+        <ArrowBackIosNewIcon style={{ opacity: 0 }} />
       </div>
     </div>
   );
