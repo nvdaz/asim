@@ -58,9 +58,27 @@
 }
 
 .sendButton {
-    border-radius: 12px;
-    padding: 8px;
-    cursor: pointer;
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.selectableBtn {
+  border-radius: 12px;
+  width: fit-content;
+  border: white 3px solid;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.selectedBtn {
+  border-radius: 12px;
+  width: fit-content;
+  border: #45C2E9 3px solid;
+  padding: 8px 10px;
+  cursor: pointer;
+  background-color: #343949;
+  filter: drop-shadow(0 4px 0 #45C2E9);
 }
 
 .hr {

@@ -6,9 +6,10 @@ import TextareaAutosize from "./textareaAutosize.js";
 
 import styles from "./index.module.css";
 
-const Input = ({ messages, setMessages }) => {
+const Input = () => {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedButton, setSelectedButton] = useState(null);
 
   const isMobile = useMediaQuery("(max-width: 400px)");
   const isDesktop = useMediaQuery("(min-width: 800px)");
@@ -23,37 +24,38 @@ const Input = ({ messages, setMessages }) => {
     setIsEmojiPickerOpen(false);
   };
 
-  return (
-    <div ref={divRef} className={styles.wrapper}>
+  const handleButtonClick = (index, message) => {
+    setSelectedButton(index);
+    setMessage(message);
+  };
+
+  const choices = ["When can we brainstorm for the poster?", "XXXX"];
+
+  const choicesSection = () => {
+    return (
       <div className={styles.choicesWrapper}>
         <div>Start the conversation with:</div>
         <div className={styles.choices}>
-          <div
-            style={{
-              borderRadius: "12px",
-              width: "fit-content",
-              border: "white 3px solid",
-              padding: "8px 10px",
-              cursor: "pointer",
-            }}
-            onClick={() => setMessage("When can we brainstorm for the poster?")}
-          >
-            When can we brainstorm for the poster?
-          </div>
-          <div
-            style={{
-              borderRadius: "12px",
-              width: "fit-content",
-              border: "white 3px solid",
-              padding: "8px 10px",
-              cursor: "pointer",
-            }}
-            onClick={() => setMessage("WWW")}
-          >
-            WWW
-          </div>
+          {choices.map((c, index) => (
+            <div
+              className={
+                selectedButton === index
+                  ? styles.selectedBtn
+                  : styles.selectableBtn
+              }
+              onClick={() => handleButtonClick(index, c)}
+            >
+              {c}
+            </div>
+          ))}
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div ref={divRef} className={styles.wrapper}>
+      {choicesSection()}
       <div className={styles.inputWrapper}>
         <SentimentVerySatisfiedOutlinedIcon
           sx={{
@@ -75,7 +77,6 @@ const Input = ({ messages, setMessages }) => {
           style={{
             backgroundColor: message === "" ? "#3C3C43" : "#FFB930",
             color: message === "" ? "#ACACAC" : "#282828",
-            border: message === "" ? "" : "white 2px solid",
           }}
         >
           Send
