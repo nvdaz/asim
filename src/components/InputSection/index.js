@@ -12,8 +12,8 @@ const Input = ({
   setChoice,
   showChoicesSection,
   setShowChoicesSection,
-  messages,
-  setMessages,
+  chatHistory,
+  setChatHistory,
   selectedButton,
   setSelectedButton,
 }) => {
@@ -38,7 +38,7 @@ const Input = ({
   };
 
   const handleSend = () => {
-    setMessages([...messages,
+    setChatHistory([...chatHistory,
       {
         text: choice,
         isSendedText: true,
@@ -50,6 +50,7 @@ const Input = ({
     ]);
     setShowChoicesSection(false);
     setChoice("");
+    setSelectedButton(null);
   };
 
   const choices = ["When can we brainstorm for the poster?", "XXXX"];

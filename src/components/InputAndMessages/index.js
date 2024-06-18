@@ -4,7 +4,7 @@ import Messages from "../messages/index.js";
 
 const InputAndMessages = ({ headerHeight }) => {
   const [inputHeight, setInputHeight] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
   const [showChoicesSection, setShowChoicesSection] = useState(true);
   const [choice, setChoice] = useState('');
   const [selectedButton, setSelectedButton] = useState(null);
@@ -22,8 +22,10 @@ const InputAndMessages = ({ headerHeight }) => {
     <div>
       <Messages
         height={`calc(100vh - ${headerHeight}px - ${inputHeight}px - 3rem)`}
-        messages={messages}
-        setMessages={setMessages}
+        chatHistory={chatHistory}
+        setChatHistory={setChatHistory}
+        choice={choice}
+        setChoice={setChoice}
         selectedButton={selectedButton}
         setSelectedButton={setSelectedButton}
       />
@@ -33,8 +35,8 @@ const InputAndMessages = ({ headerHeight }) => {
           setChoice={setChoice}
           showChoicesSection={showChoicesSection}
           setShowChoicesSection={setShowChoicesSection}
-          messages={messages}
-          setMessages={setMessages}
+          chatHistory={chatHistory}
+          setChatHistory={setChatHistory}
           selectedButton={selectedButton}
           setSelectedButton={setSelectedButton}
         />

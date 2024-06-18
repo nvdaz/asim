@@ -5,8 +5,9 @@ import Choice from "../InputSection/choice";
 
 export default function Messages({
   height,
-  messages,
-  setMessages,
+  chatHistory,
+  setChatHistory,
+  setChoice,
   selectedButton,
   setSelectedButton,
 }) {
@@ -24,10 +25,10 @@ export default function Messages({
     });
   }, []);
 
-    // const handleButtonClick = (index, message) => {
-    //   setSelectedButton(index);
-    //   setMessage(message);
-    // };
+  const handleButtonClick = (index, message) => {
+    setSelectedButton(index);
+    setChoice(message);
+  };
 
   return (
     <div
@@ -38,20 +39,20 @@ export default function Messages({
     >
       <Explanation />
       <div className={styles.messageWrapper}>
-        {messages?.map((message, index) => (
+        {chatHistory?.map((message, index) => (
           <div
             key={index}
             id={`message-${index}`}
             data-role="message"
             style={{
               marginBottom:
-                index + 1 < messages.length &&
-                message.isSendedText === messages[index + 1].isSendedText
+                index + 1 < chatHistory.length &&
+                message.isSendedText === chatHistory[index + 1].isSendedText
                   ? "5px"
                   : "10px",
               borderRadius:
-                index + 1 < messages.length &&
-                message.isSendedText === messages[index + 1].isSendedText
+                index + 1 < chatHistory.length &&
+                message.isSendedText === chatHistory[index + 1].isSendedText
                   ? "20px"
                   : message.isSendedText
                     ? "13px 13px 3px 13px"
@@ -65,7 +66,7 @@ export default function Messages({
           </div>
         ))}
       </div>
-      {/* <div
+      <div
         style={{
           background: "#42454E",
           color: "white",
@@ -84,7 +85,7 @@ export default function Messages({
           poster?”, you can say:
         </div>
         <div
-          style={{ display: "flex", justifyContent: "center", padding: "10px" }}
+          style={{ display: "flex", justifyContent: "center", padding: "5px 0 5px" }}
         >
           <Choice
             index={0}
@@ -95,10 +96,10 @@ export default function Messages({
                 "When is a good time to think about ideas for the poster?"
               )
             }
-            selectedButton={null}
+            selectedButton={selectedButton}
           />
         </div>
-      </div> */}
+      </div>
     </div>
   );
 }
