@@ -2,6 +2,7 @@
   background-color: #282828;
   color: white;
   border-top: 0;
+  bottom: 0;
   position: relative;
 }
 
@@ -138,10 +139,16 @@
     font-size: 0.8rem;
     line-height: 1.2rem;
   }
+  .choicesWrapper {
+    padding: 20px 1.5rem 0;
+  }
 }
 
 @media screen and (max-width: 400px) {
   .previewBtn {
     font-size: 16px;
+  }
+  .choicesWrapper {
+    padding: 20px 1.5rem 0;
   }
 }

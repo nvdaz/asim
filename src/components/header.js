@@ -19,6 +19,7 @@ export default function header() {
           alignItems: "center",
           padding: "16px",
           color: "white",
+          fontSize: "12px",
         }}
       >
         <ArrowBackIosNewIcon style={{ cursor: "pointer" }} />
@@ -27,10 +28,13 @@ export default function header() {
             display: "flex",
             gap: "10px",
             alignItems: "center",
-            cursor: "pointer",
           }}
         >
-          <Avatar alt="Jimmy" src={pic} />
+          <Avatar
+            alt="Jimmy"
+            sx={{ width: 35, height: 35 }}
+            src={pic}
+          />
           <div>Jimmy</div>
         </div>
         <ArrowBackIosNewIcon style={{ opacity: 0 }} />

@@ -1,19 +1,8 @@
+import styles from "./index.module.css";
+
 const Explanation = ({}) => {
   return (
-    <div
-      style={{
-        fontSize: "14px",
-        border: "#42454E 2px solid",
-        borderRadius: "22px",
-        padding: "15px",
-        color: "white",
-        display: "flex",
-        flexDirection: "row",
-        gap: "10px",
-        paddingBottom: "15px",
-        marginBottom: '20px',
-      }}
-    >
+    <div className={styles.explanation}>
       <div>
         <div
           style={{

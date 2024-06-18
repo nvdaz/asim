@@ -3,30 +3,53 @@ import SentimentVerySatisfiedOutlinedIcon from "@mui/icons-material/SentimentVer
 import useMediaQuery from "@mui/material/useMediaQuery";
 import EmojiPicker from "emoji-picker-react";
 import TextareaAutosize from "./textareaAutosize.js";
+import Choice from "./choice.js";
 
 import styles from "./index.module.css";
 
-const Input = () => {
+const Input = ({
+  choice,
+  setChoice,
+  showChoicesSection,
+  setShowChoicesSection,
+  messages,
+  setMessages,
+  selectedButton,
+  setSelectedButton,
+}) => {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [selectedButton, setSelectedButton] = useState(null);
 
   const isMobile = useMediaQuery("(max-width: 400px)");
   const isDesktop = useMediaQuery("(min-width: 800px)");
   const divRef = useRef(null);
 
   const handleAddEmoji = (e) => {
-    setMessage(message + e.emoji);
+    setChoice(choice + e.emoji);
   };
 
   const handleMessageChange = (e) => {
-    setMessage(e.target.value);
+    setChoice(e.target.value);
     setIsEmojiPickerOpen(false);
   };
 
   const handleButtonClick = (index, message) => {
     setSelectedButton(index);
-    setMessage(message);
+    setChoice(message);
+  };
+
+  const handleSend = () => {
+    setMessages([...messages,
+      {
+        text: choice,
+        isSendedText: true,
+      },
+      {
+        text: "Brainstorm? It's always a storm in my brain.",
+        isSendedText: false,
+      },
+    ]);
+    setShowChoicesSection(false);
+    setChoice("");
   };
 
   const choices = ["When can we brainstorm for the poster?", "XXXX"];
@@ -37,16 +60,13 @@ const Input = () => {
         <div>Start the conversation with:</div>
         <div className={styles.choices}>
           {choices.map((c, index) => (
-            <div
-              className={
-                selectedButton === index
-                  ? styles.selectedBtn
-                  : styles.selectableBtn
-              }
-              onClick={() => handleButtonClick(index, c)}
-            >
-              {c}
-            </div>
+            <Choice
+              key={index}
+              index={index}
+              message={c}
+              func={() => handleButtonClick(index, c)}
+              selectedButton={selectedButton}
+            />
           ))}
         </div>
       </div>
@@ -54,8 +74,12 @@ const Input = () => {
   };
 
   return (
-    <div ref={divRef} className={styles.wrapper}>
-      {choicesSection()}
+    <div
+      ref={divRef}
+      className={styles.wrapper}
+      style={{ borderRadius: showChoicesSection ? "18px 18px 0 0" : 0 }}
+    >
+      {showChoicesSection && choicesSection()}
       <div className={styles.inputWrapper}>
         <SentimentVerySatisfiedOutlinedIcon
           sx={{
@@ -70,14 +94,15 @@ const Input = () => {
           className={styles.inputBubble}
           onClick={() => setIsEmojiPickerOpen(false)}
         >
-          <TextareaAutosize value={message} onChange={handleMessageChange} />
+          <TextareaAutosize value={choice} onChange={handleMessageChange} />
         </div>
         <div
           className={styles.sendButton}
           style={{
-            backgroundColor: message === "" ? "#3C3C43" : "#FFB930",
-            color: message === "" ? "#ACACAC" : "#282828",
+            backgroundColor: choice.length === 0 ? "#3C3C43" : "#FFB930",
+            color: choice.length === 0 ? "#ACACAC" : "#282828",
           }}
+          onClick={handleSend}
         >
           Send
         </div>
