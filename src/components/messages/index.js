@@ -33,7 +33,7 @@ export default function Messages({
     setChoice(message);
   };
 
-  const messageHistory = (message, index, length, isNextSendedText) => {
+  const messageHistory = (message, index, length) => {
     switch (message.type) {
       case "text":
         return (

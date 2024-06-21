@@ -85,7 +85,6 @@ const Input = ({
           },
           {
             type: "explanation",
-            isSentByUser: false,
             content: {
               title: "Autistic people tend to think literally",
               body: "Try to avoid using metaphors or abstract expressions where the meaning could be taken literally. Instead of “When can we brainstorm for the poster?”, you can say:",
