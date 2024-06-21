@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import Header from "./components/header";
+import Header from "./components/header.js";
 import InputAndMessages from "./components/InputAndMessages/index.js";
 import "./App.css";
 
