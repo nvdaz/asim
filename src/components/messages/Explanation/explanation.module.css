@@ -1,0 +1,24 @@
+.wrapper {
+    background: #42454E;
+    color: white;
+    border-radius: 22px;
+    padding: 15px 20px;
+    margin: 10px 0 20px 0;
+    line-height: 1.5;
+    animation: fadeIn 10s ease-in-out;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 700;
+    padding-bottom: 10px;
+}
+
+@media screen and (max-width: 400px) {
+    .wrapper {
+        margin-bottom: 10px;
+    }
+    .title {
+        font-size: 17px;
+    }
+}

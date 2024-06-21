@@ -15,7 +15,7 @@ const message = ({ message, index }) => {
     <div
       id={`lol${index}`}
       className={`${styles.message} ${
-        message.isMine ? styles.mine : styles.theirs
+        message.isSentByUser ? styles.mine : styles.theirs
       } `}
     >
       {message.text}

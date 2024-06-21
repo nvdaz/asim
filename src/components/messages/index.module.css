@@ -1,5 +1,5 @@
 .message {
-  max-width: 70%;
+  max-width: 45%;
   padding: 7px 10px;
   word-break: break-word;
 }
@@ -31,7 +31,8 @@
 }
 
 .explanation {
-  font-size: 14px;
+  font-size: 13px;
+  font-family: helvetica;
   border: #42454E 1.5px solid;
   border-radius: 22px;
   padding: 19px 25px;
@@ -47,24 +48,30 @@
 @media screen and (min-width: 800px) {
   .wrapper {
     padding: 1.5rem 15%;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     line-height: 0.9rem;
   }
 }
 
 @media screen and (min-width: 400px) {
   .wrapper {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     line-height: 0.9rem;
   }
 }
 
 @media screen and (max-width: 400px) {
   .messageWrapper {
-      padding: 0;
+    padding: 0;
+  }
+
+  .wrapper {
+    font-size: 0.8rem;
   }
     
   .explanation {
     flex-direction: column;
+    padding: 13px;
+    border-radius: 20px;
   }
 }

@@ -1,7 +1,10 @@
 import { useEffect } from "react";
+import BackStory from "./backStory";
+import ChatBubble from "./chatBubble";
+import Explanation from "./Explanation";
+import TypingIndicator from "./TypingIndicator";
+
 import styles from "./index.module.css";
-import Explanation from "./explaination";
-import Choice from "../InputSection/choice";
 
 export default function Messages({
   height,
@@ -30,75 +33,39 @@ export default function Messages({
     setChoice(message);
   };
 
-  return (
-    <div
-      style={{
-        height: height,
-      }}
-      className={styles.wrapper}
-    >
-      <Explanation />
-      <div className={styles.messageWrapper}>
-        {chatHistory?.map((message, index) => (
-          <div
+  const messageHistory = (message, index, length, isNextSendedText) => {
+    switch (message.type) {
+      case "text":
+        return (
+          <ChatBubble
             key={index}
-            id={`message-${index}`}
-            data-role="message"
-            style={{
-              marginBottom:
-                index + 1 < chatHistory.length &&
-                message.isSendedText === chatHistory[index + 1].isSendedText
-                  ? "5px"
-                  : "10px",
-              borderRadius:
-                index + 1 < chatHistory.length &&
-                message.isSendedText === chatHistory[index + 1].isSendedText
-                  ? "20px"
-                  : message.isSendedText
-                    ? "13px 13px 3px 13px"
-                    : "13px 13px 13px 3px",
-            }}
-            className={`${styles.message} ${
-              message.isSendedText ? styles.sendedText : styles.receivedText
-            } `}
-          >
-            {message.text}
-          </div>
-        ))}
-      </div>
-      <div
-        style={{
-          background: "#42454E",
-          color: "white",
-          borderRadius: "22px",
-          padding: "15px 20px",
-          lineHeight: 1.5,
-        }}
-      >
-        <div>
-          Autistic people tend to think literally, so it is best to avoid idioms
-          and slang.
-        </div>
-        <div>
-          Try to avoid using metaphors or abstract expressions where the meaning
-          could be taken literally. Instead of “When can we brainstorm for the
-          poster?”, you can say:
-        </div>
-        <div
-          style={{ display: "flex", justifyContent: "center", padding: "5px 0 5px" }}
-        >
-          <Choice
-            index={0}
-            message={"When is a good time to think about ideas for the poster?"}
-            func={() =>
-              handleButtonClick(
-                0,
-                "When is a good time to think about ideas for the poster?"
-              )
-            }
-            selectedButton={selectedButton}
+            message={message}
+            length={length}
+            index={index}
           />
-        </div>
+        );
+      case "explanation":
+        return (
+          <Explanation
+            key={index}
+            selectedButton={selectedButton}
+            handleButtonClick={handleButtonClick}
+          />
+        );
+      case "typingIndicator":
+        return <TypingIndicator key={index} />;
+      default:
+        return "";
+    }
+  };
+
+  return (
+    <div style={{ height: height }} className={styles.wrapper}>
+      <BackStory />
+      <div className={styles.messageWrapper}>
+        {chatHistory?.map((message, index) => {
+          return messageHistory(message, index, chatHistory.length);
+        })}
       </div>
     </div>
   );

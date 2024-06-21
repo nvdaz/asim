@@ -6,6 +6,7 @@ export default function UnstyledTextareaIntroduction({ value, onChange }) {
     <TextareaAutosize
       value={value}
       onChange={onChange}
+      placeholder="Choose an option to send"
       aria-label="empty textarea"
     />
   );
@@ -14,7 +15,7 @@ export default function UnstyledTextareaIntroduction({ value, onChange }) {
 const TextareaAutosize = styled(BaseTextareaAutosize)(
   () => `
     font-family: 'Roboto', 'Open Sans', 'Lato', sans-serif;
-    font-size: 16px;
+    font-size: 13px;
     border-radius: 17px;
     resize: none;
     width: 100%;

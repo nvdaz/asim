@@ -1,6 +1,6 @@
 import styles from "./index.module.css";
 
-const Explanation = ({}) => {
+const backStory = ({}) => {
   return (
     <div className={styles.explanation}>
       <div>
@@ -32,4 +32,4 @@ const Explanation = ({}) => {
   );
 };
 
-export default Explanation;
+export default backStory;

@@ -38,19 +38,64 @@ const Input = ({
   };
 
   const handleSend = () => {
-    setChatHistory([...chatHistory,
+    const oldHistory = chatHistory;
+    setChatHistory([
+      ...chatHistory,
       {
-        text: choice,
-        isSendedText: true,
+        type: "text",
+        isSentByUser: true,
+        content: choice,
       },
       {
-        text: "Brainstorm? It's always a storm in my brain.",
-        isSendedText: false,
+        type: "typingIndicator",
+        isSentByUser: false,
       },
     ]);
+
     setShowChoicesSection(false);
     setChoice("");
     setSelectedButton(null);
+
+    setTimeout(() => {
+      setChatHistory([
+        ...oldHistory,
+        {
+          type: "text",
+          isSentByUser: true,
+          content: choice,
+        },
+        {
+          type: "text",
+          isSentByUser: false,
+          content: "Brainstorm? It's always a storm in my brain.",
+        },
+      ]);
+      setTimeout(() => {
+        setChatHistory([
+          ...oldHistory,
+          {
+            type: "text",
+            isSentByUser: true,
+            content: choice,
+          },
+          {
+            type: "text",
+            isSentByUser: false,
+            content: "Brainstorm? It's always a storm in my brain.",
+          },
+          {
+            type: "explanation",
+            isSentByUser: false,
+            content: {
+              title: "Autistic people tend to think literally",
+              body: "Try to avoid using metaphors or abstract expressions where the meaning could be taken literally. Instead of “When can we brainstorm for the poster?”, you can say:",
+              choice:
+                "Sorry! I meant when is a good time to think about ideas for the poster?",
+            },
+          },
+        ]);
+      }, 500);
+    }, 3000);
   };
 
   const choices = ["When can we brainstorm for the poster?", "XXXX"];
