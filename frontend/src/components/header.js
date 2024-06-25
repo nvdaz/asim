@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 
 import pic from "../assets/jimmy.png";
 
-export default function header() {
+export default function header({name}) {
   return (
     <div
       style={{
@@ -24,7 +24,7 @@ export default function header() {
           fontSize: "12px",
         }}
       >
-        <Link style={{color: 'white'}} to="/">
+        <Link style={{ color: "white" }} to="/">
           <ArrowBackIosNewIcon style={{ cursor: "pointer" }} />
         </Link>
         <div
@@ -35,7 +35,7 @@ export default function header() {
           }}
         >
           <Avatar alt="Jimmy" sx={{ width: 35, height: 35 }} src={pic} />
-          <div>Jimmy</div>
+          <div>{name}</div>
         </div>
         <ArrowBackIosNewIcon style={{ opacity: 0 }} />
       </div>
