@@ -1,6 +1,8 @@
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import Avatar from "@mui/material/Avatar";
+import { Link } from "react-router-dom";
+
 import pic from "../assets/jimmy.png";
 
 export default function header() {
@@ -22,7 +24,9 @@ export default function header() {
           fontSize: "12px",
         }}
       >
-        <ArrowBackIosNewIcon style={{ cursor: "pointer" }} />
+        <Link style={{color: 'white'}} to="/">
+          <ArrowBackIosNewIcon style={{ cursor: "pointer" }} />
+        </Link>
         <div
           style={{
             display: "flex",
@@ -30,11 +34,7 @@ export default function header() {
             alignItems: "center",
           }}
         >
-          <Avatar
-            alt="Jimmy"
-            sx={{ width: 35, height: 35 }}
-            src={pic}
-          />
+          <Avatar alt="Jimmy" sx={{ width: 35, height: 35 }} src={pic} />
           <div>Jimmy</div>
         </div>
         <ArrowBackIosNewIcon style={{ opacity: 0 }} />
