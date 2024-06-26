@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import BackStory from "./backStory";
 import ChatBubble from "./chatBubble";
 import Feedback from "./Feedback";
 import TypingIndicator from "./TypingIndicator";
