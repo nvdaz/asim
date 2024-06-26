@@ -13,6 +13,7 @@ export default function Messages({
   setChoice,
   selectedButton,
   setSelectedButton,
+  initData,
 }) {
   useEffect(() => {
     const messageDivs = document.querySelectorAll('[data-role="message"]');
@@ -61,7 +62,7 @@ export default function Messages({
 
   return (
     <div style={{ height: height }} className={styles.wrapper}>
-      <BackStory />
+      <BackStory initData={initData} />
       <div className={styles.messageWrapper}>
         {chatHistory?.map((message, index) => {
           return messageHistory(message, index, chatHistory.length);

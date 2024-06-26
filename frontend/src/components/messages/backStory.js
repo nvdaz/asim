@@ -1,6 +1,6 @@
 import styles from "./index.module.css";
 
-const backStory = ({}) => {
+const backStory = ({ initData }) => {
   return (
     <div className={styles.explanation}>
       <div>
@@ -12,9 +12,7 @@ const backStory = ({}) => {
         >
           Senario:
         </div>
-        It is a random Saturday and everything is slow. You and Jimmy are on the
-        same team to make a poster about yourselves to present on the first day
-        of class.
+        {initData.scenario}
       </div>
       <div>
         <div
@@ -25,8 +23,7 @@ const backStory = ({}) => {
         >
           Goal:
         </div>
-        Schedule a brainstorming session with Jimmy and talk about the project
-        for a bit.
+        {initData.goal}
       </div>
     </div>
   );

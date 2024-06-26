@@ -3,7 +3,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 
 import Header from "../components/header.js";
 import InputAndMessages from "../components/InputAndMessages/index.js";
-import { Get } from "../utils/request";
+import { Post } from "../utils/request";
 import "../App.css";
 
 const Lesson = ({}) => {
@@ -14,10 +14,9 @@ const Lesson = ({}) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await Get('conversations');
+      const data = await Post('conversations/');
       setData(data);
-      const conversationID = data["id"];
-      const next = await Get(`conversations/${conversationID}/next`);
+      const next = await Post(`conversations/${data["id"]}/next`);
       setNextConversation(next);
       setLoading(false);
     };
@@ -39,8 +38,8 @@ const Lesson = ({}) => {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: '20px',
-            marginBottom: '10%',
+            gap: "20px",
+            marginBottom: "10%",
           }}
         >
           <CircularProgress />
@@ -49,9 +48,17 @@ const Lesson = ({}) => {
       ) : (
         <div>
           <div ref={header}>
-            <Header name={data ? data["info"]["subject_info"]["name"] : null} />
+            <Header name={data["info"]["subject_info"]["name"]} />
           </div>
-          <InputAndMessages headerHeight={headerHeight} />
+          <InputAndMessages
+            headerHeight={headerHeight}
+            initData={{
+              id: data["info"]["id'"],
+              scenario: data["info"]["user_scenario"],
+              goal: data["info"]["user_goal"],
+              options: nextConversation.options
+            }}
+          />
         </div>
       )}
     </div>

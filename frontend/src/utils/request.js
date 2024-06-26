@@ -1,15 +1,14 @@
-export async function Get(param) {
+export async function Post(path) {
   const styles = new Promise(async (resolve, reject) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/${param}/`, {
+      const res = await fetch(`http://127.0.0.1:8000/${path}`, {
         method: "POST",
         headers: {
           Accept: "application/json",
         },
       });
 
-      // Check if the response status is 201 Created
-      if (res.status === 201) {
+      if (res.ok) {
         const data = await res.json();
         resolve(data);
       } else {

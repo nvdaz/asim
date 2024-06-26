@@ -2,6 +2,11 @@ from fastapi import FastAPI
 
 from .routers import auth, conversations
 from fastapi.middleware.cors import CORSMiddleware
+from .routers import auth, conversations
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 origins = [
     "http://localhost:3000",
@@ -16,6 +21,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+logger.debug(f"Allowed origins: {origins}")
 
 app.include_router(conversations.router)
 app.include_router(auth.router)

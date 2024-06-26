@@ -4,6 +4,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import EmojiPicker from "emoji-picker-react";
 import TextareaAutosize from "./textareaAutosize.js";
 import Choice from "./choice.js";
+import { Post } from "../../utils/request";
 
 import styles from "./index.module.css";
 
@@ -16,8 +17,11 @@ const Input = ({
   setChatHistory,
   selectedButton,
   setSelectedButton,
+  initOptions,
+  conversationID,
 }) => {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [nextConversation, setNextConversation] = useState(null);
 
   const isMobile = useMediaQuery("(max-width: 400px)");
   const isDesktop = useMediaQuery("(min-width: 800px)");
@@ -37,7 +41,16 @@ const Input = ({
     setChoice(message);
   };
 
+  const fetchData = async () => {
+    const next = await Post(
+      `conversations/${conversationID}/next?option=${selectedButton}`
+    );
+    setNextConversation(next);
+  };
+
   const handleSend = () => {
+    fetchData();
+
     const oldHistory = chatHistory;
     setChatHistory([
       ...chatHistory,
@@ -67,7 +80,7 @@ const Input = ({
         {
           type: "text",
           isSentByUser: false,
-          content: "Brainstorm? It's always a storm in my brain.",
+          content: nextConversation.content,
         },
       ]);
       setTimeout(() => {
@@ -81,7 +94,7 @@ const Input = ({
           {
             type: "text",
             isSentByUser: false,
-            content: "Brainstorm? It's always a storm in my brain.",
+            content: nextConversation.content,
           },
           {
             type: "explanation",
@@ -97,7 +110,7 @@ const Input = ({
     }, 3000);
   };
 
-  const choices = ["When can we brainstorm for the poster?", "XXXX"];
+  const choices = initOptions;
 
   const choicesSection = () => {
     return (
