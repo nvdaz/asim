@@ -2,7 +2,7 @@ import styles from "./index.module.css";
 
 const backStory = ({ initData }) => {
   return (
-    <div className={styles.explanation}>
+    <div className={styles.feedback}>
       <div>
         <div
           style={{
@@ -10,7 +10,7 @@ const backStory = ({ initData }) => {
             paddingBottom: "5px",
           }}
         >
-          Senario:
+          Scenario:
         </div>
         {initData.scenario}
       </div>

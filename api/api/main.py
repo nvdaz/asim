@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 
-from .routers import auth, conversations
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors import CORSMiddleware
 from .routers import auth, conversations
 import logging
 

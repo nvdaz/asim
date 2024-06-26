@@ -19,9 +19,11 @@ const Input = ({
   setSelectedButton,
   initOptions,
   conversationID,
+  setShowProgress,
 }) => {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [nextConversation, setNextConversation] = useState(null);
+  const [options, setOptions] = useState(initOptions);
 
   const isMobile = useMediaQuery("(max-width: 400px)");
   const isDesktop = useMediaQuery("(min-width: 800px)");
@@ -41,17 +43,83 @@ const Input = ({
     setChoice(message);
   };
 
-  const fetchData = async () => {
+  const fetchData = async (option = selectedButton) => {
+    console.log("---", option);
     const next = await Post(
-      `conversations/${conversationID}/next?option=${selectedButton}`
+      `conversations/${conversationID}/next?option=${option}`
     );
-    setNextConversation(next);
+    return next;
+    // setNextConversation(next);
   };
 
-  const handleSend = () => {
-    fetchData();
+  const handleSend = async () => {
+    setShowChoicesSection(false);
+    setChoice("");
+    setSelectedButton(null);
 
+    setShowProgress(true);
+
+    const reply = await fetchData();
+
+    if (!reply) {
+      console.log("error");
+      return;
+    }
     const oldHistory = chatHistory;
+    const respondedContent = reply?.content;
+    const lol = await fetchData();
+    let feedbackContent = "";
+    let nextOptions = [];
+
+    if (lol?.type === "feedback") {
+      feedbackContent = lol.content;
+      const fetchedChoices = await fetchData(0);
+      nextOptions = fetchedChoices.options;
+    } else if (lol?.type === "np") {
+      setShowChoicesSection(true);
+      setOptions(lol.options);
+    }
+
+    let newHistory;
+
+    console.log(feedbackContent);
+    if (feedbackContent != "") {
+      newHistory = [
+        ...oldHistory,
+        {
+          type: "text",
+          isSentByUser: true,
+          content: choice,
+        },
+        {
+          type: "text",
+          isSentByUser: false,
+          content: respondedContent,
+        },
+        {
+          type: "feedback",
+          content: {
+            body: feedbackContent,
+            choice: nextOptions[0],
+          },
+        },
+      ];
+    } else {
+      newHistory = [
+        ...oldHistory,
+        {
+          type: "text",
+          isSentByUser: true,
+          content: choice,
+        },
+        {
+          type: "text",
+          isSentByUser: false,
+          content: respondedContent,
+        },
+      ];
+    }
+
     setChatHistory([
       ...chatHistory,
       {
@@ -65,9 +133,7 @@ const Input = ({
       },
     ]);
 
-    setShowChoicesSection(false);
-    setChoice("");
-    setSelectedButton(null);
+    setShowProgress(false);
 
     setTimeout(() => {
       setChatHistory([
@@ -80,44 +146,20 @@ const Input = ({
         {
           type: "text",
           isSentByUser: false,
-          content: nextConversation.content,
+          content: respondedContent,
         },
       ]);
       setTimeout(() => {
-        setChatHistory([
-          ...oldHistory,
-          {
-            type: "text",
-            isSentByUser: true,
-            content: choice,
-          },
-          {
-            type: "text",
-            isSentByUser: false,
-            content: nextConversation.content,
-          },
-          {
-            type: "explanation",
-            content: {
-              title: "Autistic people tend to think literally",
-              body: "Try to avoid using metaphors or abstract expressions where the meaning could be taken literally. Instead of “When can we brainstorm for the poster?”, you can say:",
-              choice:
-                "Sorry! I meant when is a good time to think about ideas for the poster?",
-            },
-          },
-        ]);
+        setChatHistory(newHistory);
       }, 500);
     }, 3000);
   };
 
-  const choices = initOptions;
-
   const choicesSection = () => {
     return (
       <div className={styles.choicesWrapper}>
-        <div>Start the conversation with:</div>
         <div className={styles.choices}>
-          {choices.map((c, index) => (
+          {options.map((c, index) => (
             <Choice
               key={index}
               index={index}

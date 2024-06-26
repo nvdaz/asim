@@ -1,11 +1,12 @@
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import Avatar from "@mui/material/Avatar";
+import Dialog from "./dialog";
 import { Link } from "react-router-dom";
 
-import pic from "../assets/jimmy.png";
+import pic from "../../assets/jimmy.png";
 
-export default function header({name}) {
+export default function header({ name, initData }) {
   return (
     <div
       style={{
@@ -37,7 +38,7 @@ export default function header({name}) {
           <Avatar alt="Jimmy" sx={{ width: 35, height: 35 }} src={pic} />
           <div>{name}</div>
         </div>
-        <ArrowBackIosNewIcon style={{ opacity: 0 }} />
+        <Dialog initData={initData} />
       </div>
     </div>
   );

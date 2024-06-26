@@ -30,7 +30,7 @@
   padding: 0 5%;
 }
 
-.explanation {
+.feedback {
   font-size: 13px;
   font-family: helvetica;
   border: #42454E 1.5px solid;
@@ -69,7 +69,7 @@
     font-size: 0.8rem;
   }
     
-  .explanation {
+  .feedback {
     flex-direction: column;
     padding: 13px;
     border-radius: 20px;
