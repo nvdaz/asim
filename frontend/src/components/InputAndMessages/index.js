@@ -21,8 +21,10 @@ const InputAndMessages = ({ headerHeight, initData }) => {
   );
 
   return (
-    <div style={{ position: 'relative'}}>
-      {showProgress && <LinearProgress sx={{position: 'absolute', width: '100%'}}/>}
+    <div style={{ position: "relative" }}>
+      {showProgress && (
+        <LinearProgress sx={{ position: "absolute", width: "100%" }} />
+      )}
       <Messages
         height={`calc(100vh - ${headerHeight}px - ${inputHeight}px - 3rem)`}
         chatHistory={chatHistory}
@@ -42,7 +44,7 @@ const InputAndMessages = ({ headerHeight, initData }) => {
           setChatHistory={setChatHistory}
           selectedButton={selectedButton}
           setSelectedButton={setSelectedButton}
-          initOptions={initData.options}
+          initOptions={Object.assign({}, initData.options)}
           conversationID={initData.id}
           setShowProgress={setShowProgress}
         />

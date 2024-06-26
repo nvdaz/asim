@@ -67,8 +67,8 @@ export default function SimpleDialogDemo({ initData }) {
 
   return (
     <div>
-      <div style={{ cursor: "pointer" }} onClick={handleClickOpen}>
-        Check Scenario and Goal
+      <div style={{ cursor: "pointer", border: 'white 1px solid', borderRadius: '10px', padding: '5px 10px' }} onClick={handleClickOpen}>
+        Scenario and Goal
       </div>
       <SimpleDialog
         selectedValue={selectedValue}

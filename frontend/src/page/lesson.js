@@ -80,7 +80,7 @@ const Lesson = () => {
           <div style={{ color: "white" }}>Initializing Lesson</div>
         </div>
       ) : (
-        <div>
+        <div style={{width: '100%'}}>
           <div ref={header}>
             <Header
               name={data["info"]["subject_info"]["name"]}

@@ -24,6 +24,7 @@ const Input = ({
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [nextConversation, setNextConversation] = useState(null);
   const [options, setOptions] = useState(initOptions);
+  const [selectedOption, setSelectedOption] = useState(null);
 
   const isMobile = useMediaQuery("(max-width: 400px)");
   const isDesktop = useMediaQuery("(min-width: 800px)");
@@ -41,86 +42,31 @@ const Input = ({
   const handleButtonClick = (index, message) => {
     setSelectedButton(index);
     setChoice(message);
+    
+    if (selectedOption === null) {
+      setSelectedOption([index, message]);
+      let optionsCopy = options;
+      delete optionsCopy[index];
+      setOptions(optionsCopy);
+    }
+    else {
+      let optionsCopy = options;
+      delete optionsCopy[index];
+      setSelectedOption([index, message]);
+      options[selectedOption[0]] = selectedOption[1];
+      setOptions(optionsCopy);
+    }
   };
 
   const fetchData = async (option = selectedButton) => {
-    console.log("---", option);
     const next = await Post(
       `conversations/${conversationID}/next?option=${option}`
     );
     return next;
-    // setNextConversation(next);
   };
 
   const handleSend = async () => {
-    setShowChoicesSection(false);
-    setChoice("");
-    setSelectedButton(null);
-
-    setShowProgress(true);
-
-    const reply = await fetchData();
-
-    if (!reply) {
-      console.log("error");
-      return;
-    }
-    const oldHistory = chatHistory;
-    const respondedContent = reply?.content;
-    const lol = await fetchData();
-    let feedbackContent = "";
-    let nextOptions = [];
-
-    if (lol?.type === "feedback") {
-      feedbackContent = lol.content;
-      const fetchedChoices = await fetchData(0);
-      nextOptions = fetchedChoices.options;
-    } else if (lol?.type === "np") {
-      setShowChoicesSection(true);
-      setOptions(lol.options);
-    }
-
-    let newHistory;
-
-    console.log(feedbackContent);
-    if (feedbackContent != "") {
-      newHistory = [
-        ...oldHistory,
-        {
-          type: "text",
-          isSentByUser: true,
-          content: choice,
-        },
-        {
-          type: "text",
-          isSentByUser: false,
-          content: respondedContent,
-        },
-        {
-          type: "feedback",
-          content: {
-            body: feedbackContent,
-            choice: nextOptions[0],
-          },
-        },
-      ];
-    } else {
-      newHistory = [
-        ...oldHistory,
-        {
-          type: "text",
-          isSentByUser: true,
-          content: choice,
-        },
-        {
-          type: "text",
-          isSentByUser: false,
-          content: respondedContent,
-        },
-      ];
-    }
-
-    setChatHistory([
+    const oldHistoryWithIndicator = [
       ...chatHistory,
       {
         type: "text",
@@ -131,43 +77,96 @@ const Input = ({
         type: "typingIndicator",
         isSentByUser: false,
       },
-    ]);
+    ];
 
-    setShowProgress(false);
+    const oldHistory = [
+      ...chatHistory,
+      {
+        type: "text",
+        isSentByUser: true,
+        content: choice,
+      },
+    ];
 
-    setTimeout(() => {
-      setChatHistory([
-        ...oldHistory,
-        {
-          type: "text",
-          isSentByUser: true,
-          content: choice,
-        },
-        {
-          type: "text",
-          isSentByUser: false,
-          content: respondedContent,
-        },
-      ]);
-      setTimeout(() => {
-        setChatHistory(newHistory);
-      }, 500);
-    }, 3000);
+    setShowChoicesSection(false);
+    setChoice("");
+    setSelectedButton(null);
+    setSelectedOption(null);
+    setShowProgress(true);
+
+    const reply = await fetchData();
+
+    setTimeout(async () => {
+      setShowProgress(false);
+      setChatHistory(oldHistoryWithIndicator);
+
+      if (!reply) {
+        console.log("error");
+        return;
+      }
+      const respondedContent = reply?.content;
+      const lol = await fetchData();
+      let feedbackContent = "";
+      let nextOptions = [];
+
+      if (lol.type === "feedback") {
+        feedbackContent = lol.content;
+        const fetchedChoices = await fetchData(0);
+        nextOptions = fetchedChoices.options;
+      } else if (lol.type === "np") {
+        console.log("heree", lol.options);
+        setChoice("");
+        setShowChoicesSection(true);
+        setOptions(Object.assign({}, lol.options));
+      }
+
+      let newHistory;
+
+      if (feedbackContent != "") {
+        newHistory = [
+          ...oldHistory,
+          {
+            type: "text",
+            isSentByUser: false,
+            content: respondedContent,
+          },
+          {
+            type: "feedback",
+            content: {
+              body: feedbackContent,
+              choice: nextOptions[0],
+            },
+          },
+        ];
+      } else {
+        newHistory = [
+          ...oldHistory,
+          {
+            type: "text",
+            isSentByUser: false,
+            content: respondedContent,
+          },
+        ];
+      }
+
+      setChatHistory(newHistory);
+    }, 1500);
   };
 
   const choicesSection = () => {
     return (
       <div className={styles.choicesWrapper}>
+        <div>Choose an option:</div>
         <div className={styles.choices}>
-          {options.map((c, index) => (
-            <Choice
+          {Object.keys(options).map(index => {
+            return <Choice
               key={index}
               index={index}
-              message={c}
-              func={() => handleButtonClick(index, c)}
+              message={options[index]}
+              func={() => handleButtonClick(index, options[index])}
               selectedButton={selectedButton}
-            />
-          ))}
+            />;
+          })}
         </div>
       </div>
     );
