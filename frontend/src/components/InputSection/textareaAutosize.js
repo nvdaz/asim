@@ -23,6 +23,7 @@ const TextareaAutosize = styled(BaseTextareaAutosize)(
     border: none;
     color: white;
     background-color: #3C3C43;
+    line-height: 1.1rem;
 
     &:focus {
         border: none;

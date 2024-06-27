@@ -11,14 +11,13 @@ const InputAndMessages = ({ headerHeight, initData }) => {
   const [selectedButton, setSelectedButton] = useState(null);
   const [showProgress, setShowProgress] = useState(false);
 
-  const input = useCallback(
-    (node) => {
-      if (node !== null) {
-        setInputHeight(node.getBoundingClientRect().height);
-      }
-    },
-    [showChoicesSection]
-  );
+  const input = useCallback((node) => {
+    if (!node) return;
+    const resizeObserver = new ResizeObserver(() => {
+      setInputHeight(node.getBoundingClientRect().height);
+    });
+    resizeObserver.observe(node);
+  }, []);
 
   return (
     <div style={{ position: "relative" }}>
