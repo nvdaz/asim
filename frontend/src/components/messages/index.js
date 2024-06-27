@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import ChatBubble from "./chatBubble";
 import Feedback from "./Feedback";
 import TypingIndicator from "./TypingIndicator";
@@ -8,11 +8,22 @@ import styles from "./index.module.css";
 export default function Messages({
   height,
   chatHistory,
-  setChatHistory,
+  choice,
   setChoice,
-  selectedButton,
   setSelectedButton,
 }) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (containerRef.current && containerRef.current.lastElementChild) {
+      containerRef.current.lastElementChild.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }
+  }, [choice, chatHistory]);
+
+  // fit chat bubble width to text width
   useEffect(() => {
     const messageDivs = document.querySelectorAll('[data-role="message"]');
     messageDivs?.forEach((m, index) => {
@@ -61,7 +72,11 @@ export default function Messages({
   };
 
   return (
-    <div style={{ height: height }} className={styles.wrapper}>
+    <div
+      style={{ height: height }}
+      className={styles.wrapper}
+      ref={containerRef}
+    >
       <div className={styles.messageWrapper}>
         {chatHistory?.map((message, index) => {
           return messageHistory(message, index, chatHistory.length);

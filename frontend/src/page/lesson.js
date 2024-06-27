@@ -82,7 +82,7 @@ const Lesson = () => {
           <div ref={header}>
             <Header
               // name={data["info"]["subject_info"]["name"]}
-              name={'tempName'}
+              name={'Alex'}
               initData={{
                 scenario: data["scenario"]["user_scenario"],
                 goal: data["scenario"]["user_goal"],

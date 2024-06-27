@@ -27,10 +27,8 @@ const InputAndMessages = ({ headerHeight, initData }) => {
       <Messages
         height={`calc(100vh - ${headerHeight}px - ${inputHeight}px - 3rem)`}
         chatHistory={chatHistory}
-        setChatHistory={setChatHistory}
         choice={choice}
         setChoice={setChoice}
-        selectedButton={selectedButton}
         setSelectedButton={setSelectedButton}
       />
       <div ref={input}>

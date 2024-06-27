@@ -22,7 +22,6 @@ const Input = ({
   setShowProgress,
 }) => {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [nextConversation, setNextConversation] = useState(null);
   const [options, setOptions] = useState(initOptions);
   const [selectedOption, setSelectedOption] = useState(null);
 
@@ -94,26 +93,32 @@ const Input = ({
     setSelectedOption(null);
     setShowProgress(true);
 
-    const reply = await fetchData();
-
     setTimeout(async () => {
       setShowProgress(false);
       setChatHistory(oldHistoryWithIndicator);
+
+      const reply = await fetchData();
 
       if (!reply) {
         console.log("error");
         return;
       }
+
       const respondedContent = reply?.content;
-      const lol = await fetchData();
+      const nextFetchedContent = await fetchData();
+      let nextFetchedContent2 = null;
       let feedbackContent = "";
 
-      if (lol.type === "feedback") {
-        feedbackContent = lol.content;
-      } else if (lol.type === "np") {
-        setChoice("");
+      if (nextFetchedContent.type === "feedback") {
+        feedbackContent = nextFetchedContent.content;
+        if (!nextFetchedContent.content["follow_up"]) {
+          nextFetchedContent2 = await fetchData();
+          setOptions({ 0: nextFetchedContent2.content.choice });
+          setShowChoicesSection(true);
+        }
+      } else if (nextFetchedContent.type === "np") {
         setShowChoicesSection(true);
-        setOptions(Object.assign({}, lol.options));
+        setOptions(Object.assign({}, nextFetchedContent.options));
       }
 
       let newHistory;
@@ -130,7 +135,7 @@ const Input = ({
             type: "feedback",
             content: {
               body: feedbackContent.body,
-              choice: feedbackContent['follow_up'],
+              choice: feedbackContent["follow_up"],
               title: feedbackContent.title,
             },
           },

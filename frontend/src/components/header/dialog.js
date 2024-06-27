@@ -8,8 +8,17 @@ function SimpleDialog(props) {
   const { onClose, open, initData } = props;
 
   return (
-    <Dialog onClose={onClose} open={open}>
-      <div style={{ backgroundColor: "#B4B4B5", padding: "20px" }}>
+    <Dialog
+      PaperProps={{
+        sx: {
+          borderRadius: "24px",
+          margin: "16px",
+        },
+      }}
+      onClose={onClose}
+      open={open}
+    >
+      <div style={{ backgroundColor: "#B4B4B5", padding: "30px 25px" }}>
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -25,13 +34,16 @@ function SimpleDialog(props) {
         </IconButton>
         <div
           style={{
-            paddingBottom: "15px",
+            paddingBottom: "5px",
+            fontSize: "15px",
+            lineHeight: "1.2rem",
           }}
         >
           <div
             style={{
               fontSize: "17px",
               paddingBottom: "5px",
+              fontWeight: 550,
             }}
           >
             Scenario:
@@ -44,6 +56,7 @@ function SimpleDialog(props) {
             style={{
               fontSize: "17px",
               padding: "5px 0",
+              fontWeight: 550,
             }}
           >
             Goal:
