@@ -1,12 +1,10 @@
-import Choice from "../../InputSection/choice";
+import { Choice } from "../../InputSection/choice";
 import styles from "./feedback.module.css";
 
-const Feedback = ({ selectedButton, handleButtonClick, body, choice }) => {
+const Feedback = ({ handleButtonClick, body, title, choice }) => {
   return (
     <div className={styles.wrapper}>
-      {/* <div className={styles.title}>
-        Autistic people tend to think literally
-      </div> */}
+      <div style={{ fontWeight: 700, fontSize: '18px', marginBottom: '5px'}}>{title}</div>
       <div style={{ paddingBottom: "10px" }}>{body}</div>
       <div
         style={{
@@ -19,7 +17,6 @@ const Feedback = ({ selectedButton, handleButtonClick, body, choice }) => {
           index={0}
           message={choice}
           func={() => handleButtonClick(0, choice)}
-          selectedButton={selectedButton}
         />
       </div>
     </div>

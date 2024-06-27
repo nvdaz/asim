@@ -1,16 +1,42 @@
+import { useState, useRef, useEffect, forwardRef } from "react";
 import styles from "./index.module.css";
 
-const Choice = ({ index, message, func, selectedButton }) => {
+const ChoicesSection = ({ options, handleButtonClick }) => {
+  const [maxWidth, setMaxWidth] = useState(0);
+  const elementsRef = useRef([]);
+
+  useEffect(() => {
+    const widths = elementsRef.current.map((el) => (el ? el.offsetWidth : 0));
+    setMaxWidth(Math.max(...widths));
+  }, [elementsRef.current]);
+
   return (
-    <div
-      className={
-        selectedButton === index ? styles.selectedBtn : styles.selectableBtn
-      }
-      onClick={func}
-    >
-      {message}
+    <div className={styles.choicesWrapper}>
+      <div>Choose an option:</div>
+      <div className={styles.choices}>
+        {Object.keys(options).map((index) => {
+          return (
+            <Choice
+              width={maxWidth - 25}
+              ref={(rel) => (elementsRef.current[index] = rel)}
+              key={index}
+              message={options[index]}
+              func={() => handleButtonClick(index, options[index])}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 };
 
-export default Choice;
+export const Choice = forwardRef(({ width, message, func }, ref) => {
+  const style = width ? { width: width } : {};
+  return (
+    <div ref={ref} className={styles.choice} style={style} onClick={func}>
+      <div>{message}</div>
+    </div>
+  );
+});
+
+export default ChoicesSection;

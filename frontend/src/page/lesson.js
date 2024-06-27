@@ -22,11 +22,9 @@ const Lesson = () => {
       try {
         const res = await Post("conversations/");
         setData(res);
-        console.log(res);
         const next = await Post(`conversations/${res.id}/next`);
         setNextConversation(next);
         setLoading(false);
-        console.log('??');
       } catch (error) {
         setAlertMessage(error.message);
       }
@@ -80,13 +78,14 @@ const Lesson = () => {
           <div style={{ color: "white" }}>Initializing Lesson</div>
         </div>
       ) : (
-        <div style={{width: '100%'}}>
+        <div style={{ width: "100%" }}>
           <div ref={header}>
             <Header
-              name={data["info"]["subject_info"]["name"]}
+              // name={data["info"]["subject_info"]["name"]}
+              name={'tempName'}
               initData={{
-                scenario: data["info"]["user_scenario"],
-                goal: data["info"]["user_goal"],
+                scenario: data["scenario"]["user_scenario"],
+                goal: data["scenario"]["user_goal"],
               }}
             />
           </div>

@@ -47,8 +47,8 @@ export default function Messages({
         return (
           <Feedback
             key={index}
-            selectedButton={selectedButton}
             handleButtonClick={handleButtonClick}
+            title={message.content.title}
             body={message.content.body}
             choice={message.content.choice}
           />

@@ -3,7 +3,7 @@ import SentimentVerySatisfiedOutlinedIcon from "@mui/icons-material/SentimentVer
 import useMediaQuery from "@mui/material/useMediaQuery";
 import EmojiPicker from "emoji-picker-react";
 import TextareaAutosize from "./textareaAutosize.js";
-import Choice from "./choice.js";
+import ChoicesSection from "./choice.js";
 import { Post } from "../../utils/request";
 
 import styles from "./index.module.css";
@@ -107,14 +107,10 @@ const Input = ({
       const respondedContent = reply?.content;
       const lol = await fetchData();
       let feedbackContent = "";
-      let nextOptions = [];
 
       if (lol.type === "feedback") {
         feedbackContent = lol.content;
-        const fetchedChoices = await fetchData(0);
-        nextOptions = fetchedChoices.options;
       } else if (lol.type === "np") {
-        console.log("heree", lol.options);
         setChoice("");
         setShowChoicesSection(true);
         setOptions(Object.assign({}, lol.options));
@@ -122,7 +118,7 @@ const Input = ({
 
       let newHistory;
 
-      if (feedbackContent != "") {
+      if (feedbackContent !== "") {
         newHistory = [
           ...oldHistory,
           {
@@ -133,8 +129,9 @@ const Input = ({
           {
             type: "feedback",
             content: {
-              body: feedbackContent,
-              choice: nextOptions[0],
+              body: feedbackContent.body,
+              choice: feedbackContent['follow_up'],
+              title: feedbackContent.title,
             },
           },
         ];
@@ -153,32 +150,18 @@ const Input = ({
     }, 1500);
   };
 
-  const choicesSection = () => {
-    return (
-      <div className={styles.choicesWrapper}>
-        <div>Choose an option:</div>
-        <div className={styles.choices}>
-          {Object.keys(options).map(index => {
-            return <Choice
-              key={index}
-              index={index}
-              message={options[index]}
-              func={() => handleButtonClick(index, options[index])}
-              selectedButton={selectedButton}
-            />;
-          })}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div
       ref={divRef}
       className={styles.wrapper}
       style={{ borderRadius: showChoicesSection ? "18px 18px 0 0" : 0 }}
     >
-      {showChoicesSection && choicesSection()}
+      {showChoicesSection && (
+        <ChoicesSection
+          options={options}
+          handleButtonClick={handleButtonClick}
+        />
+      )}
       <div className={styles.inputWrapper}>
         <SentimentVerySatisfiedOutlinedIcon
           sx={{
