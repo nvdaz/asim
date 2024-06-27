@@ -62,6 +62,7 @@ async def _generate_strict(
     max_tries: int = 3,
 ) -> Type[SchemaType]:
     for attempt in range(max_tries):
+        response = None
         try:
             response = await _generate(model, prompt, system, temperature)
             data = response[response.index("{") : response.rindex("}") + 1]

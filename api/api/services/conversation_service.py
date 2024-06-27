@@ -155,7 +155,7 @@ FLOW_STATES = {
     },
     "feedback_figurative_misunderstood": {
         "prompt": "feedback_figurative_misunderstood",
-        "next": "ap_normal",
+        "next": "np_normal",
     },
     "feedback_figurative_understood": {
         "prompt": "feedback_figurative_understood",
@@ -164,7 +164,11 @@ FLOW_STATES = {
 }
 
 PROMPTS = {
-    "np_normal": "",
+    "np_normal": (
+        "Do not use any figurative language in your next message. Keep your "
+        "message straightforward and literal. Example: 'I'm going to the store. "
+        "Do you need anything?'"
+    ),
     "np_figurative": (
         "Your next message is figurative and metaphorical. You use language that "
         "is not literal and does not mean exactly what it says. Your message is "
@@ -210,12 +214,15 @@ async def _generate_message(persona: Persona, scenario: str, messages, extra="")
         message: str
         sender: Annotated[str, AfterValidator(validate_sender)]
 
+    instr = f"Instructions: {extra}" if extra else ""
+
     system_prompt = (
-        f"{persona}\n{extra}\nScenario: {scenario}\nYou are chatting over text. Keep "
-        "your messages under 50 words and appropriate for a text conversation. Return "
-        "a JSON object with the key 'message' and your message as the value and the "
-        f"key 'sender' with '{persona.name}' as the value. Respond ONLY with your next "
-        "message. Do not include the previous messages in your response."
+        f"{persona.description}\nScenario: {scenario}\n{instr}\nYou are chatting over "
+        "text. Keep your messages under 50 words and appropriate for a text "
+        "conversation. Keep the conversation going. Return a JSON object with the key "
+        "'message' and your message as the value and the key 'sender' with "
+        f"'{persona.name}' as the value. Respond ONLY with your next message. Do not "
+        "include the previous messages in your response."
     )
 
     prompt_data = json.dumps(
@@ -232,117 +239,14 @@ async def _generate_message(persona: Persona, scenario: str, messages, extra="")
     return response.message
 
 
-class FeedbackWithoutMisunderstanding(BaseModel):
-    title: Annotated[str, StringConstraints(max_length=50)]
-    body: str
-    confused: Literal[False]
-
-
-class FeedbackWithMisunderstanding(BaseModel):
-    title: Annotated[str, StringConstraints(max_length=50)]
-    body: str
-    confused: Literal[True]
-    follow_up: str
-
-
-class Feedback(RootModel):
-    root: Annotated[
-        Union[FeedbackWithoutMisunderstanding, FeedbackWithMisunderstanding],
-        Field(discriminator="confused"),
-    ]
-
-
-async def _generate_feedback(
-    user_name: str, subject_name: str, messages: list[any], extra=""
-):
-    system_prompt = (
-        "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between {user_name} and {subject_name}, who is "
-        "an autistic individual. The conversation is happening over text. Point out "
-        f"any areas where {user_name} could have been more considerate. Respond with "
-        "a JSON object with the key 'title' containing the title (less than 50 "
-        "characters) of your feedback and the key 'body' containing the feedback. "
-        f"The key 'confused' should be set to true if {subject_name} misunderstood "
-        "the figurative language in the latest message and is confused by it. If "
-        f"there is no misunderstanding, set it to false. If {subject_name} was "
-        "confused by the message and there was a potential for a serious "
-        "misunderstanding, suggest a follow-up message that {user_name} could send to "
-        f"clarify the situation in the 'follow_up' key.\n{extra}\nExamples:"
-        + json.dumps(
-            [
-                {"sender": "Chris", "message": "How are you today?"},
-                {"sender": "Ben", "message": "I feel great! Like a million bucks!"},
-                {
-                    "sender": "Chris",
-                    "message": "That's awesome! Did something good happen?",
-                },
-            ]
-        )
-        + "\n"
-        + json.dumps(
-            {
-                "title": "Be cautious with figurative language",
-                "body": (
-                    "Your message succesfully conveyed your feelings, but be cautious "
-                    "with figurative language. Chris could have misunderstood your "
-                    "message if he wasn't familiar with the idiom. Try to be more "
-                    "direct in your communication to avoid confusion."
-                ),
-                "confused": False,
-                "follow_up": None,
-            }
-        )
-        + "\n\n"
-        + json.dumps(
-            [
-                {"sender": "Kyle", "message": "I feel like a million bucks today!"},
-                {
-                    "sender": "Alex",
-                    "message": "Did you just win the lottery? That's great!",
-                },
-            ]
-        )
-        + "\n"
-        + json.dumps(
-            {
-                "title": "Avoid figurative language",
-                "confused": True,
-                "body": (
-                    "Your message relied on figurative language, which can be "
-                    "misinterpreted by autistic individuals. Consider using more "
-                    "direct language to avoid confusion. Try sending the following "
-                    "message to clarify:"
-                ),
-                "follow_up": (
-                    "I'm not actually a millionaire, but I'm feeling really "
-                    "good today!"
-                ),
-            }
-        )
-    )
-
-    prompt_data = json.dumps(
-        [{"sender": sender, "message": message} for sender, message in messages]
-    )
-
-    response = await llm.generate_strict(
-        schema=Feedback,
-        model=llm.MODEL_GPT_4,
-        system=system_prompt,
-        prompt=prompt_data,
-    )
-
-    return response
+class Message(BaseModel):
+    sender: str
+    message: str
 
 
 class MessageOption(BaseModel):
     response: str
     next: str
-
-
-class Message(BaseModel):
-    sender: str
-    message: str
 
 
 class ConversationWaiting(BaseModel):
@@ -363,6 +267,264 @@ class ConversationData(BaseModel):
         Field(discriminator="waiting"),
     ]
     messages: list[Message]
+    last_feedback_received: int
+
+
+class FeedbackWithoutMisunderstanding(BaseModel):
+    title: Annotated[str, StringConstraints(max_length=50)]
+    body: Annotated[str, StringConstraints(max_length=300)]
+    confused: Literal[False] = False
+
+
+class FeedbackWithMisunderstanding(BaseModel):
+    title: Annotated[str, StringConstraints(max_length=50)]
+    body: str
+    confused: Literal[True] = True
+    follow_up: str
+
+
+class Feedback(RootModel):
+    root: Annotated[
+        Union[FeedbackWithoutMisunderstanding, FeedbackWithMisunderstanding],
+        Field(discriminator="confused"),
+    ]
+
+
+class FeedbackAnalysisUnclear(BaseModel):
+    unclarities: Literal[True] = True
+    misunderstanding: bool
+
+
+class FeedbackAnalysisClear(BaseModel):
+    unclarities: Literal[False] = False
+
+
+class FeedbackAnalysis(RootModel):
+    root: Annotated[
+        Union[FeedbackAnalysisUnclear, FeedbackAnalysisClear],
+        Field(discriminator="unclarities"),
+    ]
+
+
+async def _analyze_messages_for_misunderstanding(conversation: ConversationData):
+    user, subject = conversation.info.user, conversation.info.subject
+    system_prompt = (
+        "You are a social skills coach. Your task is to identify whether the "
+        f"ongoing conversation between {user.name} and {subject.name}, who is an "
+        "autistic individual, contains any potential misunderstandings. The "
+        "conversation is happening over text. Analyze the messages and determine if "
+        f"there are any instances where {user.name} could have used clearer language "
+        "or provided more context to avoid confusion. Then determine whether these "
+        f"instances led to a misunderstanding by {subject.name}. Begin with analysis "
+        "in a <analysis> tag, then provide a JSON object with the key 'unclarities' "
+        "containing a boolean value indicating whether there were any unclear messages "
+        "in the conversation. If there were unclear messages, also include the key "
+        "'misunderstanding' with a boolean value indicating whether the unclear "
+        "messages led to a misunderstanding."
+    )
+
+    prompt_data = json.dumps(
+        [
+            message.model_dump()
+            for message in conversation.messages[conversation.last_feedback_received :]
+        ]
+    )
+
+    response = await llm.generate_strict(
+        schema=FeedbackAnalysis,
+        model=llm.MODEL_GPT_4,
+        system=system_prompt,
+        prompt=prompt_data,
+    )
+
+    return response
+
+
+async def _generate_feedback_clear(conversation: ConversationData):
+    user, subject = conversation.info.user, conversation.info.subject
+    system_prompt = (
+        "You are a social skills coach. Your task is to provide feedback on the "
+        f"ongoing conversation between {user.name} and {subject.name}, who is an "
+        f"autistic individual. {user.name} has been considerate and clear in their "
+        "communication. The conversation is happening over text. Point out the areas "
+        f"where {user.name} excelled in their communication. Respond with a JSON "
+        "object with the key 'title' containing the title (less than 50 characters) of "
+        "your feedback and the key 'body' containing the feedback (less than 300 "
+        "characters)."
+        "Examples: \n"
+        + json.dumps(
+            [
+                {"sender": "Ben", "message": "I'm feeling great today!"},
+                {
+                    "sender": "Chris",
+                    "message": "That's awesome! I'm glad to hear that!",
+                },
+            ]
+        )
+        + "\n"
+        + json.dumps(
+            {
+                "title": "Clear Communication",
+                "body": (
+                    "Your message was clear and considerate. You successfully "
+                    "communicated your feelings without relying on unclear language. "
+                    "Keep up the good work!"
+                ),
+            }
+        )
+    )
+
+    prompt_data = json.dumps(
+        [
+            message.model_dump()
+            for message in conversation.messages[conversation.last_feedback_received :]
+        ]
+    )
+
+    return await llm.generate_strict(
+        schema=FeedbackWithoutMisunderstanding,
+        model=llm.MODEL_GPT_4,
+        system=system_prompt,
+        prompt=prompt_data,
+    )
+
+
+async def _generate_feedback_unclear(conversation: ConversationData):
+    user, subject = conversation.info.user, conversation.info.subject
+    system_prompt = (
+        "You are a social skills coach. Your task is to provide feedback on the "
+        f"ongoing conversation between {user.name} and {subject.name}, who is an "
+        f"autistic individual. The latest message from {user.name} was unclear and "
+        f"could have been misinterpreted by {subject.name}. The conversation is "
+        f"happening over text. Describe how {user.name} could have been more clear "
+        "in their communication to avoid confusion. Respond with a JSON object with "
+        "the key 'title' containing the title (less than 50 characters) of your "
+        "feedback and the key 'body' containing the feedback (less than 300 "
+        "characters)."
+        "Examples: \n"
+        + json.dumps(
+            [
+                {"sender": "Ben", "message": "I feel like a million bucks today!"},
+                {
+                    "sender": "Chris",
+                    "message": "You must have had a great day! That's awesome!",
+                },
+            ]
+        )
+        + "\n"
+        + json.dumps(
+            {
+                "title": "Avoid Figurative Language",
+                "body": (
+                    "Your message relied on figurative language, which can be "
+                    "misinterpreted by autistic individuals. In this case, your "
+                    "message could be misinterpreted as a literal statement. Consider "
+                    "using more direct language to avoid confusion."
+                ),
+            }
+        )
+    )
+
+    prompt_data = json.dumps(
+        [
+            message.model_dump()
+            for message in conversation.messages[conversation.last_feedback_received :]
+        ]
+    )
+
+    return await llm.generate_strict(
+        schema=FeedbackWithoutMisunderstanding,
+        model=llm.MODEL_GPT_4,
+        system=system_prompt,
+        prompt=prompt_data,
+    )
+
+
+async def _generate_feedback_misunderstanding(conversation: ConversationData):
+
+    class FeedbackMisunderstandingResponse(BaseModel):
+        title: Annotated[str, StringConstraints(max_length=50)]
+        body: Annotated[str, StringConstraints(max_length=300)]
+        instructions: str
+
+    user, subject = conversation.info.user, conversation.info.subject
+    system_prompt = (
+        "You are a social skills coach. Your task is to provide feedback on the "
+        f"ongoing conversation between {user.name} and {subject.name}, who is an "
+        f"autistic individual. The latest message from {user.name} was unclear and "
+        f"was misinterpreted by {subject.name}. The conversation is happening over "
+        f"text. Describe how {user.name} could have been more clear in their "
+        "communication to avoid confusion. Respond with a JSON object with the key "
+        "'title' containing the title (less than 50 characters) of your feedback, "
+        "the key 'body' containing the feedback (less than 300 characters), and the "
+        f"key 'instructions' explaining what {user.name} could do to clarify the "
+        f"situation. The 'instructions' should not be a message, but a string that "
+        f"outlines what {user.name} should do to clarify the misunderstanding."
+        "Examples: \n"
+        + json.dumps(
+            [
+                {"sender": "Ben", "message": "I feel like a million bucks today!"},
+                {
+                    "sender": "Chris",
+                    "message": "Did you just win the lottery? That's great!",
+                },
+            ]
+        )
+        + "\n"
+        + json.dumps(
+            {
+                "title": "Avoid Figurative Language",
+                "body": (
+                    "Your message relied on figurative language, which can be "
+                    "misinterpreted by autistic individuals. Consider using more "
+                    "direct language to avoid confusion."
+                ),
+                "instructions": (
+                    "Your next message should clarify that you're not actually a "
+                    "millionaire, but you're feeling really good today. Be direct "
+                    "and avoid figurative language."
+                ),
+            }
+        )
+    )
+
+    prompt_data = json.dumps(
+        [
+            message.model_dump()
+            for message in conversation.messages[conversation.last_feedback_received :]
+        ]
+    )
+
+    feedback_base = await llm.generate_strict(
+        schema=FeedbackMisunderstandingResponse,
+        model=llm.MODEL_GPT_4,
+        system=system_prompt,
+        prompt=prompt_data,
+    )
+
+    follow_up = await _generate_message(
+        user,
+        conversation.info.scenario.user_scenario,
+        conversation.messages,
+        extra=feedback_base.instructions,
+    )
+
+    return FeedbackWithMisunderstanding(
+        title=feedback_base.title,
+        body=feedback_base.body,
+        follow_up=follow_up,
+    )
+
+
+async def _generate_feedback(conversation: ConversationData) -> Feedback:
+    analysis = await _analyze_messages_for_misunderstanding(conversation)
+
+    if isinstance(analysis.root, FeedbackAnalysisClear):
+        return Feedback(root=await _generate_feedback_clear(conversation))
+    elif not analysis.root.misunderstanding:
+        return Feedback(root=await _generate_feedback_unclear(conversation))
+    else:
+        return Feedback(root=await _generate_feedback_misunderstanding(conversation))
 
 
 class NpMessageEvent(BaseModel):
@@ -407,8 +569,8 @@ class Conversation:
         )
 
 
-async def create_conversation(user_info: dict) -> ConversationData:
-    conversation_info = await _create_conversation_info(user_info)
+async def create_conversation(user: Persona) -> Conversation:
+    conversation_info = await _create_conversation_info(user)
 
     id = len(_CONVERSATIONS)
 
@@ -418,13 +580,14 @@ async def create_conversation(user_info: dict) -> ConversationData:
             info=conversation_info,
             state=ConversationNormal(state="np_normal"),
             messages=[],
+            last_feedback_received=0,
         )
     )
 
     return Conversation.from_data(_CONVERSATIONS[-1])
 
 
-def get_conversation(conversation_id: str) -> ConversationData:
+def get_conversation(conversation_id: str) -> Conversation:
     return Conversation.from_data(_CONVERSATIONS[int(conversation_id)])
 
 
@@ -482,11 +645,8 @@ async def progress_conversation(
 
         return ApMessageEvent(content=response)
     elif ty == "feedback":
-        response = await _generate_feedback(
-            conversation.info.user.name,
-            conversation.info.subject.name,
-            conversation.messages,
-        )
+        response = await _generate_feedback(conversation)
+        conversation.last_feedback_received = len(conversation.messages)
 
         if isinstance(response.root, FeedbackWithMisunderstanding):
             conversation.messages.append(
@@ -495,8 +655,9 @@ async def progress_conversation(
                     message=response.root.follow_up,
                 )
             )
-
-        conversation.state = ConversationNormal(state=state_data["next"])
+            conversation.state = ConversationNormal(state="ap_normal")
+        else:
+            conversation.state = ConversationNormal(state="np_normal")
 
         return FeedbackEvent(content=response)
     else:

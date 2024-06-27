@@ -113,7 +113,7 @@ const Input = ({
         feedbackContent = nextFetchedContent.content;
         if (!nextFetchedContent.content["follow_up"]) {
           nextFetchedContent2 = await fetchData();
-          setOptions({ 0: nextFetchedContent2.content.choice });
+          setOptions(nextFetchedContent2.options);
           setShowChoicesSection(true);
         }
       } else if (nextFetchedContent.type === "np") {
