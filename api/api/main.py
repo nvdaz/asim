@@ -1,8 +1,9 @@
-from fastapi import FastAPI
-
-from starlette.middleware.cors import CORSMiddleware
-from .routers import auth, conversations
 import logging
+
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+
+from .routers import auth, conversations
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

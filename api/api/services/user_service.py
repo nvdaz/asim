@@ -1,37 +1,34 @@
 import asyncio
-import json
 
 import numpy as np
+from pydantic import BaseModel
+
+from api.schemas.persona import BasePersona, Persona
 
 from . import llm_service as llm
 
 
-async def _extract_demographics(messages: list[list[str]]) -> dict:
+class Demographics(BaseModel):
+    age: str
+    occupation: str
+
+
+async def _extract_demographics(messages: list[list[str]]) -> Demographics:
     system_prompt = (
         "As a user analyst, your task is to extract demographic information about the "
         "user based on the messages they sent to a chatbot. Start by analyzing "
         "messages sent by the user for any personal details, then use deductive "
         "reasoning to accurately determine their demographic information. Respond like "
-        'this: <analysis>[ANALYSIS HERE]</analysis> {"age": "AGE", "gender": '
-        '"GENDER", "location": "LOCATION", "occupation": "OCCUPATION", '
-        '"highest_education": "HIGHEST EDUCATION"}'
+        'this: <analysis>[ANALYSIS HERE]</analysis> {"age": "AGE RANGE", "occupation": '
+        '"OCCUPATION"}'
     )
     prompt_data = "\n".join([message[0] for message in messages])
-    response = await llm.generate(
+    demographics = await llm.generate_strict(
+        schema=Demographics,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
-
-    data = response[response.index("{") : response.rindex("}") + 1]
-
-    demographics = json.loads(data)
-
-    assert "age" in demographics
-    assert "gender" in demographics
-    assert "location" in demographics
-    assert "occupation" in demographics
-    assert "highest_education" in demographics
 
     return demographics
 
@@ -100,24 +97,26 @@ async def _cluster_messages(
 
 
 async def _get_cluster_topic(cluster: list[str]) -> str | None:
+    class ClusterTopicResponse(BaseModel):
+        topic: str | None
+
     system_prompt = (
         "Your task is to identify the primary topic of conversation based on a"
         "list of chatbot questions. Identify this topic as a single noun phrase "
         "that captures the main topics of interest present in the majority of "
-        "responses, focusing on subjects, locations, or objects mentioned. If no "
-        "clear topic is identifiable, return 'n/a'."
+        "responses, focusing on subjects, locations, or objects mentioned. Return "
+        "a JSON object with the key 'topic' and the identified topic as the value."
+        "If no clear topic is identifiable, use a null value."
     )
     prompt_data = "\n".join(cluster)
-    response = await llm.generate(
+    response = await llm.generate_strict(
+        schema=ClusterTopicResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
 
-    if response == "n/a":
-        return None
-
-    return response.strip()
+    return response.topic
 
 
 async def _get_cluster_topics(clustered_prompts: list[list[str]]) -> list[str]:
@@ -130,20 +129,25 @@ async def _get_cluster_topics(clustered_prompts: list[list[str]]) -> list[str]:
 
 
 async def _get_interests_from_topics(topics: list[str]) -> list[str]:
+    class InterestResponse(BaseModel):
+        interests: list[str]
+
     system_prompt = (
         "As an interest analyst, your task is to generate a coherent list of interests "
         "based on a given list of conversation topics. Each interest should be a "
         "single noun phrase, focusing specifically on subjects, locations, or objects. "
-        "Do not repeat interests."
+        "Do not repeat interests. Respond with a JSON object containing a list of "
+        "interests under the key 'interests'."
     )
     prompt_data = "\n".join(topics)
-    response = await llm.generate(
+    response = await llm.generate_strict(
+        schema=InterestResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
 
-    return response.strip().split("\n")
+    return response.interests
 
 
 async def _extract_interests(messages: list[list[str]]) -> list[str]:
@@ -157,44 +161,51 @@ async def _extract_interests(messages: list[list[str]]) -> list[str]:
         [messages[i][0] for i in cluster] for cluster in clustered_messages_indices
     ]
 
-    print(json.dumps(clustered_prompts))
-
     topics = await _get_cluster_topics(clustered_prompts)
     interests = await _get_interests_from_topics(topics)
 
     return interests
 
 
-async def _generate_user_info(messages: list[list[str]]) -> dict:
-    interests = await _extract_interests(messages)
-    demographics = await _extract_demographics(messages)
+async def _generate_user_persona(user_base: BasePersona):
+    class PersonaResponse(BaseModel):
+        persona: str
 
-    return {"interests": interests, "demographics": demographics}
-
-
-async def _generate_user_persona(user_info: dict):
     system_prompt = (
         "As a persona generator, your task is to generate a system prompt that will "
         "be used to make ChatGPT embody a persona based on the provided information. "
-        f"Put the prompt in '<' and '>'. Start with 'You are {user_info['name']}...'"
+        "Respond with a JSON object containing the key 'persona' and the system prompt "
+        f"as the value. Start with 'You are {user_base.name}...'"
     )
 
-    prompt_data = json.dumps(user_info)
+    prompt_data = user_base.model_dump_json()
 
-    response = await llm.generate(
+    response = await llm.generate_strict(
+        schema=PersonaResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
 
-    persona = response[response.index("<") + 1 : response.index(">")]
+    return Persona(**user_base.model_dump(), description=response.persona)
 
-    return persona
+
+async def _generate_user_base(messages: list[list[str]], user_name: str):
+    interests = await _extract_interests(messages)
+    demographics = await _extract_demographics(messages)
+
+    user_base = BasePersona(
+        name=user_name,
+        age=demographics.age,
+        occupation=demographics.occupation,
+        interests=interests,
+    )
+
+    return user_base
 
 
 async def generate_user(messages: list[list[str]], user_name: str):
-    user_info = await _generate_user_info(messages)
-    user_info["name"] = user_name
-    user_persona = await _generate_user_persona(user_info)
+    user_base = await _generate_user_base(messages, user_name)
+    user_persona = await _generate_user_persona(user_base)
 
-    return {**user_info, "persona": user_persona}
+    return user_persona

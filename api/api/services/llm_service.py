@@ -1,12 +1,15 @@
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import pickle as pkl
+from typing import Type, TypeVar
 
 import aiofiles
 import numpy as np
 import websockets as ws
+from pydantic import BaseModel, ValidationError
 
 _LLM_URI = os.getenv("LLM_URI")
 
@@ -35,44 +38,89 @@ async def _generate(
         response, response_dict = None, None
         while response_dict is None or "message" in response_dict:
             response = await conn.recv()
+
             response_dict = json.loads(response)
 
+            if (
+                "message" in response_dict
+                and response_dict["message"] == "Internal server error"
+            ):
+                raise RuntimeError("Could not invoke LLM generate: ISE")
+
         return response_dict["result"]
+
+
+SchemaType = TypeVar("SchemaType", bound=BaseModel)
+
+
+async def _generate_strict(
+    schema: Type[SchemaType],
+    model: str,
+    prompt: str,
+    system: str,
+    temperature: float = None,
+    max_tries: int = 3,
+) -> Type[SchemaType]:
+    for attempt in range(max_tries):
+        try:
+            response = await _generate(model, prompt, system, temperature)
+            data = response[response.index("{") : response.rindex("}") + 1]
+            return schema(**json.loads(data))
+        except Exception as e:
+            logging.warning(
+                f"Attempt {attempt + 1}/{max_tries} - Unexpected error: {e}. {response}"
+            )
+
+    raise RuntimeError("Could not generate valid response")
 
 
 _GENERATE_CACHE_LOCK = asyncio.Lock()
 
 
-async def generate(model: str, prompt: str, system: str, temperature: float = None):
-
-    cache_file = "cache/llm_generate.pkl"
+async def generate_strict(
+    schema: Type[SchemaType],
+    model: str,
+    prompt: str,
+    system: str,
+    temperature: float = None,
+    max_tries: int = 3,
+):
+    cache_file = "cache/llm_generate.json"
     async with _GENERATE_CACHE_LOCK:
         if os.path.exists(cache_file):
-            async with aiofiles.open(cache_file, "rb") as f:
+            async with aiofiles.open(cache_file, "r") as f:
                 content = await f.read()
-                cache = pkl.loads(content)
+                cache = json.loads(content)
         else:
             cache = {}
 
     key = hashlib.sha256(
-        json.dumps((model, prompt, system, temperature)).encode()
+        json.dumps(
+            (schema.model_json_schema(), model, prompt, system, temperature),
+            sort_keys=True,
+        ).encode()
     ).hexdigest()
 
     if key in cache:
-        return cache[key]
+        try:
+            return schema(**cache[key])
+        except ValidationError as e:
+            logging.warning(f"Cache invalid: {e.errors()}")
 
-    result = await _generate(model, prompt, system, temperature)
+    result = await _generate_strict(
+        schema, model, prompt, system, temperature, max_tries
+    )
 
     async with _GENERATE_CACHE_LOCK:
         if os.path.exists(cache_file):
-            async with aiofiles.open(cache_file, "rb") as f:
+            async with aiofiles.open(cache_file, "r") as f:
                 content = await f.read()
-                cache = pkl.loads(content)
+                cache = json.loads(content)
         else:
             cache = {}
-        cache[key] = result
-        async with aiofiles.open(cache_file, "wb") as f:
-            await f.write(pkl.dumps(cache, protocol=pkl.HIGHEST_PROTOCOL))
+        cache[key] = result.model_dump()
+        async with aiofiles.open(cache_file, "w") as f:
+            await f.write(json.dumps(cache, indent=2))
 
     return result
 
@@ -89,6 +137,12 @@ async def _embed(text: str) -> np.ndarray:
         while response_dict is None or "message" in response_dict:
             response = await conn.recv()
             response_dict = json.loads(response)
+
+            if (
+                "message" in response_dict
+                and response_dict["message"] == "Internal server error"
+            ):
+                raise RuntimeError("Could not invoke LLM embed: ISE")
 
         result = response_dict["result"]
 

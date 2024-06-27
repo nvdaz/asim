@@ -22,7 +22,7 @@ with open("./userConversations.csv") as csv_file:
 
 
 @router.post("/", status_code=201)
-async def create_conversation():
+async def create_conversation() -> conversation_service.Conversation:
     user_name = "Kyle"
     messages = users["0053c352-d227-40b9-989c-78ec216d3a21"]
     user_info = await user_service.generate_user(messages, user_name)
@@ -30,10 +30,14 @@ async def create_conversation():
 
 
 @router.get("/{conversation_id}")
-async def get_conversation(conversation_id: str):
+async def get_conversation(
+    conversation_id: str,
+) -> conversation_service.ConversationData:
     return conversation_service.get_conversation(conversation_id)
 
 
 @router.post("/{conversation_id}/next")
-async def progress_conversation(conversation_id: str, option: int | None = None):
+async def progress_conversation(
+    conversation_id: str, option: int | None = None
+) -> conversation_service.ConversationEvent:
     return await conversation_service.progress_conversation(conversation_id, option)
