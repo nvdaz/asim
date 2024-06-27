@@ -81,8 +81,7 @@ const Lesson = () => {
         <div style={{ width: "100%" }}>
           <div ref={header}>
             <Header
-              // name={data["info"]["subject_info"]["name"]}
-              name={'Alex'}
+              name={data["subject_name"]}
               initData={{
                 scenario: data["scenario"]["user_scenario"],
                 goal: data["scenario"]["user_goal"],

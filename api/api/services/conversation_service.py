@@ -172,11 +172,10 @@ PROMPTS = {
         "books.'"
     ),
     "np_figurative_2": (
-        "Your next message is mostly literal, but includes a tiny hint of figurative "
-        "language. The message is mostly straightforward, but there is a slight "
-        "figurative element that could be misinterpreted. Example: I’ve been working "
-        "all day and I’m feeling a bit burned out, like a candle that’s been burning "
-        "for too long."
+        "Your next message is mostly literal, but includes a hint of figurative "
+        "language. The message is mostly straightforward, but there is also a "
+        "figurative element that could be misinterpreted. Example: 'It's so hot, "
+        "It feels like 1000 degrees outside.'"
     ),
     "ap_normal": "",
     "ap_figurative_misunderstood": (
@@ -254,7 +253,7 @@ class Feedback(RootModel):
 
 
 async def _generate_feedback(
-    user_name: str, subject_name: str, messages: list[dict], extra=""
+    user_name: str, subject_name: str, messages: list[any], extra=""
 ):
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
@@ -395,6 +394,17 @@ _CONVERSATIONS: list[ConversationData] = []
 class Conversation:
     id: str
     scenario: ConversationScenario
+    subject_name: str
+    messages: list[Message]
+
+    @staticmethod
+    def from_data(data: ConversationData):
+        return Conversation(
+            id=data.id,
+            scenario=data.info.scenario,
+            subject_name=data.info.subject.name,
+            messages=data.messages,
+        )
 
 
 async def create_conversation(user_info: dict) -> ConversationData:
@@ -411,11 +421,11 @@ async def create_conversation(user_info: dict) -> ConversationData:
         )
     )
 
-    return Conversation(id=str(id), scenario=conversation_info.scenario)
+    return Conversation.from_data(_CONVERSATIONS[-1])
 
 
 def get_conversation(conversation_id: str) -> ConversationData:
-    return _CONVERSATIONS[int(conversation_id)]
+    return Conversation.from_data(_CONVERSATIONS[int(conversation_id)])
 
 
 async def progress_conversation(

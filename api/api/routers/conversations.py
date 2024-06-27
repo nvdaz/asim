@@ -32,7 +32,7 @@ async def create_conversation() -> conversation_service.Conversation:
 @router.get("/{conversation_id}")
 async def get_conversation(
     conversation_id: str,
-) -> conversation_service.ConversationData:
+) -> conversation_service.Conversation:
     return conversation_service.get_conversation(conversation_id)
 
 
