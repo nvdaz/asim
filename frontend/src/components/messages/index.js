@@ -6,7 +6,6 @@ import TypingIndicator from "./TypingIndicator";
 import styles from "./index.module.css";
 
 export default function Messages({
-  height,
   chatHistory,
   handleClickFeedback,
 }) {
@@ -66,7 +65,7 @@ export default function Messages({
 
   return (
     <div
-      style={{ height: height }}
+      style={{ flex: 1 }}
       className={styles.wrapper}
       ref={containerRef}
     >
