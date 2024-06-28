@@ -11,8 +11,6 @@ import styles from "./index.module.css";
 const Input = ({
   choice,
   setChoice,
-  showChoicesSection,
-  setShowChoicesSection,
   chatHistory,
   setChatHistory,
   selectedButton,
@@ -24,6 +22,7 @@ const Input = ({
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [options, setOptions] = useState(initOptions);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [showChoicesSection, setShowChoicesSection] = useState(true);
 
   const isMobile = useMediaQuery("(max-width: 400px)");
   const isDesktop = useMediaQuery("(min-width: 800px)");
@@ -41,14 +40,13 @@ const Input = ({
   const handleButtonClick = (index, message) => {
     setSelectedButton(index);
     setChoice(message);
-    
+
     if (selectedOption === null) {
       setSelectedOption([index, message]);
       let optionsCopy = options;
       delete optionsCopy[index];
       setOptions(optionsCopy);
-    }
-    else {
+    } else {
       let optionsCopy = options;
       delete optionsCopy[index];
       setSelectedOption([index, message]);
@@ -106,14 +104,13 @@ const Input = ({
 
       const respondedContent = reply?.content;
       const nextFetchedContent = await fetchData();
-      let nextFetchedContent2 = null;
       let feedbackContent = "";
 
       if (nextFetchedContent.type === "feedback") {
         feedbackContent = nextFetchedContent.content;
         if (!nextFetchedContent.content["follow_up"]) {
-          nextFetchedContent2 = await fetchData();
-          setOptions(nextFetchedContent2.options);
+          const nextFetchedContent2 = await fetchData();
+          setOptions(Object.assign({}, nextFetchedContent2.options));
           setShowChoicesSection(true);
         }
       } else if (nextFetchedContent.type === "np") {

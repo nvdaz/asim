@@ -8,20 +8,18 @@ import styles from "./index.module.css";
 export default function Messages({
   height,
   chatHistory,
-  choice,
-  setChoice,
-  setSelectedButton,
+  handleClickFeedback,
 }) {
   const containerRef = useRef(null);
 
   useEffect(() => {
-    if (containerRef.current && containerRef.current.lastElementChild) {
-      containerRef.current.lastElementChild.scrollIntoView({
+    if (containerRef && containerRef.current) {
+      containerRef.current.scrollTo({
         behavior: "smooth",
-        block: "end",
+        top: containerRef.current.scrollHeight + 30,
       });
     }
-  }, [choice, chatHistory]);
+  }, [containerRef?.current?.scrollHeight, chatHistory]);
 
   // fit chat bubble width to text width
   useEffect(() => {
@@ -38,11 +36,6 @@ export default function Messages({
     });
   }, []);
 
-  const handleButtonClick = (index, message) => {
-    setSelectedButton(index);
-    setChoice(message);
-  };
-
   const messageHistory = (message, index, length) => {
     switch (message.type) {
       case "text":
@@ -58,7 +51,7 @@ export default function Messages({
         return (
           <Feedback
             key={index}
-            handleButtonClick={handleButtonClick}
+            handleButtonClick={handleClickFeedback}
             title={message.content.title}
             body={message.content.body}
             choice={message.content.choice}
@@ -78,7 +71,7 @@ export default function Messages({
       ref={containerRef}
     >
       <div className={styles.messageWrapper}>
-        {chatHistory?.map((message, index) => {
+        {chatHistory.map((message, index) => {
           return messageHistory(message, index, chatHistory.length);
         })}
       </div>
