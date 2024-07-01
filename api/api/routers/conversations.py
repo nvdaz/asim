@@ -2,6 +2,7 @@ import csv
 import random
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from api.services import conversation_service, user_service
 
@@ -21,12 +22,18 @@ with open("./userConversations.csv") as csv_file:
         users[user].append((row["message"], row["response"]))
 
 
+class CreateConversationOptions(BaseModel):
+    level: int
+
+
 @router.post("/", status_code=201)
-async def create_conversation() -> conversation_service.Conversation:
+async def create_conversation(
+    options: CreateConversationOptions,
+) -> conversation_service.Conversation:
     user_name = "Kyle"
     messages = users["0053c352-d227-40b9-989c-78ec216d3a21"]
     user_info = await user_service.generate_user(messages, user_name)
-    return await conversation_service.create_conversation(user_info)
+    return await conversation_service.create_conversation(user_info, options.level)
 
 
 @router.get("/{conversation_id}")

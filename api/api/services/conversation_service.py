@@ -1,6 +1,5 @@
 import random
 from dataclasses import dataclass
-from enum import Enum
 from typing import Literal, Union
 
 from pydantic import AfterValidator, BaseModel, Field, RootModel, StringConstraints
@@ -9,6 +8,11 @@ from typing_extensions import Annotated
 from api.schemas.persona import BasePersona, Persona
 
 from . import llm_service as llm
+from .flow_state.base import ApFlowState, FeedbackFlowState, FlowStateRef, NpFlowState
+from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL
+from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL
+
+LEVELS = [FIGURATIVE_LANGUAGE_LEVEL, BLUNT_LANGUAGE_LEVEL]
 
 
 class ConversationScenario(BaseModel):
@@ -30,7 +34,147 @@ async def _generate_conversation_scenario(
         "in the scenario (begin with 'You...'), the 'subject_scenario' key should be a "
         "string describing the subject's perspective (begin with 'You...'), and the "
         f"'user_goal' key should be a string describing {user.name}'s objective in the "
-        "scenario (begin with a verb, e.g., 'Convince', 'Explain', 'Find out')."
+        "scenario (begin with a verb, e.g., 'Convince', 'Explain', 'Find out'). Do not "
+        "generate scenarios that involve significant external elements, such as "
+        "finding a bug in a software program (it is not possible to send the code)."
+        "Examples:\n"
+        "\n".join(
+            [
+                ex.model_dump_json()
+                for ex in [
+                    ConversationScenario(
+                        user_scenario=(
+                            "You are texting with an unfamiliar person named Phil on a "
+                            "messaging app. You met Phil through a mutual friend, who "
+                            "suggests that you connect because you both love "
+                            "theoretical physics. You try to get to know Phil better "
+                            "and discuss your favorite physicists, theories, and "
+                            "upcoming physics events."
+                        ),
+                        subject_scenario=(
+                            "You are texting with Ben, who you met through a mutual "
+                            "friend. Your friend mentioned that Ben is interested in "
+                            "theoretical physics, just like you. You are interested in "
+                            "discussing physics with Ben."
+                        ),
+                        user_goal=(
+                            "Discuss theoretical physics with Phil and learn more "
+                            "about their favorite physicists and theories."
+                        ),
+                    ),
+                    ConversationScenario(
+                        user_scenario=(
+                            "You just started a new job at a pharmaceutical company "
+                            "and met a colleague named Jake. You start texting with "
+                            "Jake to get to know him better. You ask Jake about his "
+                            "role in the company, his experience, and his interests "
+                            "outside of work."
+                        ),
+                        subject_scenario=(
+                            "You gave your number to a new colleague named Christina, "
+                            "who recently joined your team at the pharmaceutical "
+                            "company you work for. Christina is interested in "
+                            "discussing work and getting to know you better."
+                        ),
+                        user_goal=(
+                            "Learn more about Jake's role in the company and his "
+                            "interests to build a friendly working relationship."
+                        ),
+                    ),
+                    ConversationScenario(
+                        user_scenario=(
+                            "You met a fellow student named Avery in photography class "
+                            "and exchanged numbers. You start texting with Avery to "
+                            "discuss photography. You ask Avery about their favorite "
+                            "subjects to photograph and any tips."
+                        ),
+                        subject_scenario=(
+                            "You exchanged numbers with a fellow student named Joe in "
+                            "photography class. Joe is interested in discussing "
+                            "photography with you."
+                        ),
+                        user_goal=(
+                            "Discuss photography with Avery and learn more about their "
+                            "favorite subjects and tips."
+                        ),
+                    ),
+                    ConversationScenario(
+                        user_scenario=(
+                            "You are new to the neighborhood and are texting with a "
+                            "neighbor named Jordan. You want to get to know "
+                            "Jordan better and learn more about the community. "
+                            "You ask Jordan about local events, good places to eat, "
+                            "and any tips for newcomers."
+                        ),
+                        subject_scenario=(
+                            "You are texting with a new neighbor named David. "
+                            "David recently moved into the neighborhood and is "
+                            "interested in getting to know you better."
+                        ),
+                        user_goal=(
+                            "Learn more about the community and build a friendly "
+                            "relationship with Jordan."
+                        ),
+                    ),
+                    ConversationScenario(
+                        user_scenario=(
+                            "You are taking an online physics course and are texting "
+                            "with a classmate named Morgan. You want to get to know "
+                            "Morgan better and possibly collaborate on projects. "
+                            "You ask Morgan about their background, why they took "
+                            "the course, and their career goals."
+                        ),
+                        subject_scenario=(
+                            "You are texting with a classmate named Belle. "
+                            "Belle recently joined the course and is interested in "
+                            "getting to know you better."
+                        ),
+                        user_goal=(
+                            "Learn more about Morgan's background and explore "
+                            "possible collaboration on projects."
+                        ),
+                    ),
+                    ConversationScenario(
+                        user_scenario=(
+                            "You are attending a math conference and are texting with "
+                            "a fellow attendee named Riley. You are both interested "
+                            "in topological algebra and category theory. You want to "
+                            "get to know Riley better and learn more about their "
+                            "field of work. You ask Riley about their research, "
+                            "favorite mathematicians, and future projects."
+                        ),
+                        subject_scenario=(
+                            "You are texting with a fellow conference attendee named "
+                            "Eden. Eden is interested in discussing topological "
+                            "algebra and category theory with you."
+                        ),
+                        user_goal=(
+                            "Discuss topological algebra and category theory with "
+                            "Riley and learn more about their research and interests "
+                            "to build a professional connection."
+                        ),
+                    ),
+                    ConversationScenario(
+                        user_scenario=(
+                            "At a social event, you met a new acquaintance named Finn, "
+                            "who is an avid hiker, like you. You are texting with Finn "
+                            "to discuss hiking trails, gear, and experiences. You ask "
+                            "Finn about their favorite trails, future hiking plans, "
+                            "and any advice for beginners."
+                        ),
+                        subject_scenario=(
+                            "You exchanged numbers with a new acquaintance named Sam "
+                            "at a social event. Sam is interested in discussing hiking "
+                            "with you."
+                        ),
+                        user_goal=(
+                            "Discuss hiking with Finn and learn more about their "
+                            "experiences and advice."
+                        ),
+                    ),
+                ]
+            ]
+        )
     )
 
     sampled_interests = random.sample(user.interests, min(6, len(user.interests)))
@@ -115,165 +259,58 @@ async def _generate_subject_persona(scenario):
     return subject_persona
 
 
+async def _is_scenario_user_initiated(
+    scenario: ConversationScenario, user_name: str, subject_name: str
+):
+    system_prompt = (
+        "You are a social skills coach. Your task is to determine the initiator of the "
+        "conversation scenario. The scenario involves a conversation between "
+        f"{user_name} and {subject_name} over text messaging. You are given the "
+        f"scenario from the perspective of {user_name}. Analyze the scenario and "
+        "determine who initiated the conversation. Respond with a JSON object "
+        f"containing the key 'initiator' and the value '{user_name}' or "
+        f"'{subject_name}', indicating who initiated the conversation."
+    )
+
+    def validate_initiator(v):
+        if v not in [user_name, subject_name]:
+            raise ValueError(f"Initiator must be {user_name} or {subject_name}")
+        return v
+
+    class InitiatorResponse(BaseModel):
+        initiator: Annotated[str, AfterValidator(validate_initiator)]
+
+    res = await llm.generate_strict(
+        schema=InitiatorResponse,
+        model=llm.MODEL_GPT_4,
+        system=system_prompt,
+        prompt=scenario.user_scenario,
+    )
+
+    return res.initiator == user_name
+
+
 @dataclass
 class ConversationInfo:
     scenario: ConversationScenario
     user: Persona
     subject: Persona
+    is_user_initiated: bool
 
 
 async def _create_conversation_info(user: Persona):
     scenario = await _generate_conversation_scenario(user, "Alex")
     subject_persona = await _generate_subject_persona(scenario.subject_scenario)
+    is_user_initiated = await _is_scenario_user_initiated(
+        scenario, user.name, subject_persona.name
+    )
 
-    return ConversationInfo(scenario=scenario, user=user, subject=subject_persona)
-
-
-class NpFlowStateId(Enum):
-    NORMAL = "normal"
-    FIGURATIVE_HEAVY = "figurative_heavy"
-    FIGURATIVE_LIGHT = "figurative_light"
-
-
-class NpFlowStateRef(BaseModel):
-    type: Literal["np"] = "np"
-    id: NpFlowStateId
-
-
-class ApFlowStateId(Enum):
-    NORMAL = "normal"
-    FIGURATIVE_MISUNDERSTOOD = "figurative_misunderstood"
-
-
-class ApFlowStateRef(BaseModel):
-    type: Literal["ap"] = "ap"
-    id: ApFlowStateId
-
-
-class FeedbackFlowStateRef(BaseModel):
-    type: Literal["feedback"] = "feedback"
-
-
-class FlowStateRef(RootModel):
-    root: Annotated[
-        Union[NpFlowStateRef, ApFlowStateRef, FeedbackFlowStateRef],
-        Field(discriminator="type"),
-    ]
-
-
-class FlowOption(BaseModel):
-    prompt: str
-    next: FlowStateRef
-
-
-class NpFlowState(BaseModel):
-    type: Literal["np"] = "np"
-    id: NpFlowStateId
-    options: list[FlowOption]
-
-
-class ApFlowState(BaseModel):
-    type: Literal["ap"] = "ap"
-    id: ApFlowStateId
-    options: list[FlowOption]
-
-
-class FeedbackFlowState(BaseModel):
-    type: Literal["feedback"] = "feedback"
-
-
-class FlowState(RootModel):
-    root: Annotated[
-        Union[NpFlowState, ApFlowState, FeedbackFlowState],
-        Field(discriminator="type"),
-    ]
-
-
-FLOW_STATES = [
-    FlowState(
-        root=NpFlowState(
-            id=NpFlowStateId.NORMAL,
-            options=[
-                FlowOption(
-                    prompt=(
-                        "Do not use any figurative language in your next message. Keep "
-                        "your message straightforward and literal."
-                    ),
-                    next=FlowStateRef(root=ApFlowStateRef(id=ApFlowStateId.NORMAL)),
-                ),
-                FlowOption(
-                    prompt=(
-                        "Your next message is figurative and metaphorical. You use "
-                        "language that is not literal and does not mean exactly what "
-                        "it says. Your message is intended to be interpreted in a "
-                        "non-literal way. Example: 'Let's hit the books.'"
-                    ),
-                    next=FlowStateRef(
-                        root=ApFlowStateRef(id=ApFlowStateId.FIGURATIVE_MISUNDERSTOOD)
-                    ),
-                ),
-                FlowOption(
-                    prompt=(
-                        "Your next message is mostly literal, but includes a hint of "
-                        "figurative language. The message is mostly straightforward, "
-                        "but there is also a figurative element that could be "
-                        "misinterpreted. Example: 'It's so hot, it feels like 1000 "
-                        "degrees outside.'"
-                    ),
-                    next=FlowStateRef(
-                        root=ApFlowStateRef(id=ApFlowStateId.FIGURATIVE_MISUNDERSTOOD)
-                    ),
-                ),
-            ],
-        )
-    ),
-    FlowState(
-        root=ApFlowState(
-            id=ApFlowStateId.NORMAL,
-            options=[
-                FlowOption(
-                    prompt=(
-                        "Respond to the message in a normal, direct manner. Your "
-                        "response correctly interprets the message and continues the "
-                        "conversation. "
-                    ),
-                    next=FlowStateRef(root=NpFlowStateRef(id=NpFlowStateId.NORMAL)),
-                )
-            ],
-        )
-    ),
-    FlowState(
-        root=ApFlowState(
-            id=ApFlowStateId.FIGURATIVE_MISUNDERSTOOD,
-            options=[
-                FlowOption(
-                    prompt=(
-                        "You are responding to a figurative and metaphorical message. "
-                        "You misunderstand the figurative language and your next "
-                        "message will confidently interpret the message literally, "
-                        "missing the intended meaning. The response should be literal "
-                        "and direct, only addressing the figurative meaning and "
-                        "ignoring the intended message. Example: NP: 'Let's hit the "
-                        "books' -> AP: 'Why would you want to hit books? That would "
-                        "damage them.'"
-                    ),
-                    next=FlowStateRef(root=FeedbackFlowStateRef()),
-                )
-            ],
-        )
-    ),
-    FlowState(
-        root=FeedbackFlowState(),
-    ),
-]
-
-
-def get_flow_state(ref: FlowStateRef) -> FlowState:
-    if isinstance(ref.root, FeedbackFlowStateRef):
-        return FlowState(root=FeedbackFlowState())
-    for state in FLOW_STATES:
-        if state.root.id == ref.root.id:
-            return state
+    return ConversationInfo(
+        scenario=scenario,
+        user=user,
+        subject=subject_persona,
+        is_user_initiated=is_user_initiated,
+    )
 
 
 class Message(BaseModel):
@@ -343,6 +380,7 @@ class ConversationNormal(BaseModel):
 
 class ConversationData(BaseModel):
     id: str
+    level: int
     info: ConversationInfo
     state: Annotated[
         Union[ConversationWaiting, ConversationNormal],
@@ -352,13 +390,13 @@ class ConversationData(BaseModel):
     last_feedback_received: int
 
 
-class FeedbackWithoutMisunderstanding(BaseModel):
+class FeedbackOk(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=300)]
     confused: Literal[False] = False
 
 
-class FeedbackWithMisunderstanding(BaseModel):
+class FeedbackNeedsImprovement(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=300)]
     confused: Literal[True] = True
@@ -367,42 +405,42 @@ class FeedbackWithMisunderstanding(BaseModel):
 
 class Feedback(RootModel):
     root: Annotated[
-        Union[FeedbackWithoutMisunderstanding, FeedbackWithMisunderstanding],
+        Union[FeedbackOk, FeedbackNeedsImprovement],
         Field(discriminator="confused"),
     ]
 
 
 class FeedbackAnalysisUnclear(BaseModel):
-    clear: Literal[False] = False
+    needs_improvement: Literal[True] = True
     misunderstanding: bool
 
 
 class FeedbackAnalysisClear(BaseModel):
-    clear: Literal[True] = True
+    needs_improvement: Literal[False] = False
 
 
 class FeedbackAnalysis(RootModel):
     root: Annotated[
         Union[FeedbackAnalysisUnclear, FeedbackAnalysisClear],
-        Field(discriminator="clear"),
+        Field(discriminator="needs_improvement"),
     ]
 
 
-async def _analyze_messages_for_misunderstanding(conversation: ConversationData):
+async def _analyze_messages_for_misunderstanding(
+    conversation: ConversationData, feedback: FeedbackFlowState
+):
     user, subject = conversation.info.user, conversation.info.subject
     system_prompt = (
         "You are a social skills coach. Your task is to identify whether the "
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        "autistic individual, contains any potential misunderstandings. The "
-        "conversation is happening over text. Analyze the messages and determine if "
-        f"there are any instances where {user.name} could have used clearer language "
-        "or provided more context to avoid confusion. Then determine whether these "
-        f"instances led to a misunderstanding by {subject.name}. Begin with analysis "
-        "in a <analysis> tag, then provide a JSON object with the key 'clear' "
-        "containing a boolean value indicating whether there were any unclear messages "
-        "in the conversation. If there were unclear messages, also include the key "
-        "'misunderstanding' with a boolean value indicating whether the unclear "
-        "messages led to a misunderstanding."
+        "autistic individual, needs improvement and contains any misunderstandings. "
+        f"The conversation is happening over text.\n{feedback.prompt_analysis}\nBegin "
+        "with analysis in a <analysis> tag, then provide a JSON object with the key "
+        "'needs_improvement' containing a boolean value indicating whether the "
+        f"messages sent by {user.name} need improvement. If the messages need "
+        "improvement, also include the key 'misunderstanding' with a boolean value "
+        "indicating whether the offending messages led to a misunderstanding by "
+        f"{subject.name}."
     )
 
     prompt_data = conversation.messages[
@@ -419,20 +457,19 @@ async def _analyze_messages_for_misunderstanding(conversation: ConversationData)
     return response
 
 
-async def _generate_feedback_clear(conversation: ConversationData):
+async def _generate_feedback_ok(
+    conversation: ConversationData, feedback: FeedbackFlowState
+):
     user, subject = conversation.info.user, conversation.info.subject
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
         f"autistic individual. {user.name} has been considerate and clear in their "
-        "communication. The conversation is happening over text. Point out the areas "
-        f"where {user.name} excelled in their communication, keeping in mind that "
-        f"{subject.name} is an autistic individual, so they may find certain types of "
-        "communication more challenging than others. Provide positive reinforcement "
-        "and encouragement for clear communication. Respond with a JSON object with "
-        "the key 'title' containing the title (less than 50 characters) of your "
-        "feedback and the key 'body' containing the feedback (less than 100 words)."
-        "Examples: \n"
+        "communication. The conversation is happening over text. \n"
+        f"{feedback.prompt_ok}\nProvide positive reinforcement and encouragement for "
+        "clear communication. Respond with a JSON object with the key 'title' "
+        "containing the title (less than 50 characters) of your feedback and the key "
+        "'body' containing the feedback (less than 100 words). Examples: \n"
         + Messages(
             root=[
                 Message(sender="Ben", message="I'm feeling great today!"),
@@ -442,7 +479,7 @@ async def _generate_feedback_clear(conversation: ConversationData):
             ]
         ).model_dump_json()
         + "\n"
-        + FeedbackWithoutMisunderstanding(
+        + FeedbackOk(
             title="Clear Communication",
             body=(
                 "Your message was clear and considerate. You successfully "
@@ -457,25 +494,25 @@ async def _generate_feedback_clear(conversation: ConversationData):
     ].model_dump_json()
 
     return await llm.generate_strict(
-        schema=FeedbackWithoutMisunderstanding,
+        schema=FeedbackOk,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
 
 
-async def _generate_feedback_unclear(conversation: ConversationData):
+async def _generate_feedback_needs_improvement(
+    conversation: ConversationData, feedback: FeedbackFlowState
+):
     user, subject = conversation.info.user, conversation.info.subject
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        f"autistic individual. The latest message from {user.name} was unclear and "
-        f"could have been misinterpreted by {subject.name}. The conversation is "
-        f"happening over text. Describe how {user.name} could have been more clear "
-        "in their communication to avoid confusion. Respond with a JSON object with "
-        "the key 'title' containing the title (less than 50 characters) of your "
-        "feedback and the key 'body' containing the feedback (less than 100 "
-        "words)."
+        f"autistic individual.\n{feedback.prompt_needs_improvement}\n The conversation "
+        f"is happening over text. Describe how {user.name} could have improved their "
+        "message to avoid confusion and misunderstanding. Respond with a JSON object "
+        "with the key 'title' containing the title (less than 50 characters) of your "
+        "feedback and the key 'body' containing the feedback (less than 100 words). "
         "Examples: \n"
         + Messages(
             root=[
@@ -487,7 +524,7 @@ async def _generate_feedback_unclear(conversation: ConversationData):
             ]
         ).model_dump_json()
         + "\n"
-        + FeedbackWithoutMisunderstanding(
+        + FeedbackOk(
             title="Avoid Figurative Language",
             body=(
                 "Your message relied on figurative language, which can be "
@@ -503,15 +540,16 @@ async def _generate_feedback_unclear(conversation: ConversationData):
     ].model_dump_json()
 
     return await llm.generate_strict(
-        schema=FeedbackWithoutMisunderstanding,
+        schema=FeedbackOk,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
 
 
-async def _generate_feedback_misunderstanding(conversation: ConversationData):
-
+async def _generate_feedback_misunderstanding(
+    conversation: ConversationData, feedback: FeedbackFlowState
+):
     class FeedbackMisunderstandingResponse(BaseModel):
         title: Annotated[str, StringConstraints(max_length=50)]
         body: Annotated[str, StringConstraints(max_length=300)]
@@ -523,13 +561,14 @@ async def _generate_feedback_misunderstanding(conversation: ConversationData):
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
         f"autistic individual. The latest message from {user.name} was unclear and "
         f"was misinterpreted by {subject.name}. The conversation is happening over "
-        f"text. Describe how {user.name} could have been more clear in their "
-        "communication to avoid confusion. Respond with a JSON object with the key "
-        "'title' containing the title (less than 50 characters) of your feedback, "
-        "the key 'body' containing the feedback (less than 100 words), and the "
-        f"key 'instructions' explaining what {user.name} could do to clarify the "
+        f"text.\n{feedback.prompt_misunderstanding}\n Respond with a JSON object with "
+        "the key 'title' containing the title (less than 50 characters) of your "
+        "feedback, the key 'body' containing the feedback (less than 100 words), and "
+        f"the key 'instructions' explaining what {user.name} could do to clarify the "
         f"situation. The 'instructions' should not be a message, but a string that "
         f"outlines what {user.name} should do to clarify the misunderstanding."
+        f"The instructions should tell {user.name} to apologize for their mistake and "
+        "clarify their message."
         "Examples: \n"
         + Messages(
             root=[
@@ -574,22 +613,28 @@ async def _generate_feedback_misunderstanding(conversation: ConversationData):
         extra=feedback_base.instructions,
     )
 
-    return FeedbackWithMisunderstanding(
+    return FeedbackNeedsImprovement(
         title=feedback_base.title,
         body=feedback_base.body,
         follow_up=follow_up,
     )
 
 
-async def _generate_feedback(conversation: ConversationData) -> Feedback:
-    analysis = await _analyze_messages_for_misunderstanding(conversation)
+async def _generate_feedback(
+    conversation: ConversationData, state_data: FeedbackFlowState
+) -> Feedback:
+    analysis = await _analyze_messages_for_misunderstanding(conversation, state_data)
 
     if isinstance(analysis.root, FeedbackAnalysisClear):
-        return Feedback(root=await _generate_feedback_clear(conversation))
+        return Feedback(root=await _generate_feedback_ok(conversation, state_data))
     elif not analysis.root.misunderstanding:
-        return Feedback(root=await _generate_feedback_unclear(conversation))
+        return Feedback(
+            root=await _generate_feedback_needs_improvement(conversation, state_data)
+        )
     else:
-        return Feedback(root=await _generate_feedback_misunderstanding(conversation))
+        return Feedback(
+            root=await _generate_feedback_misunderstanding(conversation, state_data)
+        )
 
 
 class NpMessageEvent(BaseModel):
@@ -620,6 +665,7 @@ _CONVERSATIONS: list[ConversationData] = []
 @dataclass
 class Conversation:
     id: str
+    level: int
     scenario: ConversationScenario
     subject_name: str
     messages: list[Message]
@@ -628,13 +674,14 @@ class Conversation:
     def from_data(data: ConversationData):
         return Conversation(
             id=data.id,
+            level=data.level,
             scenario=data.info.scenario,
             subject_name=data.info.subject.name,
             messages=data.messages,
         )
 
 
-async def create_conversation(user: Persona) -> Conversation:
+async def create_conversation(user: Persona, level: int) -> Conversation:
     conversation_info = await _create_conversation_info(user)
 
     id = len(_CONVERSATIONS)
@@ -642,9 +689,14 @@ async def create_conversation(user: Persona) -> Conversation:
     _CONVERSATIONS.append(
         ConversationData(
             id=str(id),
+            level=level,
             info=conversation_info,
             state=ConversationNormal(
-                state=FlowStateRef(root=NpFlowStateRef(id=NpFlowStateId.NORMAL))
+                state=(
+                    LEVELS[level].initial_np_state
+                    if conversation_info.is_user_initiated
+                    else LEVELS[level].initial_ap_state
+                )
             ),
             messages=[],
             last_feedback_received=0,
@@ -675,7 +727,9 @@ async def progress_conversation(
 
     assert isinstance(conversation.state, ConversationNormal)
 
-    state_data = get_flow_state(conversation.state.state).root
+    state_data = (
+        LEVELS[conversation.level].get_flow_state(conversation.state.state).root
+    )
 
     if isinstance(state_data, NpFlowState):
         options: list[MessageOption] = []
@@ -710,10 +764,10 @@ async def progress_conversation(
 
         return ApMessageEvent(content=response)
     elif isinstance(state_data, FeedbackFlowState):
-        response = await _generate_feedback(conversation)
+        response = await _generate_feedback(conversation, state_data)
         conversation.last_feedback_received = len(conversation.messages.root)
 
-        if isinstance(response.root, FeedbackWithMisunderstanding):
+        if isinstance(response.root, FeedbackNeedsImprovement):
             conversation.messages.root.append(
                 Message(
                     sender=conversation.info.user.name,
@@ -721,11 +775,9 @@ async def progress_conversation(
                 )
             )
             conversation.state = ConversationNormal(
-                state=FlowStateRef(root=ApFlowStateRef(id=ApFlowStateId.NORMAL))
+                state=state_data.next_needs_improvement
             )
         else:
-            conversation.state = ConversationNormal(
-                state=FlowStateRef(root=NpFlowStateRef(id=NpFlowStateId.NORMAL))
-            )
+            conversation.state = ConversationNormal(state=state_data.next_ok)
 
         return FeedbackEvent(content=response)

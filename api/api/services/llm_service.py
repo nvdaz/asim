@@ -45,6 +45,10 @@ async def _generate(
                 "message" in response_dict
                 and response_dict["message"] == "Internal server error"
             ):
+                logging.error(
+                    f"Could not invoke LLM generate: ISE. action: {action}. "
+                    f"response: {response}"
+                )
                 raise RuntimeError("Could not invoke LLM generate: ISE")
 
         return response_dict["result"]

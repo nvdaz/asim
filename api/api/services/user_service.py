@@ -174,6 +174,7 @@ async def _generate_user_persona(user_base: BasePersona):
     system_prompt = (
         "As a persona generator, your task is to generate a system prompt that will "
         "be used to make ChatGPT embody a persona based on the provided information. "
+        "You must include all user details and fill in gaps with logical assumptions. "
         "Respond with a JSON object containing the key 'persona' and the system prompt "
         f"as the value. Start with 'You are {user_base.name}...'"
     )
