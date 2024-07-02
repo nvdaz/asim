@@ -6,7 +6,7 @@ from typing_extensions import Annotated
 from api.schemas.conversation import ConversationData, Message, Messages
 
 from . import llm_service as llm
-from .conversation_generation import generate_message
+from .message_handling import generate_message
 from .flow_state.base import FeedbackFlowState
 
 
