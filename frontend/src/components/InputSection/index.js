@@ -62,6 +62,116 @@ const Input = ({
     return next;
   };
 
+  const withFeedback = async (nextFetched, oldHistory, selectionResultContent) => {
+    // feedback would always not have follow_up
+    if (nextFetched.type === "np") {
+      console.log("helper 1");
+      setOptions(Object.assign({}, nextFetched.data.options));
+      setShowChoicesSection(true);
+      return [
+        ...oldHistory,
+        {
+          type: "feedback",
+          content: {
+            body: selectionResultContent.body,
+            title: selectionResultContent.title,
+          },
+        },
+      ];
+    }
+    // type = ap, feedback might have follow_up
+    else {
+      console.log("helper 2");
+      if (!nextFetched.content?.follow_up) {
+        const nextFetchedContent2 = await fetchData();
+        setOptions(Object.assign({}, nextFetchedContent2.data.options));
+        setShowChoicesSection(true);
+      }
+      return [
+        ...oldHistory,
+        {
+          type: "text",
+          isSentByUser: false,
+          content: selectionResultContent,
+        },
+        {
+          type: "feedback",
+          content: {
+            body: nextFetched.content.body,
+            choice: nextFetched.content.follow_up,
+            title: nextFetched.content.title,
+          },
+        },
+      ];
+    }
+  };
+
+  const returnNewHistory = async (
+    oldHistory,
+    selectionResultType,
+    selectionResultContent,
+  ) => {
+    if (selectionResultType === "feedback") {
+      if (selectionResultContent?.follow_up) {
+        console.log("1", selectionResultContent);
+        return [
+          ...oldHistory,
+          {
+            type: "feedback",
+            content: {
+              body: selectionResultContent.body,
+              choice: selectionResultContent.follow_up,
+              title: selectionResultContent.title,
+            },
+          },
+        ];
+      }
+    }
+
+    const nextFetched = await fetchData();
+
+    // if the first call fetched feedback with no follow up
+    if (selectionResultType === "feedback") {
+      return await withFeedback(
+        nextFetched.data,
+        oldHistory,
+        selectionResultContent
+      );
+    }
+
+    if (selectionResultType === "ap") {
+      if (nextFetched.data.type === "feedback") {
+        return await withFeedback(
+          nextFetched.data,
+          oldHistory,
+          selectionResultContent
+        );
+      } else if (nextFetched.data.type === "np") {
+        setOptions(Object.assign({}, nextFetched.data.options));
+        setShowChoicesSection(true);
+        console.log("2", selectionResultType);
+        return [
+          ...oldHistory,
+          {
+            type: "text",
+            isSentByUser: false,
+            content: selectionResultContent,
+          },
+        ];
+      }
+    }
+
+    return [];
+  };
+
+  const resetStates = () => {
+    setShowChoicesSection(false);
+    setChoice("");
+    setSelectedButton(null);
+    setSelectedOption(null);
+    setShowProgress(true);
+  }
+
   const handleSend = async () => {
     const oldHistoryWithIndicator = [
       ...chatHistory,
@@ -85,70 +195,30 @@ const Input = ({
       },
     ];
 
-    setShowChoicesSection(false);
-    setChoice("");
-    setSelectedButton(null);
-    setSelectedOption(null);
-    setShowProgress(true);
+    resetStates();
 
     setTimeout(async () => {
       setShowProgress(false);
-      setChatHistory(oldHistoryWithIndicator);
+      setChatHistory(oldHistory);
 
-      const reply = await fetchData();
-
-      if (!reply) {
+      const selectionResult = await fetchData();
+      if (!selectionResult.ok) {
         console.log("error");
         return;
       }
+      const selectionResultType = selectionResult.data.type;
 
-      const respondedContent = reply?.content;
-      const nextFetchedContent = await fetchData();
-      let feedbackContent = "";
-
-      if (nextFetchedContent.type === "feedback") {
-        feedbackContent = nextFetchedContent.content;
-        if (!nextFetchedContent.content["follow_up"]) {
-          const nextFetchedContent2 = await fetchData();
-          setOptions(Object.assign({}, nextFetchedContent2.options));
-          setShowChoicesSection(true);
-        }
-      } else if (nextFetchedContent.type === "np") {
-        setShowChoicesSection(true);
-        setOptions(Object.assign({}, nextFetchedContent.options));
+      if (selectionResultType !== 'feedback') {
+        setChatHistory(oldHistoryWithIndicator);
       }
 
-      let newHistory;
-
-      if (feedbackContent !== "") {
-        newHistory = [
-          ...oldHistory,
-          {
-            type: "text",
-            isSentByUser: false,
-            content: respondedContent,
-          },
-          {
-            type: "feedback",
-            content: {
-              body: feedbackContent.body,
-              choice: feedbackContent["follow_up"],
-              title: feedbackContent.title,
-            },
-          },
-        ];
-      } else {
-        newHistory = [
-          ...oldHistory,
-          {
-            type: "text",
-            isSentByUser: false,
-            content: respondedContent,
-          },
-        ];
-      }
-
-      setChatHistory(newHistory);
+      setChatHistory(
+        await returnNewHistory(
+          oldHistory,
+          selectionResultType,
+          selectionResult.data?.content
+        )
+      );
     }, 1500);
   };
 

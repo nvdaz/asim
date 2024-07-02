@@ -16,22 +16,49 @@ const Lesson = () => {
   const [nextConversation, setNextConversation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertMessage, setAlertMessage] = useState("");
+  const currentLevel = window.location.href.split("/")[4] - 1;
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const res = await Post("conversations/");
-        setData(res);
-        const next = await Post(`conversations/${res.id}/next`);
-        setNextConversation(next);
-        setLoading(false);
-      } catch (error) {
-        setAlertMessage(error.message);
+      if (typeof currentLevel !== "number") {
+        setAlertMessage("Wrong url parameter");
       }
+      const initConversation = await Post("conversations/", {
+        level: currentLevel,
+      });
+      if (!initConversation.ok) {
+        setAlertMessage("Error occurred fetching data");
+        return;
+      }
+      setData(initConversation.data);
+      
+      const next = await Post(`conversations/${initConversation.data.id}/next`);
+      if (!next.ok) {
+        setAlertMessage("Error occurred fetching data");
+        return;
+      }
+
+      if (!initConversation.data.scenario.is_user_initiated) {
+        const userOptions = await Post(
+          `conversations/${initConversation.data.id}/next`
+        );
+        if (!userOptions.ok) {
+          setAlertMessage("Error occurred fetching data");
+          return;
+        }
+
+        setNextConversation({
+          options: userOptions.data.options,
+          ap_message: next.data.content,
+        });
+      } else {
+        setNextConversation(next.data);
+      }
+      setLoading(false);
     };
 
     fetchData();
-  }, []);
+  }, [currentLevel]);
 
   const header = useCallback((node) => {
     if (node !== null) {
@@ -93,6 +120,8 @@ const Lesson = () => {
             initData={{
               id: data.id,
               options: nextConversation.options,
+              is_user_initiated: data.scenario.is_user_initiated,
+              ap_message: nextConversation?.content,
             }}
           />
         </div>

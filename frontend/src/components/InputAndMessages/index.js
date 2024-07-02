@@ -4,7 +4,17 @@ import Messages from "../messages/index.js";
 import LinearProgress from "@mui/material/LinearProgress";
 
 const InputAndMessages = ({ headerHeight, initData }) => {
-  const [chatHistory, setChatHistory] = useState([]);
+  const [chatHistory, setChatHistory] = useState(
+    initData.is_user_initiated
+      ? []
+      : [
+          {
+            type: "text",
+            isSentByUser: false,
+            content: initData.ap_message,
+          },
+        ]
+  );
   const [choice, setChoice] = useState("");
   const [selectedButton, setSelectedButton] = useState(null);
   const [showProgress, setShowProgress] = useState(false);
