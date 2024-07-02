@@ -121,7 +121,7 @@ FLOW_STATES = [
                 "patient and understanding."
             ),
             next_needs_improvement=ApFlowStateId.NORMAL.as_ref(),
-            next_ok=NpFlowStateId.NORMAL.as_ref(),
+            next_ok=ApFlowStateId.NORMAL.as_ref(),
         )
     ),
 ]

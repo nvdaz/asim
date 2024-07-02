@@ -19,6 +19,7 @@ class ConversationScenario(BaseModel):
     user_scenario: str
     subject_scenario: str
     user_goal: str
+    is_user_initiated: bool
 
 
 async def _generate_conversation_scenario(
@@ -32,12 +33,14 @@ async def _generate_conversation_scenario(
         "scenario should be realistic and relatable. Respond with a JSON object. The "
         f"'user_scenario' key should be a string describing {user.name}'s perspective "
         "in the scenario (begin with 'You...'), the 'subject_scenario' key should be a "
-        "string describing the subject's perspective (begin with 'You...'), and the "
+        "string describing the subject's perspective (begin with 'You...'), the "
         f"'user_goal' key should be a string describing {user.name}'s objective in the "
-        "scenario (begin with a verb, e.g., 'Convince', 'Explain', 'Find out'). Do not "
-        "generate scenarios that involve significant external elements, such as "
-        "finding a bug in a software program (it is not possible to send the code)."
-        "Examples:\n"
+        "scenario (begin with a verb, e.g., 'Convince', 'Explain', 'Find out'), and "
+        "the 'is_user_initiated' key should be a boolean that is true if the "
+        f"conversation is initiated by {user.name} and false if initiated by "
+        f"{subject_name}. Do not generate scenarios that involve significant external "
+        "elements, such as finding a bug in a software program (it is not possible to "
+        "send the code). Examples:\n"
         "\n".join(
             [
                 ex.model_dump_json()
@@ -45,30 +48,34 @@ async def _generate_conversation_scenario(
                     ConversationScenario(
                         user_scenario=(
                             "You are texting with an unfamiliar person named Phil on a "
-                            "messaging app. You met Phil through a mutual friend, who "
-                            "suggests that you connect because you both love "
-                            "theoretical physics. You try to get to know Phil better "
-                            "and discuss your favorite physicists, theories, and "
-                            "upcoming physics events."
+                            "messaging app. Phil received your number from a mutual "
+                            "friend who mentioned that you both love theoretical "
+                            "physics. You try to get to know Phil better and discuss "
+                            "your favorite physicists, theories, and upcoming physics "
+                            "events."
                         ),
                         subject_scenario=(
-                            "You are texting with Ben, who you met through a mutual "
-                            "friend. Your friend mentioned that Ben is interested in "
-                            "theoretical physics, just like you. You are interested in "
-                            "discussing physics with Ben."
+                            "You are texting with Ben, who you reached out to after "
+                            "receiving their number from a mutual friend. Ben is "
+                            "interested in discussing theoretical physics, just like "
+                            "you. You want to get to know Ben better and discuss your "
+                            "favorite physicists, theories, and upcoming physics "
+                            "events."
                         ),
                         user_goal=(
                             "Discuss theoretical physics with Phil and learn more "
                             "about their favorite physicists and theories."
                         ),
+                        is_user_initiated=False,
                     ),
                     ConversationScenario(
                         user_scenario=(
                             "You just started a new job at a pharmaceutical company "
-                            "and met a colleague named Jake. You start texting with "
-                            "Jake to get to know him better. You ask Jake about his "
-                            "role in the company, his experience, and his interests "
-                            "outside of work."
+                            "and met a colleague named Jake. You asked Jake for his "
+                            "number to discuss work and get to know him better. You "
+                            "start texting with Jake to learn more about his role in "
+                            "the company, his experience, and his interests outside "
+                            "of work."
                         ),
                         subject_scenario=(
                             "You gave your number to a new colleague named Christina, "
@@ -80,6 +87,7 @@ async def _generate_conversation_scenario(
                             "Learn more about Jake's role in the company and his "
                             "interests to build a friendly working relationship."
                         ),
+                        is_user_initiated=True,
                     ),
                     ConversationScenario(
                         user_scenario=(
@@ -97,6 +105,7 @@ async def _generate_conversation_scenario(
                             "Discuss photography with Avery and learn more about their "
                             "favorite subjects and tips."
                         ),
+                        is_user_initiated=False,
                     ),
                     ConversationScenario(
                         user_scenario=(
@@ -115,6 +124,7 @@ async def _generate_conversation_scenario(
                             "Learn more about the community and build a friendly "
                             "relationship with Jordan."
                         ),
+                        is_user_initiated=True,
                     ),
                     ConversationScenario(
                         user_scenario=(
@@ -126,13 +136,15 @@ async def _generate_conversation_scenario(
                         ),
                         subject_scenario=(
                             "You are texting with a classmate named Belle. "
-                            "Belle recently joined the course and is interested in "
-                            "getting to know you better."
+                            "Belle recently joined the course and asked for your "
+                            "number to discuss the course and potential projects."
+                            "You are interested in collaborating with Belle."
                         ),
                         user_goal=(
                             "Learn more about Morgan's background and explore "
                             "possible collaboration on projects."
                         ),
+                        is_user_initiated=True,
                     ),
                     ConversationScenario(
                         user_scenario=(
@@ -145,14 +157,16 @@ async def _generate_conversation_scenario(
                         ),
                         subject_scenario=(
                             "You are texting with a fellow conference attendee named "
-                            "Eden. Eden is interested in discussing topological "
-                            "algebra and category theory with you."
+                            "Eden. You gave Eden your number to discuss topological "
+                            "algebra and category theory after meeting at the "
+                            "conference and learning about their interests."
                         ),
                         user_goal=(
                             "Discuss topological algebra and category theory with "
                             "Riley and learn more about their research and interests "
                             "to build a professional connection."
                         ),
+                        is_user_initiated=False,
                     ),
                     ConversationScenario(
                         user_scenario=(
@@ -171,6 +185,7 @@ async def _generate_conversation_scenario(
                             "Discuss hiking with Finn and learn more about their "
                             "experiences and advice."
                         ),
+                        is_user_initiated=True,
                     ),
                 ]
             ]
@@ -259,57 +274,21 @@ async def _generate_subject_persona(scenario):
     return subject_persona
 
 
-async def _is_scenario_user_initiated(
-    scenario: ConversationScenario, user_name: str, subject_name: str
-):
-    system_prompt = (
-        "You are a social skills coach. Your task is to determine the initiator of the "
-        "conversation scenario. The scenario involves a conversation between "
-        f"{user_name} and {subject_name} over text messaging. You are given the "
-        f"scenario from the perspective of {user_name}. Analyze the scenario and "
-        "determine who initiated the conversation. Respond with a JSON object "
-        f"containing the key 'initiator' and the value '{user_name}' or "
-        f"'{subject_name}', indicating who initiated the conversation."
-    )
-
-    def validate_initiator(v):
-        if v not in [user_name, subject_name]:
-            raise ValueError(f"Initiator must be {user_name} or {subject_name}")
-        return v
-
-    class InitiatorResponse(BaseModel):
-        initiator: Annotated[str, AfterValidator(validate_initiator)]
-
-    res = await llm.generate_strict(
-        schema=InitiatorResponse,
-        model=llm.MODEL_GPT_4,
-        system=system_prompt,
-        prompt=scenario.user_scenario,
-    )
-
-    return res.initiator == user_name
-
-
 @dataclass
 class ConversationInfo:
     scenario: ConversationScenario
     user: Persona
     subject: Persona
-    is_user_initiated: bool
 
 
 async def _create_conversation_info(user: Persona):
     scenario = await _generate_conversation_scenario(user, "Alex")
     subject_persona = await _generate_subject_persona(scenario.subject_scenario)
-    is_user_initiated = await _is_scenario_user_initiated(
-        scenario, user.name, subject_persona.name
-    )
 
     return ConversationInfo(
         scenario=scenario,
         user=user,
         subject=subject_persona,
-        is_user_initiated=is_user_initiated,
     )
 
 
@@ -694,7 +673,7 @@ async def create_conversation(user: Persona, level: int) -> Conversation:
             state=ConversationNormal(
                 state=(
                     LEVELS[level].initial_np_state
-                    if conversation_info.is_user_initiated
+                    if conversation_info.scenario.is_user_initiated
                     else LEVELS[level].initial_ap_state
                 )
             ),
