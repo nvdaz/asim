@@ -2,24 +2,28 @@ import random
 from dataclasses import dataclass
 from typing import Literal, Union
 
-from pydantic import AfterValidator, BaseModel, Field, RootModel, StringConstraints
+from pydantic import AfterValidator, BaseModel, Field, RootModel
 from typing_extensions import Annotated
 
+from api.schemas.conversation import (
+    ConversationData,
+    ConversationInfo,
+    ConversationNormal,
+    ConversationScenario,
+    ConversationWaiting,
+    Message,
+    MessageOption,
+)
 from api.schemas.persona import BasePersona, Persona
 
 from . import llm_service as llm
-from .flow_state.base import ApFlowState, FeedbackFlowState, FlowStateRef, NpFlowState
+from .conversation_generation import generate_message
+from .feedback_generation import Feedback, generate_feedback
+from .flow_state.base import ApFlowState, FeedbackFlowState, NpFlowState
 from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL
 from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL
 
 LEVELS = [FIGURATIVE_LANGUAGE_LEVEL, BLUNT_LANGUAGE_LEVEL]
-
-
-class ConversationScenario(BaseModel):
-    user_scenario: str
-    subject_scenario: str
-    user_goal: str
-    is_user_initiated: bool
 
 
 async def _generate_conversation_scenario(
@@ -274,13 +278,6 @@ async def _generate_subject_persona(scenario):
     return subject_persona
 
 
-@dataclass
-class ConversationInfo:
-    scenario: ConversationScenario
-    user: Persona
-    subject: Persona
-
-
 async def _create_conversation_info(user: Persona):
     scenario = await _generate_conversation_scenario(user, "Alex")
     subject_persona = await _generate_subject_persona(scenario.subject_scenario)
@@ -290,330 +287,6 @@ async def _create_conversation_info(user: Persona):
         user=user,
         subject=subject_persona,
     )
-
-
-class Message(BaseModel):
-    sender: str
-    message: str
-
-
-class Messages(RootModel):
-    root: list[Message]
-
-    def __getitem__(self, index: Union[int, slice]):
-        if isinstance(index, slice):
-            return Messages(root=self.root[index])
-        else:
-            return self.root[index]
-
-
-async def _generate_message(
-    persona: Persona, scenario: str, messages: Messages, extra=""
-) -> str:
-    def validate_sender(v):
-        if v != persona.name:
-            raise ValueError(f"Sender must be {persona.name}")
-        return v
-
-    class MessageResponse(BaseModel):
-        message: str
-        sender: Annotated[str, AfterValidator(validate_sender)]
-
-    instr = f"Instructions: {extra}" if extra else ""
-
-    system_prompt = (
-        f"{persona.description}\nScenario: {scenario}\n{instr}\nYou are chatting over "
-        "text. Keep your messages under 50 words and appropriate for a text "
-        "conversation. Keep the conversation going. Return a JSON object with the key "
-        "'message' and your message as the value and the key 'sender' with "
-        f"'{persona.name}' as the value. Respond ONLY with your next message. Do not "
-        "include the previous messages in your response."
-    )
-
-    prompt_data = messages.model_dump_json()
-
-    response = await llm.generate_strict(
-        schema=MessageResponse,
-        model=llm.MODEL_GPT_4,
-        system=system_prompt,
-        prompt=prompt_data,
-    )
-
-    return response.message
-
-
-class MessageOption(BaseModel):
-    response: str
-    next: FlowStateRef
-
-
-class ConversationWaiting(BaseModel):
-    waiting: Literal[True] = True
-    options: list[MessageOption]
-
-
-class ConversationNormal(BaseModel):
-    waiting: Literal[False] = False
-    state: FlowStateRef
-
-
-class ConversationData(BaseModel):
-    id: str
-    level: int
-    info: ConversationInfo
-    state: Annotated[
-        Union[ConversationWaiting, ConversationNormal],
-        Field(discriminator="waiting"),
-    ]
-    messages: Messages
-    last_feedback_received: int
-
-
-class FeedbackOk(BaseModel):
-    title: Annotated[str, StringConstraints(max_length=50)]
-    body: Annotated[str, StringConstraints(max_length=300)]
-    confused: Literal[False] = False
-
-
-class FeedbackNeedsImprovement(BaseModel):
-    title: Annotated[str, StringConstraints(max_length=50)]
-    body: Annotated[str, StringConstraints(max_length=300)]
-    confused: Literal[True] = True
-    follow_up: str
-
-
-class Feedback(RootModel):
-    root: Annotated[
-        Union[FeedbackOk, FeedbackNeedsImprovement],
-        Field(discriminator="confused"),
-    ]
-
-
-class FeedbackAnalysisUnclear(BaseModel):
-    needs_improvement: Literal[True] = True
-    misunderstanding: bool
-
-
-class FeedbackAnalysisClear(BaseModel):
-    needs_improvement: Literal[False] = False
-
-
-class FeedbackAnalysis(RootModel):
-    root: Annotated[
-        Union[FeedbackAnalysisUnclear, FeedbackAnalysisClear],
-        Field(discriminator="needs_improvement"),
-    ]
-
-
-async def _analyze_messages_for_misunderstanding(
-    conversation: ConversationData, feedback: FeedbackFlowState
-):
-    user, subject = conversation.info.user, conversation.info.subject
-    system_prompt = (
-        "You are a social skills coach. Your task is to identify whether the "
-        f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        "autistic individual, needs improvement and contains any misunderstandings. "
-        f"The conversation is happening over text.\n{feedback.prompt_analysis}\nBegin "
-        "with analysis in a <analysis> tag, then provide a JSON object with the key "
-        "'needs_improvement' containing a boolean value indicating whether the "
-        f"messages sent by {user.name} need improvement. If the messages need "
-        "improvement, also include the key 'misunderstanding' with a boolean value "
-        "indicating whether the offending messages led to a misunderstanding by "
-        f"{subject.name}."
-    )
-
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
-
-    response = await llm.generate_strict(
-        schema=FeedbackAnalysis,
-        model=llm.MODEL_GPT_4,
-        system=system_prompt,
-        prompt=prompt_data,
-    )
-
-    return response
-
-
-async def _generate_feedback_ok(
-    conversation: ConversationData, feedback: FeedbackFlowState
-):
-    user, subject = conversation.info.user, conversation.info.subject
-    system_prompt = (
-        "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        f"autistic individual. {user.name} has been considerate and clear in their "
-        "communication. The conversation is happening over text. \n"
-        f"{feedback.prompt_ok}\nProvide positive reinforcement and encouragement for "
-        "clear communication. Respond with a JSON object with the key 'title' "
-        "containing the title (less than 50 characters) of your feedback and the key "
-        "'body' containing the feedback (less than 100 words). Examples: \n"
-        + Messages(
-            root=[
-                Message(sender="Ben", message="I'm feeling great today!"),
-                Message(
-                    sender="Chris", message="That's awesome! I'm glad to hear that!"
-                ),
-            ]
-        ).model_dump_json()
-        + "\n"
-        + FeedbackOk(
-            title="Clear Communication",
-            body=(
-                "Your message was clear and considerate. You successfully "
-                "communicated your feelings without relying on unclear language. "
-                "Keep up the good work!"
-            ),
-        ).model_dump_json()
-    )
-
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
-
-    return await llm.generate_strict(
-        schema=FeedbackOk,
-        model=llm.MODEL_GPT_4,
-        system=system_prompt,
-        prompt=prompt_data,
-    )
-
-
-async def _generate_feedback_needs_improvement(
-    conversation: ConversationData, feedback: FeedbackFlowState
-):
-    user, subject = conversation.info.user, conversation.info.subject
-    system_prompt = (
-        "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        f"autistic individual.\n{feedback.prompt_needs_improvement}\n The conversation "
-        f"is happening over text. Describe how {user.name} could have improved their "
-        "message to avoid confusion and misunderstanding. Respond with a JSON object "
-        "with the key 'title' containing the title (less than 50 characters) of your "
-        "feedback and the key 'body' containing the feedback (less than 100 words). "
-        "Examples: \n"
-        + Messages(
-            root=[
-                Message(sender="Ben", message="I feel like a million bucks today!"),
-                Message(
-                    sender="Chris",
-                    message="You must have had a great day! That's awesome!",
-                ),
-            ]
-        ).model_dump_json()
-        + "\n"
-        + FeedbackOk(
-            title="Avoid Figurative Language",
-            body=(
-                "Your message relied on figurative language, which can be "
-                "misinterpreted by autistic individuals. In this case, your message "
-                "could be misinterpreted as a literal statement. Consider using more "
-                "direct language to avoid confusion."
-            ),
-        ).model_dump_json()
-    )
-
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
-
-    return await llm.generate_strict(
-        schema=FeedbackOk,
-        model=llm.MODEL_GPT_4,
-        system=system_prompt,
-        prompt=prompt_data,
-    )
-
-
-async def _generate_feedback_misunderstanding(
-    conversation: ConversationData, feedback: FeedbackFlowState
-):
-    class FeedbackMisunderstandingResponse(BaseModel):
-        title: Annotated[str, StringConstraints(max_length=50)]
-        body: Annotated[str, StringConstraints(max_length=300)]
-        instructions: str
-
-    user, subject = conversation.info.user, conversation.info.subject
-    system_prompt = (
-        "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        f"autistic individual. The latest message from {user.name} was unclear and "
-        f"was misinterpreted by {subject.name}. The conversation is happening over "
-        f"text.\n{feedback.prompt_misunderstanding}\n Respond with a JSON object with "
-        "the key 'title' containing the title (less than 50 characters) of your "
-        "feedback, the key 'body' containing the feedback (less than 100 words), and "
-        f"the key 'instructions' explaining what {user.name} could do to clarify the "
-        f"situation. The 'instructions' should not be a message, but a string that "
-        f"outlines what {user.name} should do to clarify the misunderstanding."
-        f"The instructions should tell {user.name} to apologize for their mistake and "
-        "clarify their message."
-        "Examples: \n"
-        + Messages(
-            root=[
-                Message(sender="Ben", message="I feel like a million bucks today!"),
-                Message(
-                    sender="Chris",
-                    message="Did you just win the lottery? That's great!",
-                ),
-            ]
-        ).model_dump_json()
-        + "\n"
-        + FeedbackMisunderstandingResponse(
-            title="Avoid Figurative Language",
-            body=(
-                "Your message relied on figurative language, which can be "
-                "misinterpreted by autistic individuals. Consider using more "
-                "direct language to avoid confusion."
-            ),
-            instructions=(
-                "Your next message should clarify that you're not actually a "
-                "millionaire, but you're feeling really good today. Be direct "
-                "and avoid figurative language."
-            ),
-        ).model_dump_json()
-    )
-
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
-
-    feedback_base = await llm.generate_strict(
-        schema=FeedbackMisunderstandingResponse,
-        model=llm.MODEL_GPT_4,
-        system=system_prompt,
-        prompt=prompt_data,
-    )
-
-    follow_up = await _generate_message(
-        user,
-        conversation.info.scenario.user_scenario,
-        conversation.messages,
-        extra=feedback_base.instructions,
-    )
-
-    return FeedbackNeedsImprovement(
-        title=feedback_base.title,
-        body=feedback_base.body,
-        follow_up=follow_up,
-    )
-
-
-async def _generate_feedback(
-    conversation: ConversationData, state_data: FeedbackFlowState
-) -> Feedback:
-    analysis = await _analyze_messages_for_misunderstanding(conversation, state_data)
-
-    if isinstance(analysis.root, FeedbackAnalysisClear):
-        return Feedback(root=await _generate_feedback_ok(conversation, state_data))
-    elif not analysis.root.misunderstanding:
-        return Feedback(
-            root=await _generate_feedback_needs_improvement(conversation, state_data)
-        )
-    else:
-        return Feedback(
-            root=await _generate_feedback_misunderstanding(conversation, state_data)
-        )
 
 
 class NpMessageEvent(BaseModel):
@@ -713,7 +386,7 @@ async def progress_conversation(
     if isinstance(state_data, NpFlowState):
         options: list[MessageOption] = []
         for opt in state_data.options:
-            response = await _generate_message(
+            response = await generate_message(
                 conversation.info.user,
                 conversation.info.scenario.user_scenario,
                 conversation.messages,
@@ -729,7 +402,7 @@ async def progress_conversation(
     elif isinstance(state_data, ApFlowState):
         opt = random.choice(state_data.options)
 
-        response = await _generate_message(
+        response = await generate_message(
             conversation.info.subject,
             conversation.info.scenario.subject_scenario,
             conversation.messages,
@@ -743,14 +416,14 @@ async def progress_conversation(
 
         return ApMessageEvent(content=response)
     elif isinstance(state_data, FeedbackFlowState):
-        response = await _generate_feedback(conversation, state_data)
+        response = await generate_feedback(conversation, state_data)
         conversation.last_feedback_received = len(conversation.messages.root)
 
-        if isinstance(response.root, FeedbackNeedsImprovement):
+        if response.follow_up is not None:
             conversation.messages.root.append(
                 Message(
                     sender=conversation.info.user.name,
-                    message=response.root.follow_up,
+                    message=response.follow_up,
                 )
             )
             conversation.state = ConversationNormal(

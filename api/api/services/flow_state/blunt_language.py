@@ -101,8 +101,9 @@ FLOW_STATES = [
         root=FeedbackFlowState(
             id=FeedbackFlowStateId.NORMAL,
             prompt_analysis=(
-                "The conversation needs improvement if the blunt message is "
-                "misunderstood and interpreted as confrontational."
+                "The conversation needs improvement if there are instances "
+                "where the user is confrontational or negative in response to a "
+                "blunt message."
             ),
             prompt_ok=(
                 "Point out any areas where the user avoided confrontational language "
