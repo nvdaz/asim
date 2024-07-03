@@ -136,12 +136,12 @@ async def _generate_feedback_with_follow_up(
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        f"autistic individual. The latest message from {user.name} was unclear and "
-        f"was misinterpreted by {subject.name}. The conversation is happening over "
-        f"text.\n{feedback.prompt_misunderstanding}\n Respond with a JSON object with "
-        "the key 'title' containing the title (less than 50 characters) of your "
-        "feedback, the key 'body' containing the feedback (less than 100 words), and "
-        f"the key 'instructions' explaining what {user.name} could do to clarify the "
+        f"autistic individual. The conversation is happening over text."
+        f"\n{feedback.prompt_misunderstanding}\nUse second person pronouns to "
+        f"address {user.name} directly. Respond with a JSON object with the key "
+        "'title' containing the title (less than 50 characters) of your feedback, the "
+        "key 'body' containing the feedback (less than 100 words), and the key "
+        f"'instructions' explaining what {user.name} could do to clarify the "
         f"situation. The 'instructions' should not be a message, but a string that "
         f"outlines what {user.name} should do to clarify the misunderstanding."
         f"The instructions should tell {user.name} to apologize for their mistake and "
@@ -204,12 +204,11 @@ async def _generate_feedback_needs_improvement(
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        f"autistic individual.\n{feedback.prompt_needs_improvement}\n The conversation "
-        f"is happening over text. Describe how {user.name} could have improved their "
-        "message to avoid confusion and misunderstanding. Respond with a JSON object "
-        "with the key 'title' containing the title (less than 50 characters) of your "
-        "feedback and the key 'body' containing the feedback (less than 100 words). "
-        "Examples: \n"
+        "autistic individual. The conversation is happening over text.\n"
+        f"{feedback.prompt_needs_improvement}\n Use second person pronouns to address "
+        f"{user.name} directly. Respond with a JSON object with the key 'title' "
+        "containing the title (less than 50 characters) of your feedback and the key "
+        "'body' containing the feedback (less than 100 words). Examples:\n"
         + Messages(
             root=[
                 Message(sender="Ben", message="I feel like a million bucks today!"),
@@ -250,12 +249,12 @@ async def _generate_feedback_ok(
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
-        f"autistic individual. {user.name} has been considerate and clear in their "
-        "communication. The conversation is happening over text. \n"
+        f"autistic individual. The conversation is happening over text.\n"
         f"{feedback.prompt_ok}\nProvide positive reinforcement and encouragement for "
-        "clear communication. Respond with a JSON object with the key 'title' "
-        "containing the title (less than 50 characters) of your feedback and the key "
-        "'body' containing the feedback (less than 100 words). Examples: \n"
+        f"clear communication. Use second person pronouns to address {user.name} "
+        "directly. Respond with a JSON object with the key 'title' containing the "
+        "title (less than 50 characters) of your feedback and the key 'body' "
+        "containing the feedback (less than 100 words). Examples:\n"
         + Messages(
             root=[
                 Message(sender="Ben", message="I'm feeling great today!"),
