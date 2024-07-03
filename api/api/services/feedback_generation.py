@@ -7,7 +7,7 @@ from api.schemas.conversation import ConversationData, Message, Messages
 
 from . import llm
 from .flow_state.base import FeedbackFlowState
-from .message_handling import generate_message
+from .message_generation import generate_message
 
 
 class BaseFeedbackAnalysisNeedsImprovement(BaseModel):

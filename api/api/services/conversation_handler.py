@@ -1,3 +1,4 @@
+import asyncio
 import random
 from dataclasses import dataclass
 from typing import Literal, Union
@@ -20,7 +21,7 @@ from .feedback_generation import Feedback, generate_feedback
 from .flow_state.base import ApFlowState, FeedbackFlowState, NpFlowState
 from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL
 from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL
-from .message_handling import generate_message
+from .message_generation import generate_message
 
 LEVELS = [FIGURATIVE_LANGUAGE_LEVEL, BLUNT_LANGUAGE_LEVEL]
 
@@ -120,16 +121,25 @@ async def progress_conversation(
     )
 
     if isinstance(state_data, NpFlowState):
-        options: list[MessageOption] = []
-        for opt in state_data.options:
-            response = await generate_message(
-                conversation.info.user,
-                conversation.info.scenario.user_scenario,
-                conversation.messages,
-                opt.prompt,
-            )
+        responses = await asyncio.gather(
+            *[
+                generate_message(
+                    conversation.info.user,
+                    conversation.info.scenario.user_scenario,
+                    conversation.messages,
+                    opt.prompt,
+                )
+                for opt in state_data.options
+            ]
+        )
 
-            options.append(MessageOption(response=response, next=opt.next))
+        options = [
+            MessageOption(
+                response=response,
+                next=opt.next,
+            )
+            for response, opt in zip(responses, state_data.options)
+        ]
 
         random.shuffle(options)
         conversation.state = ConversationWaiting(options=options)
