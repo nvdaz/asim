@@ -62,31 +62,65 @@ const Input = ({
     return next;
   };
 
-  const withFeedback = async (nextFetched, oldHistory, selectionResultContent) => {
+  const feedbackWithNoFollowUpFollowedByNP = (
+    nextFetched,
+    selectionResultContent
+  ) => {
     // feedback would always not have follow_up
-    if (nextFetched.type === "np") {
-      console.log("helper 1");
-      setOptions(Object.assign({}, nextFetched.data.options));
-      setShowChoicesSection(true);
-      return [
-        ...oldHistory,
-        {
-          type: "feedback",
-          content: {
-            body: selectionResultContent.body,
-            title: selectionResultContent.title,
-          },
+    console.log("feedbackWithNoFollowUpFollowedByNP");
+    setOptions(Object.assign({}, nextFetched.data.options));
+    setShowChoicesSection(true);
+    return [
+      {
+        type: "feedback",
+        content: {
+          body: selectionResultContent.body,
+          title: selectionResultContent.title,
         },
-      ];
-    }
-    // type = ap, feedback might have follow_up
-    else {
-      console.log("helper 2");
-      if (!nextFetched.content?.follow_up) {
-        const nextFetchedContent2 = await fetchData();
-        setOptions(Object.assign({}, nextFetchedContent2.data.options));
-        setShowChoicesSection(true);
-      }
+      },
+    ];
+  };
+
+  const feedbackWithNoFollowUpFollowedByApAndNp = async (
+    selectionResultContent,
+    nextFetched
+  ) => {
+    console.log(
+      "feedbackWithNoFollowUpFollowedByAp",
+      selectionResultContent,
+      nextFetched
+    );
+    const nextFetchedContent2 = await fetchData();
+    setOptions(Object.assign({}, nextFetchedContent2.data.options));
+    setShowChoicesSection(true);
+
+    return [
+      {
+        type: "feedback",
+        content: {
+          body: selectionResultContent.body,
+          choice: selectionResultContent.follow_up,
+          title: selectionResultContent.title,
+        },
+      },
+      {
+        type: "text",
+        isSentByUser: false,
+        content: nextFetched.content,
+      },
+    ];
+  };
+
+  const apFollowedByFeedback = async (
+    nextFetched,
+    oldHistory,
+    selectionResultContent
+  ) => {
+    console.log("apFollowedByFeedback");
+    // ap followed by feedback with no follow_up
+    if (!nextFetched.content.follow_up) {
+      const nextFetched2 = await fetchData();
+
       return [
         ...oldHistory,
         {
@@ -94,11 +128,30 @@ const Input = ({
           isSentByUser: false,
           content: selectionResultContent,
         },
+        ...(nextFetched2.data.type === "ap"
+          ? await feedbackWithNoFollowUpFollowedByApAndNp(
+              selectionResultContent,
+              nextFetched2.data
+            )
+          : await feedbackWithNoFollowUpFollowedByNP(
+              nextFetched2.data,
+              selectionResultContent
+            )),
+      ];
+    } else {
+      console.log("apFollowedByFeedbackWithFollowUp");
+      return [
+        ...oldHistory,
+        {
+          type: "text",
+          isSentByUser: false,
+          content: selectionResultContent.content,
+        },
         {
           type: "feedback",
           content: {
             body: nextFetched.content.body,
-            choice: nextFetched.content.follow_up,
+            choice: nextFetched.follow_up,
             title: nextFetched.content.title,
           },
         },
@@ -109,11 +162,11 @@ const Input = ({
   const returnNewHistory = async (
     oldHistory,
     selectionResultType,
-    selectionResultContent,
+    selectionResultContent
   ) => {
     if (selectionResultType === "feedback") {
       if (selectionResultContent?.follow_up) {
-        console.log("1", selectionResultContent);
+        console.log("1");
         return [
           ...oldHistory,
           {
@@ -132,24 +185,49 @@ const Input = ({
 
     // if the first call fetched feedback with no follow up
     if (selectionResultType === "feedback") {
-      return await withFeedback(
-        nextFetched.data,
-        oldHistory,
-        selectionResultContent
-      );
+      if (nextFetched.data.type === "ap") {
+        setChatHistory([
+          ...oldHistory,
+          {
+            type: "feedback",
+            content: {
+              body: selectionResultContent.body,
+              title: selectionResultContent.title,
+            },
+          },
+          {
+            type: "typingIndicator",
+            isSentByUser: false,
+          },
+        ]);
+
+        return [
+          ...oldHistory,
+          ...(await feedbackWithNoFollowUpFollowedByApAndNp(
+            selectionResultContent,
+            nextFetched.data
+          )),
+        ];
+      } else {
+        return feedbackWithNoFollowUpFollowedByNP(
+          nextFetched,
+          oldHistory,
+          selectionResultContent
+        );
+      }
     }
 
     if (selectionResultType === "ap") {
       if (nextFetched.data.type === "feedback") {
-        return await withFeedback(
+        return await apFollowedByFeedback(
           nextFetched.data,
           oldHistory,
           selectionResultContent
         );
       } else if (nextFetched.data.type === "np") {
+        console.log("4");
         setOptions(Object.assign({}, nextFetched.data.options));
         setShowChoicesSection(true);
-        console.log("2", selectionResultType);
         return [
           ...oldHistory,
           {
@@ -170,7 +248,7 @@ const Input = ({
     setSelectedButton(null);
     setSelectedOption(null);
     setShowProgress(true);
-  }
+  };
 
   const handleSend = async () => {
     const oldHistoryWithIndicator = [
@@ -208,7 +286,7 @@ const Input = ({
       }
       const selectionResultType = selectionResult.data.type;
 
-      if (selectionResultType !== 'feedback') {
+      if (selectionResultType !== "feedback") {
         setChatHistory(oldHistoryWithIndicator);
       }
 
@@ -226,9 +304,14 @@ const Input = ({
     <div
       ref={divRef}
       className={styles.wrapper}
-      style={{ borderRadius: showChoicesSection ? "18px 18px 0 0" : 0 }}
+      style={{
+        borderRadius:
+          showChoicesSection && Object.keys(options).length > 0
+            ? "18px 18px 0 0"
+            : 0,
+      }}
     >
-      {showChoicesSection && (
+      {showChoicesSection && Object.keys(options).length > 0 && (
         <ChoicesSection
           options={options}
           handleButtonClick={handleButtonClick}

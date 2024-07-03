@@ -121,7 +121,7 @@ const Lesson = () => {
               id: data.id,
               options: nextConversation.options,
               is_user_initiated: data.scenario.is_user_initiated,
-              ap_message: nextConversation?.content,
+              ap_message: nextConversation?.ap_message,
             }}
           />
         </div>
