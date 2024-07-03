@@ -6,7 +6,7 @@ from typing_extensions import Annotated
 from api.schemas.conversation import ConversationInfo, ConversationScenario
 from api.schemas.persona import BasePersona, Persona
 
-from . import llm_service as llm
+from . import llm
 
 
 async def _generate_conversation_scenario(

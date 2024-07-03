@@ -5,9 +5,9 @@ from typing_extensions import Annotated
 
 from api.schemas.conversation import ConversationData, Message, Messages
 
-from . import llm_service as llm
-from .message_handling import generate_message
+from . import llm
 from .flow_state.base import FeedbackFlowState
+from .message_handling import generate_message
 
 
 class BaseFeedbackAnalysisNeedsImprovement(BaseModel):

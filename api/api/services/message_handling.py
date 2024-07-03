@@ -4,7 +4,7 @@ from typing_extensions import Annotated
 from api.schemas.conversation import Messages
 from api.schemas.persona import Persona
 
-from . import llm_service as llm
+from . import llm
 
 
 async def generate_message(

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from api.schemas.persona import BasePersona, Persona
 
-from . import llm_service as llm
+from . import llm
 
 
 class Demographics(BaseModel):
@@ -191,7 +191,7 @@ async def _generate_user_persona(user_base: BasePersona):
     return Persona(**user_base.model_dump(), description=response.persona)
 
 
-async def _generate_user_base(messages: list[list[str]], user_name: str):
+async def _generate_user_info_base(messages: list[list[str]], user_name: str):
     interests = await _extract_interests(messages)
     demographics = await _extract_demographics(messages)
 
@@ -205,8 +205,8 @@ async def _generate_user_base(messages: list[list[str]], user_name: str):
     return user_base
 
 
-async def generate_user(messages: list[list[str]], user_name: str):
-    user_base = await _generate_user_base(messages, user_name)
+async def generate_user_info(messages: list[list[str]], user_name: str):
+    user_base = await _generate_user_info_base(messages, user_name)
     user_persona = await _generate_user_persona(user_base)
 
     return user_persona
