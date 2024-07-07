@@ -161,7 +161,7 @@ async def _generate_conversation_scenario(
         interests=sampled_interests,
     ).model_dump_json(exclude="description")
 
-    scenario = await llm.generate_strict(
+    scenario = await llm.generate(
         schema=ConversationScenario,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -189,7 +189,7 @@ async def _generate_subject_base(scenario, name):
         "'interests' (list of strings)."
     )
 
-    response = await llm.generate_strict(
+    response = await llm.generate(
         schema=SubjectBasePersona,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -218,7 +218,7 @@ async def _generate_subject_persona_from_base(subject: BasePersona):
 
     prompt_data = subject.model_dump_json()
 
-    response = await llm.generate_strict(
+    response = await llm.generate(
         schema=PersonaDescriptionResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -228,8 +228,7 @@ async def _generate_subject_persona_from_base(subject: BasePersona):
     return Persona(**subject.model_dump(), description=response.persona)
 
 
-async def _generate_subject_persona(scenario):
-    subject_name = "Alex"
+async def _generate_subject_persona(scenario, subject_name):
     subject_info = await _generate_subject_base(scenario, subject_name)
 
     subject_persona = await _generate_subject_persona_from_base(subject_info)
@@ -238,8 +237,11 @@ async def _generate_subject_persona(scenario):
 
 
 async def generate_conversation_info(user: Persona):
-    scenario = await _generate_conversation_scenario(user, "Alex")
-    subject_persona = await _generate_subject_persona(scenario.subject_scenario)
+    subject_name = "Alex"
+    scenario = await _generate_conversation_scenario(user, subject_name)
+    subject_persona = await _generate_subject_persona(
+        scenario.subject_scenario, subject_name
+    )
 
     return ConversationInfo(
         scenario=scenario,

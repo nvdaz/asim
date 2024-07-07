@@ -2,11 +2,14 @@ import asyncio
 import random
 from dataclasses import dataclass
 from typing import Literal, Union
+from uuid import UUID
 
 from pydantic import BaseModel, Field, RootModel
 from typing_extensions import Annotated
 
+from api.db import conversations
 from api.schemas.conversation import (
+    BaseConversationData,
     ConversationData,
     ConversationNormal,
     ConversationScenario,
@@ -48,9 +51,6 @@ class ConversationEvent(RootModel):
     ]
 
 
-_CONVERSATIONS: list[ConversationData] = []
-
-
 @dataclass
 class Conversation:
     id: str
@@ -70,39 +70,38 @@ class Conversation:
         )
 
 
-async def create_conversation(user: Persona, level: int) -> Conversation:
+async def create_conversation(user_id: UUID, user: Persona, level: int) -> Conversation:
     conversation_info = await generate_conversation_info(user)
 
-    id = len(_CONVERSATIONS)
-
-    _CONVERSATIONS.append(
-        ConversationData(
-            id=str(id),
-            level=level,
-            info=conversation_info,
-            state=ConversationNormal(
-                state=(
-                    LEVELS[level].initial_np_state
-                    if conversation_info.scenario.is_user_initiated
-                    else LEVELS[level].initial_ap_state
-                )
-            ),
-            messages=[],
-            last_feedback_received=0,
-        )
+    data = BaseConversationData(
+        user_id=user_id,
+        level=level,
+        info=conversation_info,
+        state=ConversationNormal(
+            state=(
+                LEVELS[level].initial_np_state
+                if conversation_info.scenario.is_user_initiated
+                else LEVELS[level].initial_ap_state
+            )
+        ),
+        messages=[],
+        last_feedback_received=0,
     )
 
-    return Conversation.from_data(_CONVERSATIONS[-1])
+    conversation = await conversations.insert(data)
+
+    return Conversation.from_data(conversation)
 
 
-def get_conversation(conversation_id: str) -> Conversation:
-    return Conversation.from_data(_CONVERSATIONS[int(conversation_id)])
+async def get_conversation(conversation_id: str, user_id: UUID) -> Conversation:
+    conversation = await conversations.get(conversation_id, user_id)
+    return Conversation.from_data(conversation)
 
 
 async def progress_conversation(
-    conversation_id: str, option: int | None
+    conversation_id: str, user_id: str, option: int | None
 ) -> ConversationEvent:
-    conversation = _CONVERSATIONS[int(conversation_id)]
+    conversation = await conversations.get(conversation_id, user_id)
 
     if isinstance(conversation.state, ConversationWaiting):
         assert option is not None
@@ -144,7 +143,7 @@ async def progress_conversation(
         random.shuffle(options)
         conversation.state = ConversationWaiting(options=options)
 
-        return NpMessageEvent(options=[o.response for o in options])
+        result = NpMessageEvent(options=[o.response for o in options])
     elif isinstance(state_data, ApFlowState):
         opt = random.choice(state_data.options)
 
@@ -160,7 +159,7 @@ async def progress_conversation(
         )
         conversation.state = ConversationNormal(state=opt.next)
 
-        return ApMessageEvent(content=response)
+        result = ApMessageEvent(content=response)
     elif isinstance(state_data, FeedbackFlowState):
         response = await generate_feedback(conversation, state_data)
         conversation.last_feedback_received = len(conversation.messages.root)
@@ -178,4 +177,10 @@ async def progress_conversation(
         else:
             conversation.state = ConversationNormal(state=state_data.next_ok)
 
-        return FeedbackEvent(content=response)
+        result = FeedbackEvent(content=response)
+    else:
+        raise RuntimeError(f"Invalid state: {state_data}")
+
+    await conversations.update(conversation)
+
+    return ConversationEvent(root=result)

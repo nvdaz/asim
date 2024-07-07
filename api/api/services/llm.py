@@ -82,7 +82,7 @@ async def _generate_strict(
 _GENERATE_CACHE_LOCK = asyncio.Lock()
 
 
-async def generate_strict(
+async def generate(
     schema: Type[SchemaType],
     model: str,
     prompt: str,

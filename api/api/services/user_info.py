@@ -23,7 +23,7 @@ async def _extract_demographics(messages: list[list[str]]) -> Demographics:
         '"OCCUPATION"}'
     )
     prompt_data = "\n".join([message[0] for message in messages])
-    demographics = await llm.generate_strict(
+    demographics = await llm.generate(
         schema=Demographics,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -109,7 +109,7 @@ async def _get_cluster_topic(cluster: list[str]) -> str | None:
         "If no clear topic is identifiable, use a null value."
     )
     prompt_data = "\n".join(cluster)
-    response = await llm.generate_strict(
+    response = await llm.generate(
         schema=ClusterTopicResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -140,7 +140,7 @@ async def _get_interests_from_topics(topics: list[str]) -> list[str]:
         "interests under the key 'interests'."
     )
     prompt_data = "\n".join(topics)
-    response = await llm.generate_strict(
+    response = await llm.generate(
         schema=InterestResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -181,7 +181,7 @@ async def _generate_user_persona(user_base: BasePersona):
 
     prompt_data = user_base.model_dump_json()
 
-    response = await llm.generate_strict(
+    response = await llm.generate(
         schema=PersonaResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -192,8 +192,9 @@ async def _generate_user_persona(user_base: BasePersona):
 
 
 async def _generate_user_info_base(messages: list[list[str]], user_name: str):
-    interests = await _extract_interests(messages)
-    demographics = await _extract_demographics(messages)
+    interests, demographics = await asyncio.gather(
+        _extract_interests(messages), _extract_demographics(messages)
+    )
 
     user_base = BasePersona(
         name=user_name,

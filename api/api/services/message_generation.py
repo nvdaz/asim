@@ -36,7 +36,7 @@ async def generate_message(
         else messages.model_dump_json()
     )
 
-    response = await llm.generate_strict(
+    response = await llm.generate(
         schema=MessageResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,

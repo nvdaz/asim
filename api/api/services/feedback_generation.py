@@ -63,7 +63,7 @@ async def _analyze_messages_base(
         conversation.last_feedback_received :
     ].model_dump_json()
 
-    response = await llm.generate_strict(
+    response = await llm.generate(
         schema=BaseFeedbackAnalysis,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -101,7 +101,7 @@ async def _analyze_messages_with_understanding(
         conversation.last_feedback_received :
     ].model_dump_json()
 
-    return await llm.generate_strict(
+    return await llm.generate(
         schema=FeedbackAnalysis,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -132,6 +132,93 @@ async def _generate_feedback_with_follow_up(
         body: Annotated[str, StringConstraints(max_length=600)]
         instructions: str
 
+    examples = [
+        (
+            Messages(
+                root=[
+                    Message(
+                        sender="Ben",
+                        message="I feel like a million bucks today!",
+                    ),
+                    Message(
+                        sender="Chris",
+                        message=("Did you just win the lottery? That's great!"),
+                    ),
+                ]
+            ),
+            FeedbackWithPromptResponse(
+                title="Avoid Similies",
+                body=(
+                    "Your message relied on Chris understanding the simile 'I feel "
+                    "like a million bucks today.' However, figurative language can "
+                    "be confusing for autistic individuals, and Chris interpreted it "
+                    "literally. To avoid misunderstandings, use more direct language."
+                ),
+                instructions=(
+                    "Your next message should apologize for using figurative language "
+                    "and clarify that you didn't actually win the lottery but are "
+                    "feeling really good today. Be direct and avoid figurative "
+                    "language."
+                ),
+            ),
+        ),
+        (
+            Messages(
+                root=[
+                    Message(
+                        sender="Alex", message="Break a leg in your performance today!"
+                    ),
+                    Message(
+                        sender="Taylor",
+                        message="That's mean! Why would you want me to get hurt?",
+                    ),
+                ]
+            ),
+            FeedbackWithPromptResponse(
+                title="Avoid Idioms",
+                body=(
+                    "Using idioms like 'break a leg' can sometimes be confusing for "
+                    "autistic individuals, as they may interpret the phrase literally. "
+                    "Taylor interpreted your message literally and thought you wanted "
+                    "them to get hurt instead of wishing them good luck. To avoid "
+                    "misunderstandings, use clear, direct language."
+                ),
+                instructions=(
+                    "Your next message should apologize for using an idiom and clarify "
+                    "that you didn't actually want Taylor to get hurt but were wishing "
+                    "them good luck. Be direct and avoid figurative language."
+                ),
+            ),
+        ),
+        (
+            Messages(
+                root=[
+                    Message(
+                        sender="Morgan", message="I can't keep my head above water."
+                    ),
+                    Message(
+                        sender="Jamie",
+                        message="Are you drowning? Should I call someone?",
+                    ),
+                ]
+            ),
+            FeedbackWithPromptResponse(
+                title="Avoid Metaphors",
+                body=(
+                    "Phrases like 'I can't keep my head above water', which rely on "
+                    "metaphors, can sometimes be confusing for autistic individuals. "
+                    "Jamie interpreted your message literally and thought you were in "
+                    "danger. To avoid misunderstandings, use clear, direct language."
+                ),
+                instructions=(
+                    "Your next message should apologize for using a metaphor and "
+                    "clarify that you're not actually drowning but are just really  "
+                    "busy. Be direct and avoid figurative language."
+                ),
+            ),
+        ),
+    ]
+
     user, subject = conversation.info.user, conversation.info.subject
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
@@ -147,36 +234,19 @@ async def _generate_feedback_with_follow_up(
         f"The instructions should tell {user.name} to apologize for their mistake and "
         "clarify their message."
         "Examples: \n"
-        + Messages(
-            root=[
-                Message(sender="Ben", message="I feel like a million bucks today!"),
-                Message(
-                    sender="Chris",
-                    message="Did you just win the lottery? That's great!",
-                ),
+        + "\n\n".join(
+            [
+                f"{messages.model_dump_json()}\n{fb.model_dump_json()}"
+                for messages, fb in examples
             ]
-        ).model_dump_json()
-        + "\n"
-        + FeedbackWithPromptResponse(
-            title="Avoid Figurative Language",
-            body=(
-                "Your message relied on figurative language, which can be "
-                "misinterpreted by autistic individuals. Consider using more "
-                "direct language to avoid confusion."
-            ),
-            instructions=(
-                "Your next message should apologize for the misunderstanding "
-                "and clarify that you're not actually a millionaire, but you're "
-                "feeling really good today. Be direct and avoid figurative language."
-            ),
-        ).model_dump_json()
+        )
     )
 
     prompt_data = conversation.messages[
         conversation.last_feedback_received :
     ].model_dump_json()
 
-    feedback_base = await llm.generate_strict(
+    feedback_base = await llm.generate(
         schema=FeedbackWithPromptResponse,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -201,6 +271,79 @@ async def _generate_feedback_needs_improvement(
     conversation: ConversationData, feedback: FeedbackFlowState
 ):
     user, subject = conversation.info.user, conversation.info.subject
+
+    examples = [
+        (
+            Messages(
+                root=[
+                    Message(
+                        sender="Ben",
+                        message="I feel like a million bucks today!",
+                    ),
+                    Message(
+                        sender="Chris",
+                        message=(
+                            "You must have had a great day! That's awesome to hear!"
+                        ),
+                    ),
+                ]
+            ),
+            Feedback(
+                title="Avoid Similies",
+                body=(
+                    "Your message relied on figurative language, which can sometimes "
+                    "be misunderstood by autistic individuals. In this case, 'I feel "
+                    "like a million bucks today' might be interpreted literally. To "
+                    "avoid confusion, use more straightforward language like 'I'm "
+                    "feeling really good today!' instead."
+                ),
+            ),
+        ),
+        (
+            Messages(
+                root=[
+                    Message(
+                        sender="Alex", message="Break a leg in your performance today!"
+                    ),
+                    Message(
+                        sender="Taylor",
+                        message="Thank you! I'll do my best to impress the audience!",
+                    ),
+                ]
+            ),
+            Feedback(
+                title="Avoid Idioms",
+                body=(
+                    "Using idioms like 'break a leg' can sometimes be confusing for "
+                    "autistic individuals, as they may interpret the phrase literally. "
+                    "Use clear, direct language to avoid misunderstandings. You could "
+                    "say 'Good luck in your performance today!' instead to be more "
+                    "clear."
+                ),
+            ),
+        ),
+        (
+            Messages(
+                root=[
+                    Message(
+                        sender="Morgan", message="I can't keep my head above water."
+                    ),
+                    Message(sender="Jamie", message="Sounds like you're really busy!"),
+                ]
+            ),
+            Feedback(
+                title="Avoid Metaphors",
+                body=(
+                    "Metaphors like 'I can't keep my head above water' can sometimes "
+                    "be confusing for autistic individuals, as they may interpret the "
+                    "phrase literally. Use clear, direct language to avoid "
+                    "misunderstandings. You could say 'I'm really busy right now!' "
+                    "instead to be more clear."
+                ),
+            ),
+        ),
+    ]
+
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
@@ -209,32 +352,19 @@ async def _generate_feedback_needs_improvement(
         f"{user.name} directly. Respond with a JSON object with the key 'title' "
         "containing the title (less than 50 characters) of your feedback and the key "
         "'body' containing the feedback (less than 100 words). Examples:\n"
-        + Messages(
-            root=[
-                Message(sender="Ben", message="I feel like a million bucks today!"),
-                Message(
-                    sender="Chris",
-                    message="You must have had a great day! That's awesome!",
-                ),
+        + "\n\n".join(
+            [
+                f"{messages.model_dump_json()}\n{fb.model_dump_json()}"
+                for messages, fb in examples
             ]
-        ).model_dump_json()
-        + "\n"
-        + Feedback(
-            title="Avoid Figurative Language",
-            body=(
-                "Your message relied on figurative language, which can be "
-                "misinterpreted by autistic individuals. In this case, your message "
-                "could be misinterpreted as a literal statement. Consider using more "
-                "direct language to avoid confusion."
-            ),
-        ).model_dump_json()
+        )
     )
 
     prompt_data = conversation.messages[
         conversation.last_feedback_received :
     ].model_dump_json()
 
-    return await llm.generate_strict(
+    return await llm.generate(
         schema=Feedback,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
@@ -246,6 +376,30 @@ async def _generate_feedback_ok(
     conversation: ConversationData, feedback: FeedbackFlowState
 ):
     user, subject = conversation.info.user, conversation.info.subject
+
+    examples = [
+        (
+            Messages(
+                root=[
+                    Message(sender="Ben", message="I'm feeling great today!"),
+                    Message(
+                        sender="Chris", message="That's awesome! I'm glad to hear that!"
+                    ),
+                ]
+            ),
+            Feedback(
+                title="Clear Communication",
+                body=(
+                    "Your latest message was clear and considerate. You successfully "
+                    "communicated your feelings without relying on unclear language. "
+                    "'I'm feeling great today!' was straightforward and easy to "
+                    "understand for Chris, which is great for clear communication. "
+                    "Keep up the good work!"
+                ),
+            ),
+        )
+    ]
+
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
         f"ongoing conversation between {user.name} and {subject.name}, who is an "
@@ -255,30 +409,16 @@ async def _generate_feedback_ok(
         "directly. Respond with a JSON object with the key 'title' containing the "
         "title (less than 50 characters) of your feedback and the key 'body' "
         "containing the feedback (less than 100 words). Examples:\n"
-        + Messages(
-            root=[
-                Message(sender="Ben", message="I'm feeling great today!"),
-                Message(
-                    sender="Chris", message="That's awesome! I'm glad to hear that!"
-                ),
-            ]
-        ).model_dump_json()
-        + "\n"
-        + Feedback(
-            title="Clear Communication",
-            body=(
-                "Your message was clear and considerate. You successfully "
-                "communicated your feelings without relying on unclear language. "
-                "Keep up the good work!"
-            ),
-        ).model_dump_json()
+        + "\n\n".join(
+            [f"{msg.model_dump_json()}\n{fb.model_dump_json()}" for msg, fb in examples]
+        )
     )
 
     prompt_data = conversation.messages[
         conversation.last_feedback_received :
     ].model_dump_json()
 
-    return await llm.generate_strict(
+    return await llm.generate(
         schema=Feedback,
         model=llm.MODEL_GPT_4,
         system=system_prompt,

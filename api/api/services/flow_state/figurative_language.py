@@ -1,52 +1,37 @@
-from enum import Enum
+from typing import Literal
 
-from .base import (
-    ApFlowState,
-    ApFlowStateRef,
-    FeedbackFlowState,
-    FeedbackFlowStateRef,
-    FlowOption,
-    FlowState,
-    FlowStateRef,
-    Level,
-    NpFlowState,
-    NpFlowStateRef,
-)
+from .base import ApFlowState as _ApFlowState
+from .base import ApFlowStateRef as _ApFlowStateRef
+from .base import FeedbackFlowState as _FeedbackFlowState
+from .base import FeedbackFlowStateRef as _FeedbackFlowStateRef
+from .base import FlowOption, FlowState, Level
+from .base import NpFlowState as _NpFlowState
+from .base import NpFlowStateRef as _NpFlowStateRef
 
+NpFlowStateId = Literal["normal"]
+ApFlowStateId = Literal["normal", "figurative_misunderstood"]
+FeedbackFlowStateId = Literal["normal"]
 
-class NpFlowStateId(Enum):
-    NORMAL = "normal"
+NpFlowState = _NpFlowState[NpFlowStateId]
+ApFlowState = _ApFlowState[ApFlowStateId]
+FeedbackFlowState = _FeedbackFlowState[FeedbackFlowStateId]
 
-    def as_ref(self) -> FlowStateRef:
-        return FlowStateRef(root=NpFlowStateRef(id=self))
-
-
-class ApFlowStateId(Enum):
-    NORMAL = "normal"
-    FIGURATIVE_MISUNDERSTOOD = "figurative_misunderstood"
-
-    def as_ref(self) -> FlowStateRef:
-        return FlowStateRef(root=ApFlowStateRef(id=self))
-
-
-class FeedbackFlowStateId(Enum):
-    NORMAL = "normal"
-
-    def as_ref(self) -> FlowStateRef:
-        return FlowStateRef(root=FeedbackFlowStateRef(id=self))
+NpFlowStateRef = _NpFlowStateRef[NpFlowStateId]
+ApFlowStateRef = _ApFlowStateRef[ApFlowStateId]
+FeedbackFlowStateRef = _FeedbackFlowStateRef[FeedbackFlowStateId]
 
 
 FLOW_STATES = [
     FlowState(
         root=NpFlowState(
-            id=NpFlowStateId.NORMAL,
+            id="normal",
             options=[
                 FlowOption(
                     prompt=(
                         "Do not use any figurative language in your next message. Keep "
                         "your message straightforward and literal."
                     ),
-                    next=ApFlowStateId.NORMAL.as_ref(),
+                    next=ApFlowStateRef(id="normal").as_ref(),
                 ),
                 FlowOption(
                     prompt=(
@@ -55,7 +40,7 @@ FLOW_STATES = [
                         "it says. Your message is intended to be interpreted in a "
                         "non-literal way. Example: 'Let's hit the books.'"
                     ),
-                    next=ApFlowStateId.FIGURATIVE_MISUNDERSTOOD.as_ref(),
+                    next=ApFlowStateRef(id="figurative_misunderstood").as_ref(),
                 ),
                 FlowOption(
                     prompt=(
@@ -65,49 +50,46 @@ FLOW_STATES = [
                         "misinterpreted. Example: 'It's so hot, it feels like 1000 "
                         "degrees outside.'"
                     ),
-                    next=ApFlowStateId.FIGURATIVE_MISUNDERSTOOD.as_ref(),
+                    next=ApFlowStateRef(id="figurative_misunderstood").as_ref(),
                 ),
             ],
         )
     ),
     FlowState(
         root=ApFlowState(
-            id=ApFlowStateId.NORMAL,
+            id="normal",
             options=[
                 FlowOption(
                     prompt=(
                         "Respond to the message in a normal, direct manner. Your "
                         "response correctly interprets the message and continues the "
-                        "conversation. "
+                        "conversation. DO NOT use figurative language."
                     ),
-                    next=NpFlowStateId.NORMAL.as_ref(),
+                    next=NpFlowStateRef(id="normal").as_ref(),
                 )
             ],
         )
     ),
     FlowState(
         root=ApFlowState(
-            id=ApFlowStateId.FIGURATIVE_MISUNDERSTOOD,
+            id="figurative_misunderstood",
             options=[
                 FlowOption(
                     prompt=(
-                        "You are responding to a figurative and metaphorical message. "
-                        "You misunderstand the figurative language and your next "
-                        "message will confidently interpret the message literally, "
-                        "missing the intended meaning. The response should be literal "
-                        "and direct, only addressing the figurative meaning and "
-                        "ignoring the intended message. Example: NP: 'Let's hit the "
-                        "books' -> AP: 'Why would you want to hit books? That would "
-                        "damage them.'"
+                        "Respond to the message in a way that misunderstands the "
+                        "figurative language used. Your response should be literal and "
+                        "direct, only addressing the literal meaning of the message "
+                        "without considering the figurative nature. Example: 'Let's "
+                        "hit the books.' -> 'I don't have any books to hit.'"
                     ),
-                    next=FeedbackFlowStateId.NORMAL.as_ref(),
+                    next=FeedbackFlowStateRef(id="normal").as_ref(),
                 )
             ],
         )
     ),
     FlowState(
         root=FeedbackFlowState(
-            id=FeedbackFlowStateId.NORMAL,
+            id="normal",
             prompt_analysis=(
                 "The conversation needs improvement if there are instances where "
                 "figurative language is used, which can be misinterpreted by the "
@@ -129,8 +111,8 @@ FLOW_STATES = [
                 "Provide feedback on how the user could have been clearer in their "
                 "communication to avoid confusion."
             ),
-            next_needs_improvement=ApFlowStateId.NORMAL.as_ref(),
-            next_ok=NpFlowStateId.NORMAL.as_ref(),
+            next_needs_improvement=ApFlowStateRef(id="normal").as_ref(),
+            next_ok=NpFlowStateRef(id="normal").as_ref(),
         ),
     ),
 ]
@@ -138,6 +120,6 @@ FLOW_STATES = [
 
 FIGURATIVE_LANGUAGE_LEVEL = Level(
     flow_states=FLOW_STATES,
-    initial_np_state=NpFlowStateId.NORMAL.as_ref(),
-    initial_ap_state=ApFlowStateId.NORMAL.as_ref(),
+    initial_np_state=NpFlowStateRef(id="normal").as_ref(),
+    initial_ap_state=ApFlowStateRef(id="normal").as_ref(),
 )

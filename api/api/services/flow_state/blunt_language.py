@@ -1,74 +1,59 @@
-from enum import Enum
+from typing import Literal
 
-from .base import (
-    ApFlowState,
-    ApFlowStateRef,
-    FeedbackFlowState,
-    FeedbackFlowStateRef,
-    FlowOption,
-    FlowState,
-    FlowStateRef,
-    Level,
-    NpFlowState,
-    NpFlowStateRef,
-)
+from .base import ApFlowState as _ApFlowState
+from .base import ApFlowStateRef as _ApFlowStateRef
+from .base import FeedbackFlowState as _FeedbackFlowState
+from .base import FeedbackFlowStateRef as _FeedbackFlowStateRef
+from .base import FlowOption, FlowState, Level
+from .base import NpFlowState as _NpFlowState
+from .base import NpFlowStateRef as _NpFlowStateRef
 
+NpFlowStateId = Literal["normal", "confrontational"]
+ApFlowStateId = Literal["normal"]
+FeedbackFlowStateId = Literal["normal"]
 
-class NpFlowStateId(Enum):
-    NORMAL = "normal"
-    CONFRONTATIONAL = "confrontational"
+NpFlowState = _NpFlowState[NpFlowStateId]
+ApFlowState = _ApFlowState[ApFlowStateId]
+FeedbackFlowState = _FeedbackFlowState[FeedbackFlowStateId]
 
-    def as_ref(self) -> FlowStateRef:
-        return FlowStateRef(root=NpFlowStateRef(id=self))
-
-
-class ApFlowStateId(Enum):
-    NORMAL = "normal"
-
-    def as_ref(self) -> FlowStateRef:
-        return FlowStateRef(root=ApFlowStateRef(id=self))
-
-
-class FeedbackFlowStateId(Enum):
-    NORMAL = "normal"
-
-    def as_ref(self) -> FlowStateRef:
-        return FlowStateRef(root=FeedbackFlowStateRef(id=self))
+NpFlowStateRef = _NpFlowStateRef[NpFlowStateId]
+ApFlowStateRef = _ApFlowStateRef[ApFlowStateId]
+FeedbackFlowStateRef = _FeedbackFlowStateRef[FeedbackFlowStateId]
 
 
 FLOW_STATES = [
     FlowState(
         root=NpFlowState(
-            id=NpFlowStateId.NORMAL,
+            id="normal",
             options=[
                 FlowOption(
                     prompt=(
                         "Do not use any confrontational language in your next message. "
                         "Keep your message neutral and non-aggressive."
                     ),
-                    next=ApFlowStateId.NORMAL.as_ref(),
+                    next=ApFlowStateRef(id="normal").as_ref(),
                 ),
             ],
         )
     ),
     FlowState(
         root=NpFlowState(
-            id=NpFlowStateId.CONFRONTATIONAL,
+            id="confrontational",
             options=[
                 FlowOption(
                     prompt=(
                         "Do not use any confrontational language in your next message."
                         "Keep your message neutral and non-aggressive."
                     ),
-                    next=ApFlowStateId.NORMAL.as_ref(),
+                    next=ApFlowStateRef(id="normal").as_ref(),
                 ),
                 FlowOption(
                     prompt=(
-                        "Your next message is confrontational. Your message is intended"
-                        "to be aggressive and assertive. Example: 'I don't appreciate"
-                        "your tone.'"
+                        "Your next message is confrontational. Your message is "
+                        "intended to be aggressive and assertive. Example: 'I don't "
+                        "appreciate your tone.'"
                     ),
-                    next=FeedbackFlowStateId.NORMAL.as_ref(),
+                    next=FeedbackFlowStateRef(id="normal").as_ref(),
                 ),
                 FlowOption(
                     prompt=(
@@ -76,14 +61,14 @@ FLOW_STATES = [
                         "message and take it personally. Example: 'How dare you say "
                         "that?'"
                     ),
-                    next=FeedbackFlowStateId.NORMAL.as_ref(),
+                    next=FeedbackFlowStateRef(id="normal").as_ref(),
                 ),
             ],
         ),
     ),
     FlowState(
         root=ApFlowState(
-            id=ApFlowStateId.NORMAL,
+            id="normal",
             options=[
                 FlowOption(
                     prompt=(
@@ -92,14 +77,14 @@ FLOW_STATES = [
                         "an opinion on that.', 'Stop talking, you don't know what "
                         "you're talking about.', 'I don't care what you think.'"
                     ),
-                    next=NpFlowStateId.CONFRONTATIONAL.as_ref(),
+                    next=NpFlowStateRef(id="confrontational").as_ref(),
                 ),
             ],
         )
     ),
     FlowState(
         root=FeedbackFlowState(
-            id=FeedbackFlowStateId.NORMAL,
+            id="normal",
             prompt_analysis=(
                 "The conversation needs improvement if there are instances "
                 "where the user is confrontational or negative in response to a "
@@ -121,8 +106,8 @@ FLOW_STATES = [
                 "instead. Provide feedback on how the user could have been more "
                 "patient and understanding."
             ),
-            next_needs_improvement=ApFlowStateId.NORMAL.as_ref(),
-            next_ok=ApFlowStateId.NORMAL.as_ref(),
+            next_needs_improvement=ApFlowStateRef(id="normal").as_ref(),
+            next_ok=ApFlowStateRef(id="normal").as_ref(),
         )
     ),
 ]
@@ -130,6 +115,6 @@ FLOW_STATES = [
 
 BLUNT_LANGUAGE_LEVEL = Level(
     flow_states=FLOW_STATES,
-    initial_np_state=NpFlowStateId.NORMAL.as_ref(),
-    initial_ap_state=ApFlowStateId.NORMAL.as_ref(),
+    initial_np_state=NpFlowStateRef(id="normal").as_ref(),
+    initial_ap_state=ApFlowStateRef(id="normal").as_ref(),
 )

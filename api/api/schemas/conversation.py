@@ -1,10 +1,12 @@
 from typing import Literal, Union
+from uuid import UUID
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 from typing_extensions import Annotated
 
 from api.services.flow_state.base import FlowStateRef
 
+from .objectid import ObjectIdField
 from .persona import Persona
 
 
@@ -51,8 +53,8 @@ class ConversationInfo(BaseModel):
     subject: Persona
 
 
-class ConversationData(BaseModel):
-    id: str
+class BaseConversationData(BaseModel):
+    user_id: UUID
     level: int
     info: ConversationInfo
     state: Annotated[
@@ -61,3 +63,9 @@ class ConversationData(BaseModel):
     ]
     messages: Messages
     last_feedback_received: int
+
+
+class ConversationData(BaseConversationData):
+    id: Annotated[str, Field(alias="_id"), ObjectIdField()]
+
+    model_config = ConfigDict(populate_by_name=True)
