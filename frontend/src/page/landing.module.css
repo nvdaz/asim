@@ -1,0 +1,59 @@
+.column {
+    width: 30%;
+    color: white;
+    border-right: 1px solid white;
+    height: 100%;
+}
+
+.columnRight {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.setUpWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.btnWrapper {
+    display: flex;
+    justify-content: flex-end;
+    flex-direction: column;
+    width: 100%;
+    align-items: flex-end;
+}
+
+.btnWrapper div {
+    border-radius: 12px;
+    padding: 8px;
+    cursor: pointer;
+    width: fit-content;
+}
+
+.textAreaWrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.wrapper {
+    color: white;
+    display: flex;
+    flex-direction: row;
+    background-color: #1e1e1e;
+    font-family:
+        Roboto,
+        Open Sans,
+        Lato,
+        sans-serif;
+    line-height: 20px;
+    height: 100vh;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}

@@ -8,7 +8,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path={`/:uniqueString`} element={<Landing />} />
         <Route path="/lesson/1" element={<Lesson />} />
         <Route path="/lesson/2" element={<Lesson />} />
       </Routes>

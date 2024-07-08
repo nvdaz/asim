@@ -331,13 +331,18 @@ const Input = ({
           className={styles.inputBubble}
           onClick={() => setIsEmojiPickerOpen(false)}
         >
-          <TextareaAutosize value={choice} onChange={handleMessageChange} />
+          <TextareaAutosize
+            value={choice}
+            onChange={handleMessageChange}
+            placeholder={"Choose an option to send"}
+          />
         </div>
         <div
           className={styles.sendButton}
           style={{
             backgroundColor: choice.length === 0 ? "#3C3C43" : "#FFB930",
             color: choice.length === 0 ? "#ACACAC" : "#282828",
+            cursor: choice.length === 0 ? "default" : "pointer",
           }}
           onClick={handleSend}
         >

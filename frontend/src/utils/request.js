@@ -1,5 +1,7 @@
 export async function Post(path, data) {
   const styles = new Promise(async (resolve, reject) => {
+    const token = localStorage.getItem("token");
+
     const options = {
       method: "POST",
       headers: {
@@ -8,6 +10,10 @@ export async function Post(path, data) {
         "Access-Control-Allow-Origin": "http://localhost:3000",
       },
     };
+
+    if (token) {
+      options.headers["Authorization"] = `Bearer ${token}`;
+    }
 
     if (data) {
       options.body = JSON.stringify(data);

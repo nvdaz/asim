@@ -1,12 +1,12 @@
 import { TextareaAutosize as BaseTextareaAutosize } from "@mui/base/TextareaAutosize";
 import { styled } from "@mui/system";
 
-export default function UnstyledTextareaIntroduction({ value, onChange }) {
+export default function UnstyledTextareaIntroduction({ value, onChange, placeholder }) {
   return (
     <TextareaAutosize
       value={value}
       onChange={onChange}
-      placeholder="Choose an option to send"
+      placeholder={placeholder}
       aria-label="empty textarea"
     />
   );
