@@ -88,6 +88,16 @@
     justify-content: center;
 }
 
+@media screen and (max-width: 800px) {
+    .setUpWrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        width: 70%;
+    }
+}
+
 @keyframes typing {
     0% {
         transform: translateY(0);

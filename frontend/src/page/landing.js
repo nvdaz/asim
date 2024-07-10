@@ -22,19 +22,13 @@ const Landing = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const user_id = localStorage.getItem("user_id") || uniqueString;
-      localStorage.setItem("user_id", user_id);
-
-      const magic_link = await Post(
-        `auth/internal-create-magic-link?user_id=${user_id}`
-      );
-      if (!magic_link.ok) {
-        setAlertMessage("Error occurred");
-        return;
+      const link = localStorage.getItem("link") || uniqueString;
+      if (uniqueString) {
+        localStorage.setItem("link", uniqueString);
       }
-
+      
       const res2 = await Post("auth/exchange", {
-        magic_link: magic_link.data,
+        magic_link: link,
       });
       if (!res2.ok) {
         setAlertMessage("Error occurred");
@@ -87,7 +81,7 @@ const Landing = () => {
       </div>
     ) : (
       <div className={styles.setUpWrapper}>
-        <div>Welcome! Please enter your name!</div>
+        <div>Welcome! What is your name?</div>
         <div>
           It will be how you are addressed during conversations and when given
           feedback.
