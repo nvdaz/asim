@@ -1,6 +1,35 @@
+import { StyledEngineProvider } from "@mui/material";
 import { Post } from "../../../utils/request";
 
-async function handleSend(
+  function handleSend(
+    chatHistory,
+    setChatHistory,
+    setShowProgress,
+    choice,
+    setChoice,
+    selectedButton,
+    setSelectedButton,
+    conversationID
+  ) {
+    return function (setShowChoicesSection, setSelectedOption, setOptions) {
+
+      send(
+        chatHistory,
+        setChatHistory,
+        setShowProgress,
+        setShowChoicesSection,
+        choice,
+        setChoice,
+        selectedButton,
+        setSelectedButton,
+        setSelectedOption,
+        setOptions,
+        conversationID
+      );
+    };
+  }
+
+async function send(
   chatHistory,
   setChatHistory,
   setShowProgress,

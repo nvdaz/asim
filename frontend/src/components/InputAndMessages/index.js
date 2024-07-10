@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import Inputs from "../InputSection/index.js";
 import Messages from "../messages/index.js";
 import LinearProgress from "@mui/material/LinearProgress";
+import handleSend from "../InputSection/util/handleSend";
 
 const InputAndMessages = ({ headerHeight, initData }) => {
   const [chatHistory, setChatHistory] = useState(
@@ -25,7 +26,13 @@ const InputAndMessages = ({ headerHeight, initData }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: `calc(100vh - ${headerHeight}px)`}}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: `calc(100vh - ${headerHeight}px)`,
+      }}
+    >
       {showProgress && (
         <LinearProgress sx={{ position: "absolute", width: "100%" }} />
       )}
@@ -34,15 +41,20 @@ const InputAndMessages = ({ headerHeight, initData }) => {
         handleClickFeedback={handleClickFeedback}
       />
       <Inputs
+        handleSend={handleSend(
+          chatHistory,
+          setChatHistory,
+          setShowProgress,
+          choice,
+          setChoice,
+          selectedButton,
+          setSelectedButton,
+          initData.id
+        )}
         choice={choice}
         setChoice={setChoice}
-        chatHistory={chatHistory}
-        setChatHistory={setChatHistory}
-        selectedButton={selectedButton}
         setSelectedButton={setSelectedButton}
         initOptions={Object.assign({}, initData.options)}
-        conversationID={initData.id}
-        setShowProgress={setShowProgress}
       />
     </div>
   );

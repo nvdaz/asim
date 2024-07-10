@@ -5,20 +5,15 @@ import EmojiPicker from "emoji-picker-react";
 
 import TextareaAutosize from "./textareaAutosize.js";
 import ChoicesSection from "./choice.js";
-import handleSend from "./util/handleSend.js";
 
 import styles from "./index.module.css";
 
 const Input = ({
+  handleSend,
   choice,
   setChoice,
-  chatHistory,
-  setChatHistory,
-  selectedButton,
   setSelectedButton,
   initOptions,
-  conversationID,
-  setShowProgress,
 }) => {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [options, setOptions] = useState(initOptions);
@@ -102,17 +97,9 @@ const Input = ({
           }}
           onClick={() =>
             handleSend(
-              chatHistory,
-              setChatHistory,
-              setShowProgress,
               setShowChoicesSection,
-              choice,
-              setChoice,
-              selectedButton,
-              setSelectedButton,
               setSelectedOption,
               setOptions,
-              conversationID
             )
           }
         >
