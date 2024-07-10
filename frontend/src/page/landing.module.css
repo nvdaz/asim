@@ -20,6 +20,19 @@
     margin: 12px 50px;
 }
 
+.lessonsBtn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 20px;
+    animation: typing 3s infinite;
+}
+
 .columnRight {
     flex: 1;
     display: flex;
@@ -73,4 +86,18 @@
     width: 100%;
     align-items: center;
     justify-content: center;
+}
+
+@keyframes typing {
+    0% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
 }

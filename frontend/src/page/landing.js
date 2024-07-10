@@ -141,36 +141,35 @@ const Landing = () => {
         <div className={styles.columnRight}>
           <Button
             sx={{
-              backgroundColor: "#797979",
+              backgroundColor: "#FFB930",
+              textTransform: "none",
               borderRadius: "50%",
               padding: 0,
               "&:hover": {
-                backgroundColor: "#A3A3A3",
+                backgroundColor: "#FF9430",
               },
               "& .MuiTouchRipple-child": {
-                backgroundColor: "#637BC4",
+                backgroundColor: "#FFCC69",
               },
             }}
           >
             <div
-              style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "50%",
-              }}
+              className={styles.lessonsBtn}
               onClick={() =>
                 setTimeout(() => {
                   window.location.href = "/lesson/1";
                 }, "250")
               }
-            ></div>
+            >
+              <div>Start</div>
+            </div>
           </Button>
           <Button
             sx={{
               backgroundColor: "#797979",
               borderRadius: "50%",
               padding: 0,
-              marginLeft: '80px',
+              marginLeft: "80px",
               "&:hover": {
                 backgroundColor: "#A3A3A3",
               },
@@ -180,11 +179,7 @@ const Landing = () => {
             }}
           >
             <div
-              style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "50%",
-              }}
+              className={styles.lessonsBtn}
               onClick={() =>
                 setTimeout(() => {
                   window.location.href = "/lesson/2";
