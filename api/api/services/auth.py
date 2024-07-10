@@ -48,7 +48,7 @@ async def login_user(secret: str) -> LoginResult:
 
     token = await _create_auth_token(link.user_id)
 
-    user = await users.get(link.user_id)
+    user = await users.get(UUID(link.user_id))
 
     if not user:
         return LoginResultNewUser(user_id=link.user_id, token=token)

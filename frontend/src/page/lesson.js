@@ -8,7 +8,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import Header from "../components/header/index.js";
 import InputAndMessages from "../components/InputAndMessages/index.js";
 import { Post } from "../utils/request";
-import "../App.css";
+
+import styles from "./landing.module.css";
 
 const Lesson = () => {
   const [headerHeight, setHeaderHeight] = useState(null);
@@ -67,7 +68,7 @@ const Lesson = () => {
   }, []);
 
   return (
-    <div className="wrapper">
+    <div className={styles.wrapper}>
       {alertMessage && (
         <Collapse in={alertMessage !== ""}>
           <Alert

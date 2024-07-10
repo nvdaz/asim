@@ -13,44 +13,42 @@ import styles from "./landing.module.css";
 
 const Landing = () => {
   const { uniqueString } = useParams();
-  let name = localStorage.getItem("name");
-  const [loading, setLoading] = useState(name === undefined ? true : false);
+  const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(true);
   const [enteredName, setEnteredName] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        setLoading(false);
+      const user_id = localStorage.getItem("user_id") || uniqueString;
+      localStorage.setItem("user_id", user_id);
+
+      const magic_link = await Post(
+        `auth/internal-create-magic-link?user_id=${user_id}`
+      );
+      if (!magic_link.ok) {
+        setAlertMessage("Error occurred");
+        return;
       }
-      if (uniqueString) {
-        const magic_link = await Post(
-          `auth/internal-create-magic-link?user_id=${uniqueString.toString()}`
-        );
-        if (!magic_link.ok) {
-          setAlertMessage("Error occurred");
-          return;
-        }
 
-        // {new_user: true, token: 'something', user_id}
-        const res2 = await Post("auth/exchange", {
-          magic_link: magic_link.data,
-        });
+      const res2 = await Post("auth/exchange", {
+        magic_link: magic_link.data,
+      });
+      if (!res2.ok) {
+        setAlertMessage("Error occurred");
+        return;
+      }
+      localStorage.setItem("token", res2.data.token);
 
-        if (!res2.ok) {
-          setAlertMessage("Error occurred");
-          return;
-        }
-        localStorage.setItem("token", res2.data.token);
-
+      if (res2.data.new_user) {
         setFetching(false);
+      } else {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [uniqueString, loading]);
+  }, [uniqueString]);
 
   const handleMessageChange = (e) => {
     setEnteredName(e.target.value);
@@ -62,11 +60,10 @@ const Landing = () => {
     });
 
     if (!setupName.ok) {
-      setAlertMessage("Submission failed");
+      setAlertMessage("Submission failed. Please make sure your signup link is correct.");
       return;
     }
 
-    localStorage.setItem("name", setupName.data.name);
     setLoading(false);
   };
 
@@ -82,7 +79,7 @@ const Landing = () => {
         }}
       >
         <CircularProgress />
-        <div style={{ color: "white" }}>Initializing Lesson</div>
+        <div style={{ color: "white" }}>Loading</div>
       </div>
     ) : (
       <div className={styles.setUpWrapper}>

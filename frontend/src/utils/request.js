@@ -7,11 +7,10 @@ export async function Post(path, data) {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "http://localhost:3000",
       },
     };
 
-    if (token) {
+    if (token !== null) {
       options.headers["Authorization"] = `Bearer ${token}`;
     }
 
@@ -37,6 +36,7 @@ export async function Post(path, data) {
       })
       .catch((error) => {
         result = { ok: false, error: error || "Unknown error" };
+        resolve(result);
       });
   })
 
