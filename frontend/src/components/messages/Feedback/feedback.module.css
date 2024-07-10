@@ -14,7 +14,16 @@
     padding-bottom: 10px;
 }
 
-@media screen and (max-width: 400px) {
+.btn {
+    border-radius: 12px;
+    padding: 8px;
+    cursor: pointer;
+    background-color: #FFB930;
+    color: #282828;
+    width: fit-content;
+}
+
+@media screen and (max-width: 500px) {
     .wrapper {
         margin-bottom: 10px;
     }

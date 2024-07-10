@@ -34,7 +34,7 @@ export const Choice = forwardRef(({ width, message, func }, ref) => {
   const style = width ? { width: width } : {};
   return (
     <div ref={ref} className={styles.choice} style={style} onClick={func}>
-      <div>{message}</div>
+      {message}
     </div>
   );
 });

@@ -54,6 +54,9 @@ export default function Messages({
             title={message.content.title}
             body={message.content.body}
             choice={message.content.choice}
+            handleContinue={message?.continue?.handleClick}
+            oldHistory={message?.continue?.oldHistory}
+            selectionResultContent={message?.continue?.selectionResultContent}
           />
         );
       case "typingIndicator":

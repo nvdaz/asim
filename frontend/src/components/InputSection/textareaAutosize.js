@@ -19,7 +19,7 @@ const TextareaAutosize = styled(BaseTextareaAutosize)(
     border-radius: 17px;
     resize: none;
     width: 100%;
-    padding: 10px 50px 10px 10px;
+    padding: 10px;
     border: none;
     color: white;
     background-color: #3C3C43;
