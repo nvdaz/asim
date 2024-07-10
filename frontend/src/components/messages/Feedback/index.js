@@ -31,8 +31,7 @@ const Feedback = ({
           />
         </div>
       )}
-
-      {!choice && (
+      {choice === null && (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <div
             className={styles.btn}

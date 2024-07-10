@@ -125,9 +125,9 @@ async function send(
     oldHistory,
     selectionResultContent
   ) => {
-    console.log("apFollowedByFeedback");
     // ap followed by feedback with no follow_up
     if (!nextFetched.content.follow_up) {
+      console.log("apFollowedByFeedback");
       return [
         ...oldHistory,
         {
@@ -141,19 +141,19 @@ async function send(
         },
       ];
     } else {
-      console.log("apFollowedByFeedbackWithFollowUp");
+      console.log("apFollowedByFeedbackWithFollowUp", nextFetched);
       return [
         ...oldHistory,
         {
           type: "text",
           isSentByUser: false,
-          content: selectionResultContent.content,
+          content: selectionResultContent,
         },
         {
           type: "feedback",
           content: {
             body: nextFetched.content.body,
-            choice: nextFetched.follow_up,
+            choice: nextFetched.content.follow_up,
             title: nextFetched.content.title,
           },
         },
