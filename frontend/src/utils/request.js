@@ -19,8 +19,7 @@ export async function Post(path, data) {
     }
 
     let result;
-
-    fetch(`http://127.0.0.1:8000/${path}`, options)
+    fetch(`${process.env.REACT_APP_API_HOST}/${path}`, options)
       .then(async (response) => {
         const ok = response.ok;
 
@@ -38,7 +37,7 @@ export async function Post(path, data) {
         result = { ok: false, error: error || "Unknown error" };
         resolve(result);
       });
-  })
+  });
 
   return styles;
 }
