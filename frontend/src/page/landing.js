@@ -1,10 +1,11 @@
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
+import Button from "@mui/material/Button";
 
 import TextareaAutosize from "../components/InputSection/textareaAutosize";
 import { Post } from "../utils/request";
@@ -17,6 +18,7 @@ const Landing = () => {
   const [fetching, setFetching] = useState(true);
   const [enteredName, setEnteredName] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
+  const [mode, selectedMode] = useState("lessons");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,7 +62,9 @@ const Landing = () => {
     });
 
     if (!setupName.ok) {
-      setAlertMessage("Submission failed. Please make sure your signup link is correct.");
+      setAlertMessage(
+        "Submission failed. Please make sure your signup link is correct."
+      );
       return;
     }
 
@@ -118,14 +122,76 @@ const Landing = () => {
   const landingPage = () => {
     return (
       <div className={styles.wrapper}>
-        <div className={styles.column}>column</div>
+        <div className={styles.column}>
+          <div style={{ padding: "3rem 0" }}>
+            <div
+              className={mode === "lessons" ? styles.btnSelected : styles.btn}
+              onClick={() => selectedMode("lessons")}
+            >
+              Learn
+            </div>
+            <div
+              className={mode !== "lessons" ? styles.btnSelected : styles.btn}
+              onClick={() => selectedMode("playground")}
+            >
+              Playground
+            </div>
+          </div>
+        </div>
         <div className={styles.columnRight}>
-          <Link style={{ color: "white" }} to="/lesson/1">
-            Go to first lesson
-          </Link>
-          <Link style={{ color: "white" }} to="/lesson/2">
-            Go to second lesson
-          </Link>
+          <Button
+            sx={{
+              backgroundColor: "#797979",
+              borderRadius: "50%",
+              padding: 0,
+              "&:hover": {
+                backgroundColor: "#A3A3A3",
+              },
+              "& .MuiTouchRipple-child": {
+                backgroundColor: "#637BC4",
+              },
+            }}
+          >
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+              }}
+              onClick={() =>
+                setTimeout(() => {
+                  window.location.href = "/lesson/1";
+                }, "250")
+              }
+            ></div>
+          </Button>
+          <Button
+            sx={{
+              backgroundColor: "#797979",
+              borderRadius: "50%",
+              padding: 0,
+              marginLeft: '80px',
+              "&:hover": {
+                backgroundColor: "#A3A3A3",
+              },
+              "& .MuiTouchRipple-child": {
+                backgroundColor: "#637BC4",
+              },
+            }}
+          >
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+              }}
+              onClick={() =>
+                setTimeout(() => {
+                  window.location.href = "/lesson/2";
+                }, "250")
+              }
+            ></div>
+          </Button>
         </div>
       </div>
     );
