@@ -26,7 +26,7 @@ const Landing = () => {
       if (uniqueString) {
         localStorage.setItem("link", uniqueString);
       }
-      
+
       const res2 = await Post("auth/exchange", {
         magic_link: link,
       });
@@ -36,7 +36,7 @@ const Landing = () => {
       }
       localStorage.setItem("token", res2.data.token);
 
-      if (res2.data.new_user) {
+      if (!res2.data.user.init) {
         setFetching(false);
       } else {
         setLoading(false);

@@ -1,8 +1,11 @@
 import random
 
+from bson import ObjectId
+from faker.providers.person.en import Provider
 from pydantic import AfterValidator, BaseModel
 from typing_extensions import Annotated
 
+from api.db.conversations import get_previous_scenarios
 from api.schemas.conversation import ConversationInfo, ConversationScenario
 from api.schemas.persona import BasePersona, Persona
 
@@ -10,7 +13,7 @@ from . import llm
 
 
 async def _generate_conversation_scenario(
-    user: Persona, subject_name: str
+    user_id: ObjectId, user: Persona, subject_name: str
 ) -> ConversationScenario:
     system_prompt = (
         "As a scenario generator, your task is to generate a casual conversational "
@@ -29,7 +32,8 @@ async def _generate_conversation_scenario(
         f"true if the first message would be sent by {user.name} and false if it would "
         f"be sent by {subject_name}. Do not generate scenarios that involve "
         "significant external elements, such as finding a bug in a software program "
-        "(it is not possible to send the code). Examples:\n"
+        "(it is not possible to send the code). Also do not generate scenarios that "
+        "are too similar to a previously generated scenario. Examples:\n"
         "\n".join(
             [
                 ex.model_dump_json()
@@ -156,10 +160,24 @@ async def _generate_conversation_scenario(
 
     sampled_interests = random.sample(user.interests, min(2, len(user.interests)))
 
-    prompt_data = Persona(
-        **user.model_dump(exclude="interests"),
+    previous_scenarios = await get_previous_scenarios(user_id)
+
+    class GenerateConversationScenarioPrompt(BaseModel):
+        name: str
+        age: str
+        occupation: str
+        interests: list[str]
+        previous_user_scenarios: list[str]
+
+    prompt_data = GenerateConversationScenarioPrompt(
+        name=user.name,
+        age=user.age,
+        occupation=user.occupation,
         interests=sampled_interests,
-    ).model_dump_json(exclude="description")
+        previous_user_scenarios=previous_scenarios,
+    ).model_dump_json()
+
+    print(prompt_data)
 
     scenario = await llm.generate(
         schema=ConversationScenario,
@@ -236,9 +254,9 @@ async def _generate_subject_persona(scenario, subject_name):
     return subject_persona
 
 
-async def generate_conversation_info(user: Persona):
-    subject_name = "Alex"
-    scenario = await _generate_conversation_scenario(user, subject_name)
+async def generate_conversation_info(user_id: ObjectId, user: Persona):
+    subject_name = random.choice(Provider.first_names)
+    scenario = await _generate_conversation_scenario(user_id, user, subject_name)
     subject_persona = await _generate_subject_persona(
         scenario.subject_scenario, subject_name
     )

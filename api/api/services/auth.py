@@ -1,35 +1,24 @@
 import secrets
-from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, RootModel
-from pydantic.fields import Field
-from typing_extensions import Annotated
+from bson import ObjectId
+from pydantic import BaseModel
 
 from api.db import auth_tokens, magic_links
 from api.db import users as users
-from api.schemas.user import User
+from api.schemas.persona import Persona
+from api.schemas.user import BaseUserInit, User, UserInit
+
+from .qa_messages import is_qa_id_valid
+from .user_info import generate_user_info
 
 
-class LoginResultReturningUser(BaseModel):
-    new_user: Literal[False] = False
+class LoginResult(BaseModel):
     token: str
     user: User
 
 
-class LoginResultNewUser(BaseModel):
-    new_user: Literal[True] = True
-    token: str
-    user_id: str
-
-
-class LoginResult(RootModel):
-    root: Annotated[
-        LoginResultReturningUser | LoginResultNewUser, Field(discriminator="new_user")
-    ]
-
-
-async def _create_auth_token(user_id: str) -> str:
+async def _create_auth_token(user_id: ObjectId) -> str:
     secret = secrets.token_urlsafe(16)
     token = auth_tokens.AuthToken(secret=secret, user_id=user_id)
     await auth_tokens.create(token)
@@ -46,24 +35,53 @@ async def login_user(secret: str) -> LoginResult:
     if not link:
         raise InvalidMagicLink()
 
-    token = await _create_auth_token(link.user_id)
+    user = await users.get(link.user_id)
 
-    user = await users.get(UUID(link.user_id))
+    token = await _create_auth_token(user.root.id)
+
+    return LoginResult(user=user, token=token)
+
+
+class InvalidUser(Exception):
+    pass
+
+
+async def create_magic_link(qa_id: UUID) -> str:
+    if not is_qa_id_valid(qa_id):
+        raise InvalidUser()
+
+    secret = secrets.token_urlsafe(16)
+
+    user = await users.get_by_qa_id(qa_id)
 
     if not user:
-        return LoginResultNewUser(user_id=link.user_id, token=token)
+        persona = await generate_user_info(qa_id)
+        user = await users.create(users.BaseUserUninit(qa_id=qa_id, persona=persona))
 
-    return LoginResultReturningUser(user=user, token=token)
-
-
-async def create_magic_link(user_id: str) -> str:
-    secret = secrets.token_urlsafe(16)
-    link = magic_links.MagicLink(secret=secret, user_id=user_id)
+    link = magic_links.MagicLink(secret=secret, user_id=user.root.id)
     await magic_links.create(link)
     return link.secret
 
 
-async def setup_user(user_id: UUID, name: str) -> User:
-    user = users.User(user_id=user_id, name=name)
-    await users.upsert(user)
-    return user
+class AlreadyInitialized(Exception):
+    pass
+
+
+async def init_user(user_id: ObjectId, name: str) -> User:
+    user_uninit = await users.get(user_id)
+    if isinstance(user_uninit.root, UserInit):
+        raise AlreadyInitialized()
+
+    user_init = BaseUserInit(
+        qa_id=user_uninit.root.qa_id,
+        name=name,
+        persona=Persona(
+            name=name,
+            age=user_uninit.root.persona.age,
+            occupation=user_uninit.root.persona.occupation,
+            interests=user_uninit.root.persona.interests,
+            description=user_uninit.root.persona.description.replace("{{NAME}}", name),
+        ),
+    )
+
+    return await users.update(user_id, user_init)

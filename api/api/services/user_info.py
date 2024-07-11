@@ -1,11 +1,13 @@
 import asyncio
+from uuid import UUID
 
 import numpy as np
 from pydantic import BaseModel
 
-from api.schemas.persona import BasePersona, Persona
+from api.schemas.persona import BasePersonaUninit, PersonaUninit
 
 from . import llm
+from .qa_messages import get_messages
 
 
 class Demographics(BaseModel):
@@ -167,7 +169,7 @@ async def _extract_interests(messages: list[list[str]]) -> list[str]:
     return interests
 
 
-async def _generate_user_persona(user_base: BasePersona):
+async def _generate_user_persona(user_base: BasePersonaUninit):
     class PersonaResponse(BaseModel):
         persona: str
 
@@ -176,7 +178,8 @@ async def _generate_user_persona(user_base: BasePersona):
         "be used to make ChatGPT embody a persona based on the provided information. "
         "You must include all user details and fill in gaps with logical assumptions. "
         "Respond with a JSON object containing the key 'persona' and the system prompt "
-        f"as the value. Start with 'You are {user_base.name}...'"
+        "as the value. {{NAME}} will be replaced with the user's name. Start with 'You "
+        "are {{NAME}}...'"
     )
 
     prompt_data = user_base.model_dump_json()
@@ -188,16 +191,15 @@ async def _generate_user_persona(user_base: BasePersona):
         prompt=prompt_data,
     )
 
-    return Persona(**user_base.model_dump(), description=response.persona)
+    return PersonaUninit(**user_base.model_dump(), description=response.persona)
 
 
-async def _generate_user_info_base(messages: list[list[str]], user_name: str):
+async def _generate_user_info_base(messages: list[list[str]]):
     interests, demographics = await asyncio.gather(
         _extract_interests(messages), _extract_demographics(messages)
     )
 
-    user_base = BasePersona(
-        name=user_name,
+    user_base = BasePersonaUninit(
         age=demographics.age,
         occupation=demographics.occupation,
         interests=interests,
@@ -206,8 +208,10 @@ async def _generate_user_info_base(messages: list[list[str]], user_name: str):
     return user_base
 
 
-async def generate_user_info(messages: list[list[str]], user_name: str):
-    user_base = await _generate_user_info_base(messages, user_name)
+async def generate_user_info(qa_id: UUID):
+    print("GENNING>>>>")
+    messages = get_messages(qa_id)
+    user_base = await _generate_user_info_base(messages)
     user_persona = await _generate_user_persona(user_base)
 
     return user_persona

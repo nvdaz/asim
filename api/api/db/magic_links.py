@@ -1,11 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+from api.schemas.objectid import PyObjectId
 
 from .client import db
 
 
 class MagicLink(BaseModel):
     secret: str
-    user_id: str
+    user_id: PyObjectId
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 magic_links = db.magic_links

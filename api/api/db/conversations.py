@@ -1,17 +1,19 @@
-from uuid import UUID
-
 from bson import ObjectId
 
-from api.schemas.conversation import BaseConversationData, ConversationData
+from api.schemas.conversation import (
+    BaseConversationData,
+    ConversationData,
+    ConversationDescriptorData,
+)
 
 from .client import db
 
 conversations = db.conversations
 
 
-async def get(conversation_id: str, user_id: UUID) -> ConversationData:
+async def get(conversation_id: ObjectId, user_id: ObjectId) -> ConversationData:
     conversation = await conversations.find_one(
-        {"_id": ObjectId(conversation_id), "user_id": user_id}
+        {"_id": conversation_id, "user_id": user_id}
     )
     return ConversationData(**conversation) if conversation else None
 
@@ -19,21 +21,38 @@ async def get(conversation_id: str, user_id: UUID) -> ConversationData:
 async def insert(conversation: BaseConversationData) -> ConversationData:
     res = await conversations.insert_one(conversation.model_dump())
 
-    id = str(res.inserted_id)
-
-    data = ConversationData(
-        _id=id,
+    return ConversationData(
+        id=res.inserted_id,
         **conversation.model_dump(),
     )
-
-    return data
 
 
 async def update(conversation: ConversationData):
     await conversations.update_one(
         {
-            "_id": ObjectId(conversation.id),
+            "_id": conversation.id,
             "user_id": conversation.user_id,
         },
         {"$set": conversation.model_dump()},
     )
+
+
+async def list(
+    user_id: ObjectId, level: int | None = None
+) -> list[ConversationDescriptorData]:
+    cursor = conversations.find(
+        {"user_id": user_id, "level": level} if level else {"user_id": user_id},
+        {"_id": 1, "level": 1, "info": 1},
+    )
+    return [ConversationDescriptorData(**conversation) async for conversation in cursor]
+
+
+async def get_previous_scenarios(user_id: ObjectId):
+    cursor = conversations.find(
+        {"user_id": user_id},
+        {"info.scenario.user_scenario": 1},
+    )
+    return [
+        conversation["info"]["scenario"]["user_scenario"]
+        async for conversation in cursor
+    ]

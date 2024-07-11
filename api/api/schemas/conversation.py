@@ -1,12 +1,11 @@
 from typing import Literal, Union
-from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 from typing_extensions import Annotated
 
 from api.services.flow_state.base import FlowStateRef
 
-from .objectid import ObjectIdField
+from .objectid import PyObjectId
 from .persona import Persona
 
 
@@ -30,9 +29,19 @@ class MessageOption(BaseModel):
     next: FlowStateRef
 
 
-class ConversationWaiting(BaseModel):
+class ConversationWaitingInternal(BaseModel):
     waiting: Literal[True] = True
     options: list[MessageOption]
+
+
+class ConversationNormalInternal(BaseModel):
+    waiting: Literal[False] = False
+    state: FlowStateRef
+
+
+class ConversationWaiting(BaseModel):
+    waiting: Literal[True] = True
+    options: list[str]
 
 
 class ConversationNormal(BaseModel):
@@ -54,18 +63,67 @@ class ConversationInfo(BaseModel):
 
 
 class BaseConversationData(BaseModel):
-    user_id: UUID
+    user_id: PyObjectId
     level: int
     info: ConversationInfo
     state: Annotated[
-        Union[ConversationWaiting, ConversationNormal],
+        Union[ConversationWaitingInternal, ConversationNormalInternal],
         Field(discriminator="waiting"),
     ]
     messages: Messages
     last_feedback_received: int
 
+    model_config = ConfigDict(populate_by_name=True)
+
 
 class ConversationData(BaseConversationData):
-    id: Annotated[str, Field(alias="_id"), ObjectIdField()]
+    id: Annotated[PyObjectId, Field(alias="_id")]
 
-    model_config = ConfigDict(populate_by_name=True)
+
+class ConversationDescriptorData(BaseModel):
+    id: Annotated[PyObjectId, Field(alias="_id")]
+    level: int
+    info: ConversationInfo
+
+
+class ConversationDescriptor(BaseModel):
+    id: PyObjectId
+    level: int
+    subject_name: str
+
+    @staticmethod
+    def from_data(data: ConversationDescriptorData):
+        return ConversationDescriptor(
+            id=data.id,
+            level=data.level,
+            subject_name=data.info.subject.name,
+        )
+
+
+class Conversation(BaseModel):
+    id: PyObjectId
+    level: int
+    scenario: ConversationScenario
+    state: Annotated[
+        Union[ConversationWaiting, ConversationNormal],
+        Field(discriminator="waiting"),
+    ]
+    subject_name: str
+    messages: Messages
+
+    @staticmethod
+    def from_data(data: ConversationData):
+        state = (
+            ConversationWaiting(options=[o.response for o in data.state.options])
+            if data.state.waiting
+            else ConversationNormal(state=data.state.state)
+        )
+
+        return Conversation(
+            id=data.id,
+            level=data.level,
+            scenario=data.info.scenario,
+            state=state,
+            subject_name=data.info.subject.name,
+            messages=data.messages,
+        )

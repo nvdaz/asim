@@ -1,19 +1,18 @@
 import asyncio
 import random
-from dataclasses import dataclass
 from typing import Literal, Union
-from uuid import UUID
 
+from bson import ObjectId
 from pydantic import BaseModel, Field, RootModel
 from typing_extensions import Annotated
 
 from api.db import conversations
 from api.schemas.conversation import (
     BaseConversationData,
-    ConversationData,
-    ConversationNormal,
-    ConversationScenario,
-    ConversationWaiting,
+    Conversation,
+    ConversationDescriptor,
+    ConversationNormalInternal,
+    ConversationWaitingInternal,
     Message,
     MessageOption,
 )
@@ -51,33 +50,16 @@ class ConversationEvent(RootModel):
     ]
 
 
-@dataclass
-class Conversation:
-    id: str
-    level: int
-    scenario: ConversationScenario
-    subject_name: str
-    messages: list[Message]
-
-    @staticmethod
-    def from_data(data: ConversationData):
-        return Conversation(
-            id=data.id,
-            level=data.level,
-            scenario=data.info.scenario,
-            subject_name=data.info.subject.name,
-            messages=data.messages,
-        )
-
-
-async def create_conversation(user_id: UUID, user: Persona, level: int) -> Conversation:
-    conversation_info = await generate_conversation_info(user)
+async def create_conversation(
+    user_id: ObjectId, user: Persona, level: int
+) -> Conversation:
+    conversation_info = await generate_conversation_info(user_id, user)
 
     data = BaseConversationData(
         user_id=user_id,
         level=level,
         info=conversation_info,
-        state=ConversationNormal(
+        state=ConversationNormalInternal(
             state=(
                 LEVELS[level].initial_np_state
                 if conversation_info.scenario.is_user_initiated
@@ -93,17 +75,26 @@ async def create_conversation(user_id: UUID, user: Persona, level: int) -> Conve
     return Conversation.from_data(conversation)
 
 
-async def get_conversation(conversation_id: str, user_id: UUID) -> Conversation:
+async def list_conversations(
+    user_id: ObjectId, level: int | None = None
+) -> list[ConversationDescriptor]:
+    convs = await conversations.list(user_id, level)
+    return [ConversationDescriptor.from_data(c) for c in convs]
+
+
+async def get_conversation(
+    conversation_id: ObjectId, user_id: ObjectId
+) -> Conversation:
     conversation = await conversations.get(conversation_id, user_id)
     return Conversation.from_data(conversation)
 
 
 async def progress_conversation(
-    conversation_id: str, user_id: str, option: int | None
+    conversation_id: ObjectId, user_id: ObjectId, option: int | None
 ) -> ConversationEvent:
     conversation = await conversations.get(conversation_id, user_id)
 
-    if isinstance(conversation.state, ConversationWaiting):
+    if isinstance(conversation.state, ConversationWaitingInternal):
         assert option is not None
         response = conversation.state.options[option]
 
@@ -111,9 +102,9 @@ async def progress_conversation(
             Message(sender=conversation.info.user.name, message=response.response)
         )
 
-        conversation.state = ConversationNormal(state=response.next)
+        conversation.state = ConversationNormalInternal(state=response.next)
 
-    assert isinstance(conversation.state, ConversationNormal)
+    assert isinstance(conversation.state, ConversationNormalInternal)
 
     state_data = (
         LEVELS[conversation.level].get_flow_state(conversation.state.state).root
@@ -141,7 +132,7 @@ async def progress_conversation(
         ]
 
         random.shuffle(options)
-        conversation.state = ConversationWaiting(options=options)
+        conversation.state = ConversationWaitingInternal(options=options)
 
         result = NpMessageEvent(options=[o.response for o in options])
     elif isinstance(state_data, ApFlowState):
@@ -157,7 +148,7 @@ async def progress_conversation(
         conversation.messages.root.append(
             Message(sender=conversation.info.subject.name, message=response)
         )
-        conversation.state = ConversationNormal(state=opt.next)
+        conversation.state = ConversationNormalInternal(state=opt.next)
 
         result = ApMessageEvent(content=response)
     elif isinstance(state_data, FeedbackFlowState):
@@ -171,11 +162,11 @@ async def progress_conversation(
                     message=response.follow_up,
                 )
             )
-            conversation.state = ConversationNormal(
+            conversation.state = ConversationNormalInternal(
                 state=state_data.next_needs_improvement
             )
         else:
-            conversation.state = ConversationNormal(state=state_data.next_ok)
+            conversation.state = ConversationNormalInternal(state=state_data.next_ok)
 
         result = FeedbackEvent(content=response)
     else:
