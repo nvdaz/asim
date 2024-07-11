@@ -12,10 +12,8 @@ const Feedback = ({
 }) => {
   return (
     <div className={styles.wrapper}>
-      <div style={{ fontWeight: 700, fontSize: "18px", marginBottom: "5px" }}>
-        {title}
-      </div>
-      <div style={{ paddingBottom: "10px" }}>{body}</div>
+      <div className={styles.title}>{title}</div>
+      <div className={styles.body}>{body}</div>
       {choice && (
         <div
           style={{

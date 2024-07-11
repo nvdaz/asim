@@ -73,4 +73,14 @@
     padding: 13px;
     border-radius: 20px;
   }
+
+  .sendedText {
+    font-size: 16px;
+    line-height: 1.3rem;
+  }
+
+  .receivedText {
+    font-size: 16px;
+    line-height: 1.3rem;
+  }
 }

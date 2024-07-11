@@ -28,13 +28,22 @@ export async function Post(path, data) {
           result = { ok, data };
         } catch (error) {
           const errorText = await response.text();
-          result = { ok, error: errorText || "Unknown error" };
+          result = {
+            ok,
+            error:
+              errorText || Object.keys(error).length !== 0
+                ? error
+                : "Unknown error",
+          };
         }
 
         resolve(result);
       })
       .catch((error) => {
-        result = { ok: false, error: error || "Unknown error" };
+        result = {
+          ok: false,
+          error: Object.keys(error).length !== 0 ? error : "Unknown error",
+        };
         resolve(result);
       });
   });

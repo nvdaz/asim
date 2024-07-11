@@ -1,5 +1,4 @@
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import Avatar from "@mui/material/Avatar";
 import Dialog from "./dialog";
 import { Link } from "react-router-dom";

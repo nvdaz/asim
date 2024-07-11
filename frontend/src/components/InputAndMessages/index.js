@@ -30,7 +30,7 @@ const InputAndMessages = ({ headerHeight, initData }) => {
       style={{
         display: "flex",
         flexDirection: "column",
-        height: `calc(100vh - ${headerHeight}px)`,
+        height: `calc(100% - ${headerHeight}px)`,
       }}
     >
       {showProgress && (

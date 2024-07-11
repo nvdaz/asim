@@ -8,7 +8,7 @@ const ChoicesSection = ({ options, handleButtonClick }) => {
   useEffect(() => {
     const widths = elementsRef.current.map((el) => (el ? el.offsetWidth : 0));
     setMaxWidth(Math.max(...widths));
-  }, [elementsRef.current]);
+  }, []);
 
   return (
     <div className={styles.choicesWrapper}>
