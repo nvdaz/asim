@@ -46,7 +46,7 @@ class ConversationWaiting(BaseModel):
 
 class ConversationNormal(BaseModel):
     waiting: Literal[False] = False
-    state: FlowStateRef
+    type: Literal["ap", "np", "feedback"]
 
 
 class ConversationScenario(BaseModel):
@@ -116,7 +116,7 @@ class Conversation(BaseModel):
         state = (
             ConversationWaiting(options=[o.response for o in data.state.options])
             if data.state.waiting
-            else ConversationNormal(state=data.state.state)
+            else ConversationNormal(type=data.state.state.root.type)
         )
 
         return Conversation(
