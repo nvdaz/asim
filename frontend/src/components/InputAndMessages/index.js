@@ -16,6 +16,7 @@ const InputAndMessages = ({ headerHeight, initData }) => {
     });
   };
 
+  const [options, setOptions] = useState(Object.assign({}, initData.options));
   const [chatHistory, setChatHistory] = useState(
     initData.ap_message
       ? [
@@ -51,6 +52,8 @@ const InputAndMessages = ({ headerHeight, initData }) => {
       <Messages
         chatHistory={chatHistory}
         handleClickFeedback={handleClickFeedback}
+        setShowProgress={setShowProgress}
+        options={options}
       />
       <Inputs
         handleSend={handleSend(
@@ -66,7 +69,8 @@ const InputAndMessages = ({ headerHeight, initData }) => {
         choice={choice}
         setChoice={setChoice}
         setSelectedButton={setSelectedButton}
-        initOptions={Object.assign({}, initData.options)}
+        options={options}
+        setOptions={setOptions}
       />
     </div>
   );

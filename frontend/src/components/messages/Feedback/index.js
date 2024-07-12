@@ -8,7 +8,8 @@ const Feedback = ({
   choice,
   handleContinue,
   oldHistory,
-  selectionResultContent
+  selectionResultContent,
+  setShowProgress
 }) => {
   return (
     <div className={styles.wrapper}>
@@ -33,7 +34,13 @@ const Feedback = ({
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <div
             className={styles.btn}
-            onClick={() => handleContinue(oldHistory, selectionResultContent)}
+            onClick={() =>
+              handleContinue(
+                oldHistory,
+                selectionResultContent,
+                setShowProgress
+              )
+            }
           >
             Continue
           </div>

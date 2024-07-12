@@ -10,9 +10,9 @@ const Input = ({
   choice,
   setChoice,
   setSelectedButton,
-  initOptions,
+  options,
+  setOptions,
 }) => {
-  const [options, setOptions] = useState(initOptions);
   const [selectedOption, setSelectedOption] = useState(null);
   const [showChoicesSection, setShowChoicesSection] = useState(true);
 

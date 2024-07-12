@@ -8,6 +8,8 @@ import styles from "./index.module.css";
 export default function Messages({
   chatHistory,
   handleClickFeedback,
+  setShowProgress,
+  options,
 }) {
   const containerRef = useRef(null);
 
@@ -18,7 +20,7 @@ export default function Messages({
         top: containerRef.current.scrollHeight + 30,
       });
     }
-  }, [containerRef?.current?.scrollHeight, chatHistory]);
+  }, [containerRef?.current?.scrollHeight, chatHistory, options]);
 
   // fit chat bubble width to text width
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function Messages({
             handleContinue={message?.continue?.handleClick}
             oldHistory={message?.continue?.oldHistory}
             selectionResultContent={message?.continue?.selectionResultContent}
+            setShowProgress={setShowProgress}
           />
         );
       case "typingIndicator":
@@ -67,11 +70,7 @@ export default function Messages({
   };
 
   return (
-    <div
-      style={{ flex: 1 }}
-      className={styles.wrapper}
-      ref={containerRef}
-    >
+    <div style={{ flex: 1 }} className={styles.wrapper} ref={containerRef}>
       <div className={styles.messageWrapper}>
         {chatHistory.map((message, index) => {
           return messageHistory(message, index, chatHistory.length);

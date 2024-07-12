@@ -54,7 +54,7 @@ async function send(
   ) => {
     // feedback would always not have follow_up
     console.log("feedbackWithNoFollowUpFollowedByNP");
-    setOptions(Object.assign({}, nextFetched.data.options));
+    setOptions(Object.assign({}, nextFetched.options));
     setShowChoicesSection(true);
     return [
       {
@@ -62,7 +62,7 @@ async function send(
         content: {
           body: selectionResultContent.body,
           title: selectionResultContent.title,
-        },
+        }
       },
     ];
   };
@@ -97,8 +97,14 @@ async function send(
     ];
   };
 
-  const handleContinueLol = async (oldHistory, selectionResultContent) => {
+  async function handleContinue(
+    oldHistory,
+    selectionResultContent,
+    setShowProgress
+  ) {
+    setShowProgress(true);
     const nextFetched2 = await fetchData();
+    setShowProgress(false);
 
     return [
       ...oldHistory,
@@ -126,17 +132,26 @@ async function send(
   ) => {
     // ap followed by feedback with no follow_up
     if (!nextFetched.content.follow_up) {
-      console.log("apFollowedByFeedback");
+      console.log("apFollowedByFeedback", selectionResultContent, nextFetched);
       return [
         ...oldHistory,
         {
+          type: "text",
+          isSentByUser: false,
+          content: selectionResultContent,
+        },
+        {
           type: "feedback",
           content: {
-            body: selectionResultContent.body,
-            choice: selectionResultContent.follow_up,
-            title: selectionResultContent.title,
+            body: nextFetched.content.body,
+            choice: nextFetched.content.follow_up,
+            title: nextFetched.content.title,
           },
-          handleClick: handleContinueLol,
+          continue: {
+            handleClick: handleContinue,
+            oldHistory: oldHistory,
+            selectionResultContent: selectionResultContent
+          }
         },
       ];
     } else {
@@ -196,7 +211,7 @@ async function send(
 
       setChatHistory([
         ...oldHistory,
-        ...(await feedbackWithNoFollowUpFollowedByNP(nextFetched, oldHistory)),
+        ...(await feedbackWithNoFollowUpFollowedByNP(nextFetched.data, oldHistory)),
       ]);
     }
   };
