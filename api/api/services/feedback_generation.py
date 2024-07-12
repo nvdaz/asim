@@ -249,7 +249,8 @@ async def _generate_feedback_with_follow_up(
 
     follow_up = await generate_message(
         user,
-        conversation.info.scenario.user_scenario,
+        subject,
+        conversation.info.scenario.user_perspective,
         conversation.messages,
         extra=feedback_base.instructions,
     )

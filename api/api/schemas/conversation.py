@@ -56,8 +56,8 @@ class ConversationNormal(BaseModel):
 
 
 class ConversationScenario(BaseModel):
-    user_scenario: str
-    subject_scenario: str
+    user_perspective: str
+    subject_perspective: str
     user_goal: str
     is_user_initiated: bool
 

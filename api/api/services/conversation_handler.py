@@ -129,7 +129,8 @@ async def progress_conversation(
             *[
                 generate_message(
                     conversation.info.user,
-                    conversation.info.scenario.user_scenario,
+                    conversation.info.subject,
+                    conversation.info.scenario.user_perspective,
                     conversation.messages,
                     opt.prompt,
                 )
@@ -164,7 +165,8 @@ async def progress_conversation(
 
         response = await generate_message(
             conversation.info.subject,
-            conversation.info.scenario.subject_scenario,
+            conversation.info.user,
+            conversation.info.scenario.subject_perspective,
             conversation.messages,
             opt.prompt,
         )
@@ -199,15 +201,13 @@ async def progress_conversation(
         )
 
         if response.follow_up is not None:
-            conversation.messages.root.append(
-                Message(
-                    sender=conversation.info.user.name,
-                    message=response.follow_up,
+            options = [
+                MessageOption(
+                    response=response.follow_up, next=state_data.next_needs_improvement
                 )
-            )
-            conversation.state = ConversationNormalInternal(
-                state=state_data.next_needs_improvement
-            )
+            ]
+
+            conversation.state = ConversationWaitingInternal(options=options)
         else:
             conversation.state = ConversationNormalInternal(state=state_data.next_ok)
 
