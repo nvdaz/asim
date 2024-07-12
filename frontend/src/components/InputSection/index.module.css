@@ -1,9 +1,9 @@
 .wrapper {
   background-color: #282828;
   color: white;
-  border-top: 0;
   bottom: 0;
   position: relative;
+  border-top: 1.5px solid #333333;
 }
 
 .textArea {
@@ -35,7 +35,14 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  padding-top: 20px;
+}
+
+.choicesTitlesWrapper {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .choices {
@@ -98,6 +105,16 @@
   padding: 1.5rem 1.5rem 15px;
 }
 
+.arrow {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.arrowRotate {
+  transform: rotate(180deg);
+  cursor: pointer;
+}
+
 @media screen and (min-width: 800px) {
   .inputWrapper, .choicesWrapper {
     margin-right: calc(20% - 16px);
@@ -130,7 +147,9 @@
     line-height: 1.2rem;
   }
   .choicesWrapper {
-    padding: 20px 1.5rem 0;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-bottom: 0;
   }
 }
 
@@ -139,7 +158,9 @@
     font-size: 16px;
   }
   .choicesWrapper {
-    padding: 20px 16px 0;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: 0;
   }
   .choice {
     font-size: 16px;
