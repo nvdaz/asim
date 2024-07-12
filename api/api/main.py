@@ -12,6 +12,7 @@ origins = ["http://localhost:3000", "https://autsim.pages.dev"]
 
 app = FastAPI(title="Autism Simulator API", version="0.0.1")
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

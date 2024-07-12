@@ -3,7 +3,7 @@ from typing import Literal, Union
 from pydantic import BaseModel, Field, RootModel, StringConstraints
 from typing_extensions import Annotated
 
-from api.schemas.conversation import ConversationData, Message, Messages
+from api.schemas.conversation import ConversationData, Feedback, Message, Messages
 
 from . import llm
 from .flow_state.base import FeedbackFlowState
@@ -116,12 +116,6 @@ async def _analyze_messages(
         return await _analyze_messages_base(conversation, state)
     else:
         return await _analyze_messages_with_understanding(conversation, state)
-
-
-class Feedback(BaseModel):
-    title: Annotated[str, StringConstraints(max_length=50)]
-    body: Annotated[str, StringConstraints(max_length=600)]
-    follow_up: str | None = None
 
 
 async def _generate_feedback_with_follow_up(

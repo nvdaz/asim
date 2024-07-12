@@ -1,4 +1,5 @@
 from bson import ObjectId
+from pydantic.fields import Field
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 from typing_extensions import Annotated
@@ -42,4 +43,8 @@ class _ObjectIdField:
         return handler(core_schema.str_schema())
 
 
-PyObjectId = Annotated[ObjectId, _ObjectIdField]
+PyObjectId = Annotated[
+    ObjectId,
+    _ObjectIdField,
+    Field(format="objectid"),
+]

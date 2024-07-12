@@ -1,6 +1,6 @@
 from typing import Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel, StringConstraints
 from typing_extensions import Annotated
 
 from api.services.flow_state.base import FlowStateRef
@@ -12,6 +12,12 @@ from .persona import Persona
 class Message(BaseModel):
     sender: str
     message: str
+
+
+class Feedback(BaseModel):
+    title: Annotated[str, StringConstraints(max_length=50)]
+    body: Annotated[str, StringConstraints(max_length=600)]
+    follow_up: str | None = None
 
 
 class Messages(RootModel):
@@ -62,6 +68,41 @@ class ConversationInfo(BaseModel):
     subject: Persona
 
 
+class NpMessageOptionsLogEntry(BaseModel):
+    type: Literal["np_options"] = "np_options"
+    state: str
+    options: list[MessageOption]
+
+
+class NpMessageSelectedLogEntry(BaseModel):
+    type: Literal["np_selected"] = "np_selected"
+    message: str
+
+
+class ApMessageLogEntry(BaseModel):
+    type: Literal["ap"] = "ap"
+    state: str
+    message: str
+
+
+class FeedbackLogEntry(BaseModel):
+    type: Literal["feedback"] = "feedback"
+    state: str
+    content: Feedback
+
+
+class ConversationLogEntry(RootModel):
+    root: Annotated[
+        Union[
+            NpMessageOptionsLogEntry,
+            NpMessageSelectedLogEntry,
+            ApMessageLogEntry,
+            FeedbackLogEntry,
+        ],
+        Field(discriminator="type"),
+    ]
+
+
 class BaseConversationData(BaseModel):
     user_id: PyObjectId
     level: int
@@ -70,6 +111,7 @@ class BaseConversationData(BaseModel):
         Union[ConversationWaitingInternal, ConversationNormalInternal],
         Field(discriminator="waiting"),
     ]
+    events: list[ConversationLogEntry]
     messages: Messages
     last_feedback_received: int
 

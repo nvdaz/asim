@@ -8,13 +8,18 @@ from typing_extensions import Annotated
 
 from api.db import conversations
 from api.schemas.conversation import (
+    ApMessageLogEntry,
     BaseConversationData,
     Conversation,
     ConversationDescriptor,
+    ConversationLogEntry,
     ConversationNormalInternal,
     ConversationWaitingInternal,
+    FeedbackLogEntry,
     Message,
     MessageOption,
+    NpMessageOptionsLogEntry,
+    NpMessageSelectedLogEntry,
 )
 from api.schemas.persona import Persona
 
@@ -66,6 +71,7 @@ async def create_conversation(
                 else LEVELS[level].initial_ap_state
             )
         ),
+        events=[],
         messages=[],
         last_feedback_received=0,
     )
@@ -97,6 +103,14 @@ async def progress_conversation(
     if isinstance(conversation.state, ConversationWaitingInternal):
         assert option is not None
         response = conversation.state.options[option]
+
+        conversation.events.append(
+            ConversationLogEntry(
+                root=NpMessageSelectedLogEntry(
+                    message=response.response,
+                )
+            )
+        )
 
         conversation.messages.root.append(
             Message(sender=conversation.info.user.name, message=response.response)
@@ -132,6 +146,16 @@ async def progress_conversation(
         ]
 
         random.shuffle(options)
+
+        conversation.events.append(
+            ConversationLogEntry(
+                root=NpMessageOptionsLogEntry(
+                    state=conversation.state.state.root.id,
+                    options=options,
+                )
+            )
+        )
+
         conversation.state = ConversationWaitingInternal(options=options)
 
         result = NpMessageEvent(options=[o.response for o in options])
@@ -145,15 +169,34 @@ async def progress_conversation(
             opt.prompt,
         )
 
+        conversation.events.append(
+            ConversationLogEntry(
+                root=ApMessageLogEntry(
+                    state=conversation.state.state.root.id,
+                    message=response,
+                )
+            )
+        )
+
         conversation.messages.root.append(
             Message(sender=conversation.info.subject.name, message=response)
         )
+
         conversation.state = ConversationNormalInternal(state=opt.next)
 
         result = ApMessageEvent(content=response)
     elif isinstance(state_data, FeedbackFlowState):
         response = await generate_feedback(conversation, state_data)
         conversation.last_feedback_received = len(conversation.messages.root)
+
+        conversation.events.append(
+            ConversationLogEntry(
+                root=FeedbackLogEntry(
+                    state=conversation.state.state.root.id,
+                    content=response,
+                )
+            )
+        )
 
         if response.follow_up is not None:
             conversation.messages.root.append(
