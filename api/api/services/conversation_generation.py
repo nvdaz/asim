@@ -1,18 +1,17 @@
 import random
 
 from bson import ObjectId
-from faker.providers.person.en import Provider
 from pydantic import AfterValidator, BaseModel
 from typing_extensions import Annotated
 
 from api.db.conversations import get_previous_scenarios
-from api.schemas.conversation import ConversationInfo, ConversationScenario
+from api.schemas.conversation import ConversationScenario
 from api.schemas.persona import BasePersona, Persona
 
 from . import llm
 
 
-async def _generate_conversation_scenario(
+async def generate_conversation_scenario(
     user_id: ObjectId, user: Persona, subject_name: str
 ) -> ConversationScenario:
     system_prompt = (
@@ -246,7 +245,7 @@ async def _generate_subject_persona_from_base(subject: BasePersona):
     return Persona(**subject.model_dump(), description=response.persona)
 
 
-async def _generate_subject_persona(scenario, subject_name):
+async def generate_subject_persona(scenario, subject_name):
     subject_info = await _generate_subject_base(scenario, subject_name)
 
     subject_persona = await _generate_subject_persona_from_base(subject_info)
@@ -254,15 +253,15 @@ async def _generate_subject_persona(scenario, subject_name):
     return subject_persona
 
 
-async def generate_conversation_info(user_id: ObjectId, user: Persona):
-    subject_name = random.choice(Provider.first_names)
-    scenario = await _generate_conversation_scenario(user_id, user, subject_name)
-    subject_persona = await _generate_subject_persona(
-        scenario.subject_perspective, subject_name
-    )
+# async def generate_conversation_info(user_id: ObjectId, user: Persona):
+#     subject_name = random.choice(Provider.first_names)
+#     scenario = await generate_conversation_scenario(user_id, user, subject_name)
+#     subject_persona = await _generate_subject_persona(
+#         scenario.subject_scenario, subject_name
+#     )
 
-    return ConversationInfo(
-        scenario=scenario,
-        user=user,
-        subject=subject_persona,
-    )
+#     return ConversationInfo(
+#         scenario=scenario,
+#         user=user,
+#         subject=subject_persona,
+#     )

@@ -4,11 +4,14 @@ ENV PYTHONUNBUFFERED True
 
 WORKDIR /app
 
+COPY ./pyproject.toml .
+
+RUN python -m pip install --no-cache-dir  --upgrade .
+
 COPY . .
 
 ENV PORT 8080
 
-RUN python -m pip install --no-cache-dir .
 
 RUN mkdir cache
 

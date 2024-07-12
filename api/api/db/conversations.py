@@ -1,9 +1,10 @@
 from bson import ObjectId
 
 from api.schemas.conversation import (
-    BaseConversationData,
+    BaseConversationUninitData,
     ConversationData,
     ConversationDescriptorData,
+    ConversationUninitData,
 )
 
 from .client import db
@@ -18,7 +19,7 @@ async def get(conversation_id: ObjectId, user_id: ObjectId) -> ConversationData:
     return ConversationData(**conversation) if conversation else None
 
 
-async def insert(conversation: BaseConversationData) -> ConversationData:
+async def insert(conversation: BaseConversationUninitData) -> ConversationUninitData:
     res = await conversations.insert_one(conversation.model_dump())
 
     return ConversationData(
@@ -30,8 +31,8 @@ async def insert(conversation: BaseConversationData) -> ConversationData:
 async def update(conversation: ConversationData):
     await conversations.update_one(
         {
-            "_id": conversation.id,
-            "user_id": conversation.user_id,
+            "_id": conversation.root.id,
+            "user_id": conversation.root.user_id,
         },
         {"$set": conversation.model_dump(exclude={"id"})},
     )

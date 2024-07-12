@@ -3,7 +3,7 @@ from typing import Literal, Union
 from pydantic import BaseModel, Field, RootModel, StringConstraints
 from typing_extensions import Annotated
 
-from api.schemas.conversation import ConversationData, Feedback, Message, Messages
+from api.schemas.conversation import ConversationInitData, Feedback, Message, Messages
 
 from . import llm
 from .flow_state.base import FeedbackFlowState
@@ -44,7 +44,7 @@ class FeedbackAnalysis(RootModel):
 
 
 async def _analyze_messages_base(
-    conversation: ConversationData, state: FeedbackFlowState
+    conversation: ConversationInitData, state: FeedbackFlowState
 ) -> FeedbackAnalysis:
     user, subject = conversation.info.user, conversation.info.subject
 
@@ -81,7 +81,7 @@ async def _analyze_messages_base(
 
 
 async def _analyze_messages_with_understanding(
-    conversation: ConversationData, state: FeedbackFlowState
+    conversation: ConversationInitData, state: FeedbackFlowState
 ):
     user, subject = conversation.info.user, conversation.info.subject
 
@@ -110,7 +110,7 @@ async def _analyze_messages_with_understanding(
 
 
 async def _analyze_messages(
-    conversation: ConversationData, state: FeedbackFlowState
+    conversation: ConversationInitData, state: FeedbackFlowState
 ) -> FeedbackAnalysis:
     if conversation.messages[-1].sender == conversation.info.user.name:
         return await _analyze_messages_base(conversation, state)
@@ -119,7 +119,7 @@ async def _analyze_messages(
 
 
 async def _generate_feedback_with_follow_up(
-    conversation: ConversationData, feedback: FeedbackFlowState
+    conversation: ConversationInitData, feedback: FeedbackFlowState
 ):
     class FeedbackWithPromptResponse(BaseModel):
         title: Annotated[str, StringConstraints(max_length=50)]
@@ -263,7 +263,7 @@ async def _generate_feedback_with_follow_up(
 
 
 async def _generate_feedback_needs_improvement(
-    conversation: ConversationData, feedback: FeedbackFlowState
+    conversation: ConversationInitData, feedback: FeedbackFlowState
 ):
     user, subject = conversation.info.user, conversation.info.subject
 
@@ -368,7 +368,7 @@ async def _generate_feedback_needs_improvement(
 
 
 async def _generate_feedback_ok(
-    conversation: ConversationData, feedback: FeedbackFlowState
+    conversation: ConversationInitData, feedback: FeedbackFlowState
 ):
     user, subject = conversation.info.user, conversation.info.subject
 
@@ -422,7 +422,7 @@ async def _generate_feedback_ok(
 
 
 async def generate_feedback(
-    conversation: ConversationData, state: FeedbackFlowState
+    conversation: ConversationInitData, state: FeedbackFlowState
 ) -> Feedback:
     analysis = await _analyze_messages(conversation, state)
 

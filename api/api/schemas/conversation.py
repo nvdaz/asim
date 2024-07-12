@@ -103,7 +103,21 @@ class ConversationLogEntry(RootModel):
     ]
 
 
-class BaseConversationData(BaseModel):
+class BaseConversationInfo(BaseModel):
+    scenario: ConversationScenario
+
+
+class BaseConversationUninitData(BaseModel):
+    init: Literal[False] = False
+    user_id: PyObjectId
+    level: int
+    subject_name: str
+    info: BaseConversationInfo
+    user_persona: Persona
+
+
+class BaseConversationInitData(BaseModel):
+    init: Literal[True] = True
     user_id: PyObjectId
     level: int
     info: ConversationInfo
@@ -115,11 +129,24 @@ class BaseConversationData(BaseModel):
     messages: Messages
     last_feedback_received: int
 
+
+class ConversationInitData(BaseConversationInitData):
+    id: Annotated[PyObjectId, Field(alias="_id")]
+
     model_config = ConfigDict(populate_by_name=True)
 
 
-class ConversationData(BaseConversationData):
+class ConversationUninitData(BaseConversationUninitData):
     id: Annotated[PyObjectId, Field(alias="_id")]
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ConversationData(RootModel):
+    root: Annotated[
+        Union[ConversationInitData, ConversationUninitData],
+        Field(discriminator="init"),
+    ]
 
 
 class ConversationDescriptorData(BaseModel):
@@ -142,8 +169,9 @@ class ConversationDescriptor(BaseModel):
         )
 
 
-class Conversation(BaseModel):
+class ConversationInit(BaseModel):
     id: PyObjectId
+    init: Literal[True] = True
     level: int
     scenario: ConversationScenario
     state: Annotated[
@@ -154,18 +182,53 @@ class Conversation(BaseModel):
     messages: Messages
 
     @staticmethod
-    def from_data(data: ConversationData):
+    def from_data(data: ConversationInitData):
         state = (
             ConversationWaiting(options=[o.response for o in data.state.options])
             if data.state.waiting
             else ConversationNormal(type=data.state.state.root.type)
         )
 
-        return Conversation(
+        return ConversationInit(
             id=data.id,
             level=data.level,
             scenario=data.info.scenario,
             state=state,
             subject_name=data.info.subject.name,
             messages=data.messages,
+        )
+
+
+class ConversationUninit(BaseModel):
+    id: PyObjectId
+    init: Literal[False] = False
+    level: int
+    scenario: ConversationScenario
+    subject_name: str
+    messages: Annotated[list[Message], Field(min_length=0, max_length=0)] = []
+
+    @staticmethod
+    def from_data(data: ConversationUninitData):
+        return ConversationUninit(
+            id=data.id,
+            level=data.level,
+            scenario=data.info.scenario,
+            subject_name=data.subject_name,
+        )
+
+
+class Conversation(RootModel):
+    root: Annotated[
+        Union[ConversationInit, ConversationUninit],
+        Field(discriminator="init"),
+    ]
+
+    @staticmethod
+    def from_data(data: ConversationData):
+        return Conversation(
+            root=(
+                ConversationInit.from_data(data.root)
+                if data.root.init
+                else ConversationUninit.from_data(data.root)
+            )
         )
