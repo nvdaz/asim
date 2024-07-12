@@ -201,15 +201,13 @@ async def progress_conversation(
         )
 
         if response.follow_up is not None:
-            conversation.messages.root.append(
-                Message(
-                    sender=conversation.info.user.name,
-                    message=response.follow_up,
+            options = [
+                MessageOption(
+                    response=response.follow_up, next=state_data.next_needs_improvement
                 )
-            )
-            conversation.state = ConversationNormalInternal(
-                state=state_data.next_needs_improvement
-            )
+            ]
+
+            conversation.state = ConversationWaitingInternal(options=options)
         else:
             conversation.state = ConversationNormalInternal(state=state_data.next_ok)
 
