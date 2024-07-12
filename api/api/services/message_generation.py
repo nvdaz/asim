@@ -8,7 +8,7 @@ from . import llm
 
 
 async def generate_message(
-    persona: Persona, scenario: str, messages: Messages, extra=""
+    persona: Persona, other: Persona, scenario: str, messages: Messages, extra=""
 ) -> str:
     def validate_sender(v):
         if v != persona.name:
@@ -22,12 +22,12 @@ async def generate_message(
     instr = f"Instructions: {extra}" if extra else ""
 
     system_prompt = (
-        f"{persona.description}\nScenario: {scenario}\n{instr}\nYou are chatting over "
-        "text. Keep your messages under 50 words and appropriate for a text "
-        "conversation. Keep the conversation going. Return a JSON object with the key "
-        "'message' and your message as the value and the key 'sender' with "
-        f"'{persona.name}' as the value. Respond ONLY with your next message. Do not "
-        "include the previous messages in your response."
+        f"{persona.description}\nScenario: {scenario}\n{instr}\nYou ({persona.name}) "
+        f"are chatting over text with {other.name}. Keep your messages under 50 words "
+        "and appropriate for a text conversation. Keep the conversation going. Return "
+        "a JSON object with the key 'message' and your message as the value and the "
+        f"key 'sender' with '{persona.name}' as the value. Respond ONLY with your next "
+        "message. Do not include the previous messages in your response."
     )
 
     prompt_data = (

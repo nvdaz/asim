@@ -129,7 +129,8 @@ async def progress_conversation(
             *[
                 generate_message(
                     conversation.info.user,
-                    conversation.info.scenario.user_scenario,
+                    conversation.info.subject,
+                    conversation.info.scenario.user_perspective,
                     conversation.messages,
                     opt.prompt,
                 )
@@ -164,7 +165,8 @@ async def progress_conversation(
 
         response = await generate_message(
             conversation.info.subject,
-            conversation.info.scenario.subject_scenario,
+            conversation.info.user,
+            conversation.info.scenario.subject_perspective,
             conversation.messages,
             opt.prompt,
         )

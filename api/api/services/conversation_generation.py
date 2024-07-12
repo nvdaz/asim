@@ -21,9 +21,9 @@ async def _generate_conversation_scenario(
         "profile. The scenario should be a specific situation that could happen "
         f"between {user.name} and an unfamiliar person {subject_name} over text "
         "messaging. The scenario should be realistic and relatable. Respond with a "
-        f"JSON object. The 'user_scenario' key should be a string describing "
+        f"JSON object. The 'user_perspective' key should be a string describing "
         f"{user.name}'s perspective in the scenario (use second person pronouns to "
-        f"refer to {user.name}), the 'subject_scenario' key should be a string "
+        f"refer to {user.name}), the 'subject_perspective' key should be a string "
         f"describing {subject_name}'s perspective (use second person pronouns to refer "
         f"to {subject_name}), the 'user_goal' key should be a string describing "
         f"{user.name}'s objective in the scenario (begin with an action verb, e.g., "
@@ -39,13 +39,13 @@ async def _generate_conversation_scenario(
                 ex.model_dump_json()
                 for ex in [
                     ConversationScenario(
-                        user_scenario=(
+                        user_perspective=(
                             "Phil, a theoretical physics student, has reached out to "
                             "you over text. Phil is looking for advice on studying "
                             "theoretical physics and wants to discuss different "
                             "areas of the field to explore further."
                         ),
-                        subject_scenario=(
+                        subject_perspective=(
                             "You reach out to Professor Green, a theoretical physics "
                             "professor, over text. Professor Green is excited to chat "
                             "about theoretical physics and share advice on studying "
@@ -59,13 +59,13 @@ async def _generate_conversation_scenario(
                         is_user_initiated=False,
                     ),
                     ConversationScenario(
-                        user_scenario=(
+                        user_perspective=(
                             "Having just started at a pharmaceutical company, you "
                             "exchanged numbers with your colleague, Jake. Start "
                             "texting to discuss work, get insights into his role, and "
                             "learn about his interests outside of work."
                         ),
-                        subject_scenario=(
+                        subject_perspective=(
                             "You've given your number to Christina, a new team member "
                             "at the pharmaceutical company you work for. Christina "
                             "wants to chat about work and get to know you better."
@@ -77,13 +77,13 @@ async def _generate_conversation_scenario(
                         is_user_initiated=True,
                     ),
                     ConversationScenario(
-                        user_scenario=(
+                        user_perspective=(
                             "After meeting Avery in photography class and exchanging "
                             "numbers, you start texting to potentially collaborate on "
                             "a project. Ask about their favorite subjects, tips, and "
                             "projects to discuss further."
                         ),
-                        subject_scenario=(
+                        subject_perspective=(
                             "You met Joe in photography class and asked for his "
                             "number. Joe is excited to talk about photography with "
                             "you, discussing favorite subjects, tips, and projects. "
@@ -97,13 +97,13 @@ async def _generate_conversation_scenario(
                         is_user_initiated=False,
                     ),
                     ConversationScenario(
-                        user_scenario=(
+                        user_perspective=(
                             "Being new to the neighborhood, you start texting your "
                             "neighbor Jordan to get acquainted. Ask about local "
                             "events, the best dining spots, and any helpful tips for "
                             "newcomers."
                         ),
-                        subject_scenario=(
+                        subject_perspective=(
                             "David, your new neighbor, has reached out to you over "
                             "text. David is eager to chat about local events, dining "
                             "spots, and tips for newcomers."
@@ -115,13 +115,13 @@ async def _generate_conversation_scenario(
                         is_user_initiated=True,
                     ),
                     ConversationScenario(
-                        user_scenario=(
+                        user_perspective=(
                             "At a math conference, you start texting Riley, a fellow "
                             "attendee interested in topological algebra and category "
                             "theory. Get to know Riley better and discuss their "
                             "research, favorite mathematicians, and future projects."
                         ),
-                        subject_scenario=(
+                        subject_perspective=(
                             "After meeting you at a math conference, Eden is eager to "
                             "chat about topological algebra and category theory. Eden "
                             "wants to learn about your research and interests in the "
@@ -135,13 +135,13 @@ async def _generate_conversation_scenario(
                         is_user_initiated=False,
                     ),
                     ConversationScenario(
-                        user_scenario=(
+                        user_perspective=(
                             "After meeting Finn, an avid hiker, at a social event, "
                             "you start texting to share hiking experiences. Ask about "
                             "their favorite trails, future hiking plans, and advice "
                             "for beginners."
                         ),
-                        subject_scenario=(
+                        subject_perspective=(
                             "You met Alex at a social event and exchanged numbers to "
                             "chat about hiking. Alex wants to learn about your "
                             "favorite trails, future hiking plans, and advice for "
@@ -258,7 +258,7 @@ async def generate_conversation_info(user_id: ObjectId, user: Persona):
     subject_name = random.choice(Provider.first_names)
     scenario = await _generate_conversation_scenario(user_id, user, subject_name)
     subject_persona = await _generate_subject_persona(
-        scenario.subject_scenario, subject_name
+        scenario.subject_perspective, subject_name
     )
 
     return ConversationInfo(

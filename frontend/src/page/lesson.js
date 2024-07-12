@@ -177,7 +177,7 @@ const Lesson = () => {
             <Header
               name={data["subject_name"]}
               initData={{
-                scenario: data["scenario"]["user_scenario"],
+                scenario: data["scenario"]["user_perspective"],
                 goal: data["scenario"]["user_goal"],
               }}
               fetchNewConversation={fetchNewConversation}

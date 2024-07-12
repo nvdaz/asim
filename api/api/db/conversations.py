@@ -50,9 +50,9 @@ async def list(
 async def get_previous_scenarios(user_id: ObjectId):
     cursor = conversations.find(
         {"user_id": user_id},
-        {"info.scenario.user_scenario": 1},
+        {"info.scenario.user_perspective": 1},
     )
     return [
-        conversation["info"]["scenario"]["user_scenario"]
+        conversation["info"]["scenario"]["user_perspective"]
         async for conversation in cursor
     ]
