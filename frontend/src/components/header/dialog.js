@@ -73,35 +73,13 @@ SimpleDialog.propTypes = {
   open: PropTypes.bool.isRequired,
 };
 
-export default function SimpleDialogDemo({ initData }) {
-  const [open, setOpen] = React.useState(true);
-
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
+export default function SimpleDialogDemo({ open, setOpen, initData }) {
 
   return (
-    <div>
-      <div
-        style={{
-          cursor: "pointer",
-          border: "white 1px solid",
-          borderRadius: "10px",
-          padding: "5px 10px",
-        }}
-        onClick={handleClickOpen}
-      >
-        Scenario and Goal
-      </div>
-      <SimpleDialog
-        open={open}
-        onClose={handleClose}
-        initData={initData}
-      />
-    </div>
+    <SimpleDialog
+      open={open}
+      onClose={() => setOpen(false)}
+      initData={initData}
+    />
   );
 }

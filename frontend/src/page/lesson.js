@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Collapse from "@mui/material/Collapse";
@@ -12,8 +13,10 @@ import { Post, Get } from "../utils/request";
 import styles from "./landing.module.css";
 
 const Lesson = () => {
+  const { conversationIDFromParam } = useParams();
   const [headerHeight, setHeaderHeight] = useState(null);
   const [data, setData] = useState(null);
+  const [conversationList, setConversationList] = useState(null);
   const [nextConversation, setNextConversation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertMessage, setAlertMessage] = useState("");
@@ -48,6 +51,22 @@ const Lesson = () => {
     }
   };
 
+  const fetchNewConversation = async () => {
+    const initConversation = await Post("conversations/", {
+      level: currentLevel,
+    });
+    if (!initConversation.ok) {
+      setAlertMessage("Error occurred fetching data");
+      return;
+    }
+    setData(initConversation.data);
+
+    await fetchNextSteps(
+      initConversation.data.id,
+      !initConversation.data.scenario.is_user_initiated
+    );
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (typeof currentLevel !== "number") {
@@ -57,26 +76,20 @@ const Lesson = () => {
       const listConversations = await Get(
         `conversations/?level=${currentLevel}`
       );
+      if (!listConversations.ok) {
+        setAlertMessage("Error occurred fetching data");
+        return;
+      }
 
-      // when there were no previous conversations
+      setConversationList(listConversations.data);
+
       if (listConversations.data.length === 0) {
-        const initConversation = await Post("conversations/", {
-          level: currentLevel,
-        });
-        if (!initConversation.ok) {
-          setAlertMessage("Error occurred fetching data");
-          return;
-        }
-        setData(initConversation.data);
-
-        await fetchNextSteps(
-          initConversation.data.id,
-          !initConversation.data.scenario.is_user_initiated
-        );
-        // when there are many conversations
+        await fetchNewConversation();
       } else {
-        const conversationID =
+        const conversationID = conversationIDFromParam ||
           listConversations.data[listConversations.data.length - 1].id;
+
+        console.log(conversationIDFromParam, conversationID);
         const history = await Get(`conversations/${conversationID}`);
         if (!history.ok) {
           setAlertMessage("Error occurred fetching data");
@@ -167,6 +180,9 @@ const Lesson = () => {
                 scenario: data["scenario"]["user_scenario"],
                 goal: data["scenario"]["user_goal"],
               }}
+              fetchNewConversation={fetchNewConversation}
+              conversationList={conversationList}
+              currentLevel={currentLevel}
             />
           </div>
           <InputAndMessages
