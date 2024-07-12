@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from api.schemas.persona import BasePersonaUninit, PersonaUninit
 
 from . import llm
-from .qa_messages import get_messages
+from .qa_messages import QaMessage, get_messages_by_user
 
 
 class Demographics(BaseModel):
@@ -15,7 +15,7 @@ class Demographics(BaseModel):
     occupation: str
 
 
-async def _extract_demographics(messages: list[list[str]]) -> Demographics:
+async def _extract_demographics(messages: list[QaMessage]) -> Demographics:
     system_prompt = (
         "As a user analyst, your task is to extract demographic information about the "
         "user based on the messages they sent to a chatbot. Start by analyzing "
@@ -24,7 +24,7 @@ async def _extract_demographics(messages: list[list[str]]) -> Demographics:
         'this: <analysis>[ANALYSIS HERE]</analysis> {"age": "AGE RANGE", "occupation": '
         '"OCCUPATION"}'
     )
-    prompt_data = "\n".join([message[0] for message in messages])
+    prompt_data = "\n".join([message.message for message in messages])
     demographics = await llm.generate(
         schema=Demographics,
         model=llm.MODEL_GPT_4,
@@ -152,15 +152,15 @@ async def _get_interests_from_topics(topics: list[str]) -> list[str]:
     return response.interests
 
 
-async def _extract_interests(messages: list[list[str]]) -> list[str]:
-    responses = [response for _, response in messages]
+async def _extract_interests(messages: list[QaMessage]) -> list[str]:
+    responses = [message.response for message in messages]
 
     clustered_messages_indices = await _cluster_messages(
         responses, epsilon=0.7, alpha=0.3, c=min(len(responses) // 12, 6)
     )
 
     clustered_prompts = [
-        [messages[i][0] for i in cluster] for cluster in clustered_messages_indices
+        [messages[i].message for i in cluster] for cluster in clustered_messages_indices
     ]
 
     topics = await _get_cluster_topics(clustered_prompts)
@@ -194,7 +194,7 @@ async def _generate_user_persona(user_base: BasePersonaUninit):
     return PersonaUninit(**user_base.model_dump(), description=response.persona)
 
 
-async def _generate_user_info_base(messages: list[list[str]]):
+async def _generate_user_info_base(messages: list[QaMessage]):
     interests, demographics = await asyncio.gather(
         _extract_interests(messages), _extract_demographics(messages)
     )
@@ -209,8 +209,7 @@ async def _generate_user_info_base(messages: list[list[str]]):
 
 
 async def generate_user_info(qa_id: UUID):
-    print("GENNING>>>>")
-    messages = get_messages(qa_id)
+    messages = await get_messages_by_user(qa_id)
     user_base = await _generate_user_info_base(messages)
     user_persona = await _generate_user_persona(user_base)
 

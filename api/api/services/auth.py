@@ -9,7 +9,6 @@ from api.db import users as users
 from api.schemas.persona import Persona
 from api.schemas.user import BaseUserInit, User, UserInit
 
-from .qa_messages import is_qa_id_valid
 from .user_info import generate_user_info
 
 
@@ -42,14 +41,7 @@ async def login_user(secret: str) -> LoginResult:
     return LoginResult(user=user, token=token)
 
 
-class InvalidUser(Exception):
-    pass
-
-
 async def create_magic_link(qa_id: UUID) -> str:
-    if not is_qa_id_valid(qa_id):
-        raise InvalidUser()
-
     secret = secrets.token_urlsafe(16)
 
     user = await users.get_by_qa_id(qa_id)

@@ -33,7 +33,7 @@ async def update(conversation: ConversationData):
             "_id": conversation.id,
             "user_id": conversation.user_id,
         },
-        {"$set": conversation.model_dump()},
+        {"$set": conversation.model_dump(exclude={"id"})},
     )
 
 

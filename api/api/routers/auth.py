@@ -8,7 +8,6 @@ from api.schemas.user import User
 from api.services.auth import (
     AlreadyInitialized,
     InvalidMagicLink,
-    InvalidUser,
     LoginResult,
     create_magic_link,
     init_user,
@@ -47,11 +46,6 @@ async def me(current_user: CurrentUser) -> User:
     return current_user
 
 
-@router.post(
-    "/internal-create-magic-link", responses={400: {"description": "Invalid user id"}}
-)
+@router.post("/internal-create-magic-link")
 async def internal_create_magic_link(qa_id: UUID) -> str:
-    try:
-        return await create_magic_link(qa_id)
-    except InvalidUser as e:
-        raise HTTPException(status_code=400, detail="Invalid user id") from e
+    return await create_magic_link(qa_id)
