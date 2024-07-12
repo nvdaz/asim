@@ -19,7 +19,7 @@ const Lesson = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const currentLevel = window.location.href.split("/")[4] - 1;
 
-  const errr = async (conversationID, condition) => {
+  const fetchNextSteps = async (conversationID, condition) => {
     const next = await Post(`conversations/${conversationID}/next`);
     if (!next.ok) {
       setAlertMessage("Error occurred fetching data");
@@ -37,7 +37,13 @@ const Lesson = () => {
         options: userOptions.data.options,
         ap_message: next.data.content,
       });
+
+      console.log("fetchNextSteps 1", {
+        options: userOptions.data.options,
+        ap_message: next.data.content,
+      });
     } else {
+      console.log("fetchNextSteps 2", next.data);
       setNextConversation(next.data);
     }
   };
@@ -45,14 +51,14 @@ const Lesson = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (typeof currentLevel !== "number") {
-        setAlertMessage("Wrong url parameter");
+        setAlertMessage("Invalid url parameter");
       }
 
       const listConversations = await Get(
         `conversations/?level=${currentLevel}`
       );
 
-      // when there were no previous conversatioins
+      // when there were no previous conversations
       if (listConversations.data.length === 0) {
         const initConversation = await Post("conversations/", {
           level: currentLevel,
@@ -63,37 +69,19 @@ const Lesson = () => {
         }
         setData(initConversation.data);
 
-        //
-        const next = await Post(
-          `conversations/${initConversation.data.id}/next`
+        await fetchNextSteps(
+          initConversation.data.id,
+          !initConversation.data.scenario.is_user_initiated
         );
-        if (!next.ok) {
+        // when there are many conversations
+      } else {
+        const conversationID =
+          listConversations.data[listConversations.data.length - 1].id;
+        const history = await Get(`conversations/${conversationID}`);
+        if (!history.ok) {
           setAlertMessage("Error occurred fetching data");
           return;
         }
-
-        if (!initConversation.data.scenario.is_user_initiated) {
-          const userOptions = await Post(
-            `conversations/${initConversation.data.id}/next`
-          );
-          if (!userOptions.ok) {
-            setAlertMessage("Error occurred fetching data");
-            return;
-          }
-
-          setNextConversation({
-            options: userOptions.data.options,
-            ap_message: next.data.content,
-          });
-        } else {
-          setNextConversation(next.data);
-        }
-        //
-        // when there are many conversations
-      } else {
-        const length = listConversations.data.length;
-        const conversationID = listConversations.data[length - 1].id;
-        const history = await Get(`conversations/${conversationID}`);
         const historyData = history.data;
 
         setData({
@@ -104,23 +92,19 @@ const Lesson = () => {
         });
 
         if (historyData.state.waiting) {
+          console.log(
+            "historyData.state.waiting",
+            historyData.state.waiting,
+            "nextConversation",
+            {
+              options: historyData.state.options,
+            }
+          );
           setNextConversation({
             options: historyData.state.options,
-            ap_message: null,
           });
         } else {
-          const next = await Post(`conversations/${conversationID}/next`);
-          if (next.data.type === "ap") {
-            const userOptions = await Post(
-              `conversations/${conversationID}/next`
-            );
-            setNextConversation({
-              options: userOptions.data.options,
-              ap_message: next.data.content,
-            });
-          } else {
-            setNextConversation(next);
-          }
+          await fetchNextSteps(conversationID);
         }
       }
 
