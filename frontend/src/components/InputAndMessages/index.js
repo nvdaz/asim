@@ -5,16 +5,28 @@ import LinearProgress from "@mui/material/LinearProgress";
 import handleSend from "../InputSection/util/handleSend";
 
 const InputAndMessages = ({ headerHeight, initData }) => {
+  const convertToMessageHistory = () => {
+    const userName = localStorage.getItem("name");
+    return initData.messages.map((m) => {
+      return {
+        type: "text",
+        isSentByUser: userName === m.sender,
+        content: m.message,
+      };
+    });
+  };
+
   const [chatHistory, setChatHistory] = useState(
-    initData.is_user_initiated
-      ? []
-      : [
+    initData.ap_message
+      ? [
+          ...convertToMessageHistory(),
           {
             type: "text",
             isSentByUser: false,
             content: initData.ap_message,
           },
         ]
+      : [...convertToMessageHistory()]
   );
   const [choice, setChoice] = useState("");
   const [selectedButton, setSelectedButton] = useState(null);

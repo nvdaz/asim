@@ -33,7 +33,7 @@ const Landing = () => {
         magic_link: link,
       });
       if (!res2.ok) {
-        setAlertMessage(res2.error);
+        setAlertMessage("Error occurred");
         return;
       }
       localStorage.setItem("token", res2.data.token);
@@ -56,6 +56,8 @@ const Landing = () => {
     const setupName = await Post("auth/setup", {
       name: enteredName,
     });
+
+    localStorage.setItem("name", enteredName);
 
     if (!setupName.ok) {
       setAlertMessage(

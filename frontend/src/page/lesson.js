@@ -7,7 +7,7 @@ import CloseIcon from "@mui/icons-material/Close";
 
 import Header from "../components/header/index.js";
 import InputAndMessages from "../components/InputAndMessages/index.js";
-import { Post } from "../utils/request";
+import { Post, Get } from "../utils/request";
 
 import styles from "./landing.module.css";
 
@@ -19,42 +19,111 @@ const Lesson = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const currentLevel = window.location.href.split("/")[4] - 1;
 
+  const errr = async (conversationID, condition) => {
+    const next = await Post(`conversations/${conversationID}/next`);
+    if (!next.ok) {
+      setAlertMessage("Error occurred fetching data");
+      return;
+    }
+
+    if (condition || next.data.type === "ap") {
+      const userOptions = await Post(`conversations/${conversationID}/next`);
+      if (!userOptions.ok) {
+        setAlertMessage("Error occurred fetching data");
+        return;
+      }
+
+      setNextConversation({
+        options: userOptions.data.options,
+        ap_message: next.data.content,
+      });
+    } else {
+      setNextConversation(next.data);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (typeof currentLevel !== "number") {
         setAlertMessage("Wrong url parameter");
       }
-      const initConversation = await Post("conversations/", {
-        level: currentLevel,
-      });
-      if (!initConversation.ok) {
-        setAlertMessage("Error occurred fetching data");
-        return;
-      }
-      setData(initConversation.data);
-      
-      const next = await Post(`conversations/${initConversation.data.id}/next`);
-      if (!next.ok) {
-        setAlertMessage("Error occurred fetching data");
-        return;
-      }
 
-      if (!initConversation.data.scenario.is_user_initiated) {
-        const userOptions = await Post(
+      const listConversations = await Get(
+        `conversations/?level=${currentLevel}`
+      );
+
+      // when there were no previous conversatioins
+      if (listConversations.data.length === 0) {
+        const initConversation = await Post("conversations/", {
+          level: currentLevel,
+        });
+        if (!initConversation.ok) {
+          setAlertMessage("Error occurred fetching data");
+          return;
+        }
+        setData(initConversation.data);
+
+        //
+        const next = await Post(
           `conversations/${initConversation.data.id}/next`
         );
-        if (!userOptions.ok) {
+        if (!next.ok) {
           setAlertMessage("Error occurred fetching data");
           return;
         }
 
-        setNextConversation({
-          options: userOptions.data.options,
-          ap_message: next.data.content,
-        });
+        if (!initConversation.data.scenario.is_user_initiated) {
+          const userOptions = await Post(
+            `conversations/${initConversation.data.id}/next`
+          );
+          if (!userOptions.ok) {
+            setAlertMessage("Error occurred fetching data");
+            return;
+          }
+
+          setNextConversation({
+            options: userOptions.data.options,
+            ap_message: next.data.content,
+          });
+        } else {
+          setNextConversation(next.data);
+        }
+        //
+        // when there are many conversations
       } else {
-        setNextConversation(next.data);
+        const length = listConversations.data.length;
+        const conversationID = listConversations.data[length - 1].id;
+        const history = await Get(`conversations/${conversationID}`);
+        const historyData = history.data;
+
+        setData({
+          id: conversationID,
+          subject_name: historyData.subject_name,
+          scenario: historyData.scenario,
+          messages: historyData.messages,
+        });
+
+        if (historyData.state.waiting) {
+          setNextConversation({
+            options: historyData.state.options,
+            ap_message: null,
+          });
+        } else {
+          const next = await Post(`conversations/${conversationID}/next`);
+          if (next.data.type === "ap") {
+            const userOptions = await Post(
+              `conversations/${conversationID}/next`
+            );
+            setNextConversation({
+              options: userOptions.data.options,
+              ap_message: next.data.content,
+            });
+          } else {
+            setNextConversation(next);
+          }
+        }
       }
+
       setLoading(false);
     };
 
@@ -106,7 +175,7 @@ const Lesson = () => {
           <div style={{ color: "white" }}>Initializing Lesson</div>
         </div>
       ) : (
-        <div style={{ width: "100%", height: '100%' }}>
+        <div style={{ width: "100%", height: "100%" }}>
           <div ref={header}>
             <Header
               name={data["subject_name"]}
@@ -123,6 +192,7 @@ const Lesson = () => {
               options: nextConversation.options,
               is_user_initiated: data.scenario.is_user_initiated,
               ap_message: nextConversation?.ap_message,
+              messages: data.messages,
             }}
           />
         </div>
