@@ -40,9 +40,16 @@ from .conversation_generation import (
     generate_subject_persona,
 )
 from .feedback_generation import Feedback, generate_feedback
-from .flow_state.base import ApFlowState, FeedbackFlowState, NpFlowState
+from .flow_state.base import (
+    ApFlowState,
+    FeedbackFlowState,
+    NormalApFlowStateRef,
+    NormalNpFlowStateRef,
+    NpFlowState,
+)
 from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL
 from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL
+from .flow_state.playground import PLAYGROUND_MAPPINGS
 from .message_generation import generate_message
 
 LEVELS = [FIGURATIVE_LANGUAGE_LEVEL, BLUNT_LANGUAGE_LEVEL]
@@ -174,9 +181,9 @@ async def progress_conversation(
             info=info,
             state=ConversationNormalInternal(
                 state=(
-                    LEVELS[level].initial_np_state
+                    NormalNpFlowStateRef
                     if info.scenario.is_user_initiated
-                    else LEVELS[level].initial_ap_state
+                    else NormalApFlowStateRef
                 )
             ),
             events=[],
@@ -193,7 +200,7 @@ async def progress_conversation(
             subject_name=conversation.subject_name,
             info=conversation.info,
             user_persona=conversation.user_persona,
-            state=ConversationNormalInternal(state=LEVELS[level].initial_np_state),
+            state=ConversationNormalInternal(state=NormalNpFlowStateRef),
             events=[],
             messages=[],
             last_feedback_received=0,
@@ -220,10 +227,19 @@ async def progress_conversation(
     assert isinstance(conversation.state, ConversationNormalInternal)
 
     state_data = (
-        LEVELS[conversation.level].get_flow_state(conversation.state.state).root
+        LEVELS[conversation.level].get_flow_state(conversation.state.state)
+        if conversation.type == "level"
+        else PLAYGROUND_MAPPINGS[conversation.state.state]
     )
 
     if isinstance(state_data, NpFlowState):
+        print(state_data.options)
+        state_options = (
+            random.sample(state_data.options, 3)
+            if len(state_data.options) > 3
+            else state_data.options
+        )
+
         responses = await asyncio.gather(
             *[
                 generate_message(
@@ -240,7 +256,7 @@ async def progress_conversation(
                     conversation.messages,
                     opt.prompt,
                 )
-                for opt in state_data.options
+                for opt in state_options
             ]
         )
 
@@ -249,7 +265,7 @@ async def progress_conversation(
                 response=response,
                 next=opt.next,
             )
-            for response, opt in zip(responses, state_data.options)
+            for response, opt in zip(responses, state_options)
         ]
 
         random.shuffle(options)
@@ -257,7 +273,7 @@ async def progress_conversation(
         conversation.events.append(
             ConversationLogEntry(
                 root=NpMessageOptionsLogEntry(
-                    state=conversation.state.state.root.id,
+                    state=conversation.state.state.id,
                     options=options,
                 )
             )
@@ -286,7 +302,7 @@ async def progress_conversation(
         conversation.events.append(
             ConversationLogEntry(
                 root=ApMessageLogEntry(
-                    state=conversation.state.state.root.id,
+                    state=conversation.state.state.id,
                     message=response,
                 )
             )
@@ -306,7 +322,7 @@ async def progress_conversation(
         conversation.events.append(
             ConversationLogEntry(
                 root=FeedbackLogEntry(
-                    state=conversation.state.state.root.id,
+                    state=conversation.state.state.id,
                     content=response,
                 )
             )

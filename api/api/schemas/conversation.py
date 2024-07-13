@@ -322,7 +322,7 @@ class PlaygroundConversationInit(BaseModel):
         state = (
             ConversationWaiting(options=[o.response for o in data.state.options])
             if data.state.waiting
-            else ConversationNormal(type=data.state.state.root.type)
+            else ConversationNormal(type=data.state.state.type)
         )
 
         return PlaygroundConversationInit(

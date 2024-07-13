@@ -45,7 +45,7 @@ async def get_conversation(
     res = await conversation_handler.get_conversation(
         conversation_id, current_user.root.id
     )
-    print(res)
+
     return res
 
 

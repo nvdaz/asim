@@ -1,16 +1,25 @@
 from typing import Literal
 
+from .base import (
+    NORMAL_NP_MAPPINGS,
+    ApFlowStateMapping,
+    FeedbackFlowStateMapping,
+    FlowOption,
+    FlowStateMapping,
+    Level,
+    NpFlowStateMapping,
+    build_mappings,
+)
 from .base import ApFlowState as _ApFlowState
 from .base import ApFlowStateRef as _ApFlowStateRef
 from .base import FeedbackFlowState as _FeedbackFlowState
 from .base import FeedbackFlowStateRef as _FeedbackFlowStateRef
-from .base import FlowOption, FlowState, Level
 from .base import NpFlowState as _NpFlowState
 from .base import NpFlowStateRef as _NpFlowStateRef
 
 NpFlowStateId = Literal["normal", "confrontational"]
 ApFlowStateId = Literal["normal"]
-FeedbackFlowStateId = Literal["normal"]
+FeedbackFlowStateId = Literal["blunt"]
 
 NpFlowState = _NpFlowState[NpFlowStateId]
 ApFlowState = _ApFlowState[ApFlowStateId]
@@ -21,31 +30,17 @@ ApFlowStateRef = _ApFlowStateRef[ApFlowStateId]
 FeedbackFlowStateRef = _FeedbackFlowStateRef[FeedbackFlowStateId]
 
 
-FLOW_STATES = [
-    FlowState(
-        root=NpFlowState(
-            id="normal",
-            options=[
-                FlowOption(
-                    prompt=(
-                        "Do not use any confrontational language in your next message. "
-                        "Keep your message neutral and non-aggressive."
-                    ),
-                    next=ApFlowStateRef(id="normal").as_ref(),
-                ),
-            ],
-        )
-    ),
-    FlowState(
-        root=NpFlowState(
-            id="confrontational",
+BLUNT_MAPPINGS: list[FlowStateMapping] = [
+    NpFlowStateMapping(
+        id=NpFlowStateRef(id="confrontational"),
+        value=NpFlowState(
             options=[
                 FlowOption(
                     prompt=(
                         "Do not use any confrontational language in your next message."
                         "Keep your message neutral and non-aggressive."
                     ),
-                    next=ApFlowStateRef(id="normal").as_ref(),
+                    next=ApFlowStateRef(id="normal"),
                 ),
                 FlowOption(
                     prompt=(
@@ -53,7 +48,7 @@ FLOW_STATES = [
                         "intended to be aggressive and assertive. Example: 'I don't "
                         "appreciate your tone.'"
                     ),
-                    next=FeedbackFlowStateRef(id="normal").as_ref(),
+                    next=FeedbackFlowStateRef(id="blunt"),
                 ),
                 FlowOption(
                     prompt=(
@@ -61,14 +56,14 @@ FLOW_STATES = [
                         "message and take it personally. Example: 'How dare you say "
                         "that?'"
                     ),
-                    next=FeedbackFlowStateRef(id="normal").as_ref(),
+                    next=FeedbackFlowStateRef(id="blunt"),
                 ),
             ],
         ),
     ),
-    FlowState(
-        root=ApFlowState(
-            id="normal",
+    ApFlowStateMapping(
+        id=ApFlowStateRef(id="normal"),
+        value=ApFlowState(
             options=[
                 FlowOption(
                     prompt=(
@@ -77,14 +72,14 @@ FLOW_STATES = [
                         "an opinion on that.', 'Stop talking, you don't know what "
                         "you're talking about.', 'I don't care what you think.'"
                     ),
-                    next=NpFlowStateRef(id="confrontational").as_ref(),
+                    next=NpFlowStateRef(id="confrontational"),
                 ),
             ],
-        )
+        ),
     ),
-    FlowState(
-        root=FeedbackFlowState(
-            id="normal",
+    FeedbackFlowStateMapping(
+        id=FeedbackFlowStateRef(id="blunt"),
+        value=FeedbackFlowState(
             prompt_analysis=(
                 "The conversation needs improvement if there are instances "
                 "where the user is confrontational or negative in response to a "
@@ -106,15 +101,12 @@ FLOW_STATES = [
                 "instead. Provide feedback on how the user could have been more "
                 "patient and understanding."
             ),
-            next_needs_improvement=ApFlowStateRef(id="normal").as_ref(),
-            next_ok=ApFlowStateRef(id="normal").as_ref(),
-        )
+            next_needs_improvement=ApFlowStateRef(id="normal"),
+            next_ok=ApFlowStateRef(id="normal"),
+        ),
     ),
 ]
 
-
 BLUNT_LANGUAGE_LEVEL = Level(
-    flow_states=FLOW_STATES,
-    initial_np_state=NpFlowStateRef(id="normal").as_ref(),
-    initial_ap_state=ApFlowStateRef(id="normal").as_ref(),
+    mappings=build_mappings(NORMAL_NP_MAPPINGS, BLUNT_MAPPINGS),
 )
