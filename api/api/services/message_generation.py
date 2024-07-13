@@ -1,14 +1,14 @@
 from pydantic import AfterValidator, BaseModel
 from typing_extensions import Annotated
 
-from api.schemas.conversation import Messages
+from api.schemas.conversation import Message, message_list_adapter
 from api.schemas.persona import Persona
 
 from . import llm
 
 
 async def generate_message(
-    persona: Persona, other: Persona, scenario: str, messages: Messages, extra=""
+    persona: Persona, other: Persona, scenario: str, messages: list[Message], extra=""
 ) -> str:
     def validate_sender(v):
         if v != persona.name:
@@ -32,8 +32,8 @@ async def generate_message(
 
     prompt_data = (
         "[CONVERSATION START]"
-        if len(messages.root) == 0
-        else messages.model_dump_json()
+        if len(messages) == 0
+        else str(message_list_adapter.dump_json(messages))
     )
 
     response = await llm.generate(

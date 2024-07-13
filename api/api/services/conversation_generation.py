@@ -4,7 +4,7 @@ from bson import ObjectId
 from pydantic import AfterValidator, BaseModel
 from typing_extensions import Annotated
 
-from api.db.conversations import get_previous_scenarios
+from api.db.conversations import get_previous_level_scenarios
 from api.schemas.conversation import ConversationScenario
 from api.schemas.persona import BasePersona, Persona
 
@@ -159,7 +159,7 @@ async def generate_conversation_scenario(
 
     sampled_interests = random.sample(user.interests, min(2, len(user.interests)))
 
-    previous_scenarios = await get_previous_scenarios(user_id)
+    previous_scenarios = await get_previous_level_scenarios(user_id)
 
     class GenerateConversationScenarioPrompt(BaseModel):
         name: str
@@ -251,17 +251,3 @@ async def generate_subject_persona(scenario, subject_name):
     subject_persona = await _generate_subject_persona_from_base(subject_info)
 
     return subject_persona
-
-
-# async def generate_conversation_info(user_id: ObjectId, user: Persona):
-#     subject_name = random.choice(Provider.first_names)
-#     scenario = await generate_conversation_scenario(user_id, user, subject_name)
-#     subject_persona = await _generate_subject_persona(
-#         scenario.subject_scenario, subject_name
-#     )
-
-#     return ConversationInfo(
-#         scenario=scenario,
-#         user=user,
-#         subject=subject_persona,
-#     )

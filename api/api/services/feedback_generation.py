@@ -3,7 +3,13 @@ from typing import Literal, Union
 from pydantic import BaseModel, Field, RootModel, StringConstraints
 from typing_extensions import Annotated
 
-from api.schemas.conversation import ConversationInitData, Feedback, Message, Messages
+from api.schemas.conversation import (
+    Feedback,
+    LevelConversationInitData,
+    Message,
+    Messages,
+    message_list_adapter,
+)
 
 from . import llm
 from .flow_state.base import FeedbackFlowState
@@ -44,7 +50,7 @@ class FeedbackAnalysis(RootModel):
 
 
 async def _analyze_messages_base(
-    conversation: ConversationInitData, state: FeedbackFlowState
+    conversation: LevelConversationInitData, state: FeedbackFlowState
 ) -> FeedbackAnalysis:
     user, subject = conversation.info.user, conversation.info.subject
 
@@ -59,9 +65,11 @@ async def _analyze_messages_base(
         "conversation."
     )
 
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
+    prompt_data = str(
+        message_list_adapter.dump_json(
+            conversation.messages[conversation.last_feedback_received :]
+        )
+    )
 
     response = await llm.generate(
         schema=BaseFeedbackAnalysis,
@@ -81,7 +89,7 @@ async def _analyze_messages_base(
 
 
 async def _analyze_messages_with_understanding(
-    conversation: ConversationInitData, state: FeedbackFlowState
+    conversation: LevelConversationInitData, state: FeedbackFlowState
 ):
     user, subject = conversation.info.user, conversation.info.subject
 
@@ -97,9 +105,11 @@ async def _analyze_messages_with_understanding(
         "and 'analysis': a string containing your analysis of the conversation."
     )
 
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
+    prompt_data = str(
+        message_list_adapter.dump_json(
+            conversation.messages[conversation.last_feedback_received :]
+        )
+    )
 
     return await llm.generate(
         schema=FeedbackAnalysis,
@@ -110,7 +120,7 @@ async def _analyze_messages_with_understanding(
 
 
 async def _analyze_messages(
-    conversation: ConversationInitData, state: FeedbackFlowState
+    conversation: LevelConversationInitData, state: FeedbackFlowState
 ) -> FeedbackAnalysis:
     if conversation.messages[-1].sender == conversation.info.user.name:
         return await _analyze_messages_base(conversation, state)
@@ -119,7 +129,7 @@ async def _analyze_messages(
 
 
 async def _generate_feedback_with_follow_up(
-    conversation: ConversationInitData, feedback: FeedbackFlowState
+    conversation: LevelConversationInitData, feedback: FeedbackFlowState
 ):
     class FeedbackWithPromptResponse(BaseModel):
         title: Annotated[str, StringConstraints(max_length=50)]
@@ -230,15 +240,17 @@ async def _generate_feedback_with_follow_up(
         "Examples: \n"
         + "\n\n".join(
             [
-                f"{messages.model_dump_json()}\n{fb.model_dump_json()}"
+                f"{str(message_list_adapter.dump_json(messages))}\n{fb.model_dump_json()}"
                 for messages, fb in examples
             ]
         )
     )
 
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
+    prompt_data = str(
+        message_list_adapter.dump_json(
+            conversation.messages[conversation.last_feedback_received :]
+        )
+    )
 
     feedback_base = await llm.generate(
         schema=FeedbackWithPromptResponse,
@@ -250,7 +262,14 @@ async def _generate_feedback_with_follow_up(
     follow_up = await generate_message(
         user,
         subject,
-        conversation.info.scenario.user_perspective,
+        (
+            conversation.info.scenario.user_perspective
+            if conversation.type == "level"
+            else (
+                f"You are discussing {conversation.info.topic} with "
+                f"{conversation.info.subject.name}, who is an expert."
+            )
+        ),
         conversation.messages,
         extra=feedback_base.instructions,
     )
@@ -263,7 +282,7 @@ async def _generate_feedback_with_follow_up(
 
 
 async def _generate_feedback_needs_improvement(
-    conversation: ConversationInitData, feedback: FeedbackFlowState
+    conversation: LevelConversationInitData, feedback: FeedbackFlowState
 ):
     user, subject = conversation.info.user, conversation.info.subject
 
@@ -355,9 +374,11 @@ async def _generate_feedback_needs_improvement(
         )
     )
 
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
+    prompt_data = str(
+        message_list_adapter.dump_json(
+            conversation.messages[conversation.last_feedback_received :]
+        )
+    )
 
     return await llm.generate(
         schema=Feedback,
@@ -368,7 +389,7 @@ async def _generate_feedback_needs_improvement(
 
 
 async def _generate_feedback_ok(
-    conversation: ConversationInitData, feedback: FeedbackFlowState
+    conversation: LevelConversationInitData, feedback: FeedbackFlowState
 ):
     user, subject = conversation.info.user, conversation.info.subject
 
@@ -409,9 +430,11 @@ async def _generate_feedback_ok(
         )
     )
 
-    prompt_data = conversation.messages[
-        conversation.last_feedback_received :
-    ].model_dump_json()
+    prompt_data = str(
+        message_list_adapter.dump_json(
+            conversation.messages[conversation.last_feedback_received :]
+        )
+    )
 
     return await llm.generate(
         schema=Feedback,
@@ -422,7 +445,7 @@ async def _generate_feedback_ok(
 
 
 async def generate_feedback(
-    conversation: ConversationInitData, state: FeedbackFlowState
+    conversation: LevelConversationInitData, state: FeedbackFlowState
 ) -> Feedback:
     analysis = await _analyze_messages(conversation, state)
 
