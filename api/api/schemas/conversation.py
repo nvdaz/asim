@@ -8,18 +8,34 @@ from .objectid import PyObjectId
 from .persona import Persona, PersonaName
 
 
+class Feedback(BaseModel):
+    title: Annotated[str, StringConstraints(max_length=50)]
+    body: Annotated[str, StringConstraints(max_length=600)]
+    follow_up: str | None = None
+
+
 class Message(BaseModel):
     sender: str
     message: str
 
 
+class MessageElement(BaseModel):
+    type: Literal["message"] = "message"
+    content: Message
+
+
+class FeedbackElement(BaseModel):
+    type: Literal["feedback"] = "feedback"
+    content: Feedback
+
+
+ConversationElement = Annotated[
+    MessageElement | FeedbackElement,
+    Field(discriminator="type"),
+]
+
+
 message_list_adapter = TypeAdapter(list[Message])
-
-
-class Feedback(BaseModel):
-    title: Annotated[str, StringConstraints(max_length=50)]
-    body: Annotated[str, StringConstraints(max_length=600)]
-    follow_up: str | None = None
 
 
 class MessageOption(BaseModel):
@@ -122,7 +138,7 @@ class BaseConversationUninit(BaseModel):
     user_id: PyObjectId
     info: ConversationInfo
     agent: PersonaName
-    messages: list[Message]
+    elements: list[ConversationElement]
 
 
 class BaseConversationInit(BaseModel):
@@ -132,7 +148,7 @@ class BaseConversationInit(BaseModel):
     agent: Persona
     state: ConversationStateData
     events: list[ConversationLogEntry]
-    messages: list[Message]
+    elements: list[ConversationElement]
     last_feedback_received: int
 
 
@@ -178,14 +194,15 @@ class Conversation(BaseModel):
     info: ConversationInfo
     agent: str
     state: ConversationState | None
-    messages: list[Message]
+    elements: list[ConversationElement]
 
     @staticmethod
     def from_data(data: ConversationData) -> "Conversation":
         state = (
             (
                 StateAwaitingUserChoice(
-                    options=[o.response for o in data.state.options]
+                    options=[o.response for o in data.state.options],
+                    allow_custom=data.state.allow_custom,
                 )
                 if isinstance(data.state, StateAwaitingUserChoiceData)
                 else StateActive(type=data.state.id.type)
@@ -199,7 +216,7 @@ class Conversation(BaseModel):
             info=data.info,
             agent=data.agent.name,
             state=state,
-            messages=data.messages,
+            elements=data.elements,
         )
 
 

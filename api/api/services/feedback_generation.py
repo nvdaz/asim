@@ -6,6 +6,7 @@ from api.schemas.conversation import (
     ConversationDataInit,
     Feedback,
     Message,
+    MessageElement,
     message_list_adapter,
 )
 from api.schemas.persona import Persona
@@ -229,10 +230,16 @@ async def _generate_feedback_with_follow_up(
         prompt=prompt_data,
     )
 
+    all_messages = [
+        elem.content
+        for elem in conversation.elements
+        if isinstance(elem, MessageElement)
+    ]
+
     follow_up = await generate_message(
         user,
         agent,
-        conversation.messages,
+        all_messages,
         extra=feedback_base.instructions,
     )
 
@@ -395,7 +402,8 @@ async def generate_feedback(
     user: Persona, conversation: ConversationDataInit, state: FeedbackFlowState
 ) -> Feedback:
     agent = conversation.agent
-    messages = conversation.messages[conversation.last_feedback_received :]
+    elements = conversation.elements[conversation.last_feedback_received :]
+    messages = [elem.content for elem in elements if isinstance(elem, MessageElement)]
 
     analysis = await _analyze_messages(user, agent, messages, state)
 

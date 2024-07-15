@@ -16,11 +16,13 @@ from api.schemas.conversation import (
     ConversationDescriptor,
     ConversationOptions,
     ConversationStep,
+    FeedbackElement,
     FeedbackLogEntry,
     FeedbackStep,
     LevelConversationInfo,
     LevelConversationOptions,
     Message,
+    MessageElement,
     MessageOption,
     NpMessageOptionsLogEntry,
     NpMessageSelectedLogEntry,
@@ -81,7 +83,7 @@ async def create_conversation(
             )
 
     data = BaseConversationUninit(
-        user_id=user_id, info=info, agent=PersonaName(name=agent_name), messages=[]
+        user_id=user_id, info=info, agent=PersonaName(name=agent_name), elements=[]
     )
 
     conversation = await conversations.insert(data)
@@ -149,7 +151,7 @@ async def progress_conversation(
             agent=agent,
             state=state,
             events=[],
-            messages=[],
+            elements=[],
             last_feedback_received=0,
         )
 
@@ -171,8 +173,8 @@ async def progress_conversation(
             )
         )
 
-        conversation.messages.append(
-            Message(sender=user.name, message=response.response)
+        conversation.elements.append(
+            MessageElement(content=Message(sender=user.name, message=response.response))
         )
 
         conversation.state = StateActiveData(id=response.next)
@@ -191,6 +193,12 @@ async def progress_conversation(
 
     state_data = mappings[conversation.state.id]
 
+    messages = [
+        elem.content
+        for elem in conversation.elements
+        if isinstance(elem, MessageElement)
+    ]
+
     if isinstance(state_data, NpFlowState):
         state_options = (
             random.sample(state_data.options, 3)
@@ -203,7 +211,7 @@ async def progress_conversation(
                 generate_message(
                     user,
                     conversation.agent,
-                    conversation.messages,
+                    messages,
                     opt.prompt,
                 )
                 for opt in state_options
@@ -240,7 +248,7 @@ async def progress_conversation(
         response = await generate_message(
             conversation.agent,
             user,
-            conversation.messages,
+            messages,
             opt.prompt,
         )
 
@@ -251,8 +259,10 @@ async def progress_conversation(
             )
         )
 
-        conversation.messages.append(
-            Message(sender=conversation.agent.name, message=response)
+        conversation.elements.append(
+            MessageElement(
+                content=Message(sender=conversation.agent.name, message=response)
+            )
         )
 
         conversation.state = StateActiveData(id=opt.next)
@@ -260,7 +270,7 @@ async def progress_conversation(
         result = ApMessageStep(content=response)
     elif isinstance(state_data, FeedbackFlowState):
         response = await generate_feedback(user, conversation, state_data)
-        conversation.last_feedback_received = len(conversation.messages)
+        conversation.last_feedback_received = len(conversation.elements)
 
         conversation.events.append(
             FeedbackLogEntry(
@@ -281,6 +291,12 @@ async def progress_conversation(
             )
         else:
             conversation.state = StateActiveData(state=state_data.next_ok)
+
+        conversation.elements.append(
+            FeedbackElement(
+                content=response,
+            )
+        )
 
         result = FeedbackStep(content=response)
     else:
