@@ -1,5 +1,6 @@
+from typing import Annotated
+
 from pydantic import AfterValidator, BaseModel
-from typing_extensions import Annotated
 
 from api.schemas.conversation import Message, message_list_adapter
 from api.schemas.persona import Persona
@@ -8,11 +9,11 @@ from . import llm
 
 
 async def generate_message(
-    persona: Persona, other: Persona, scenario: str, messages: list[Message], extra=""
+    sender: Persona, other: Persona, messages: list[Message], extra=""
 ) -> str:
     def validate_sender(v):
-        if v != persona.name:
-            raise ValueError(f"Sender must be {persona.name}")
+        if v != sender.name:
+            raise ValueError(f"Sender must be {sender.name}")
         return v
 
     class MessageResponse(BaseModel):
@@ -22,12 +23,12 @@ async def generate_message(
     instr = f"Instructions: {extra}" if extra else ""
 
     system_prompt = (
-        f"{persona.description}\nScenario: {scenario}\n{instr}\nYou ({persona.name}) "
-        f"are chatting over text with {other.name}. Keep your messages under 50 words "
-        "and appropriate for a text conversation. Keep the conversation going. Return "
-        "a JSON object with the key 'message' and your message as the value and the "
-        f"key 'sender' with '{persona.name}' as the value. Respond ONLY with your next "
-        "message. Do not include the previous messages in your response."
+        f"{sender.description}\n{instr}\nYou ({sender.name}) are chatting over text "
+        f"with {other.name}. Keep your messages under 50 words and appropriate for a "
+        "text conversation. Keep the conversation going. Return a JSON object with the "
+        "key 'message' and your message as the value and the key 'sender' with "
+        f"'{sender.name}' as the value. Respond ONLY with your next message. Do not "
+        "include the previous messages in your response."
     )
 
     prompt_data = (

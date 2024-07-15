@@ -1,38 +1,58 @@
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, RootModel
+from pydantic import BaseModel, ConfigDict, TypeAdapter
 from pydantic.fields import Field
-from typing_extensions import Annotated
 
 from .objectid import PyObjectId
 from .persona import Persona, PersonaUninit
 
 
-class BaseUser(BaseModel):
+class BaseUserData(BaseModel):
     qa_id: UUID
 
-    model_config = ConfigDict(populate_by_name=True)
 
-
-class BaseUserUninit(BaseUser):
+class BaseUserUninitData(BaseUserData):
     init: Literal[False] = False
     persona: PersonaUninit
 
 
-class BaseUserInit(BaseUser):
+class BaseUserInitData(BaseUserData):
     init: Literal[True] = True
     name: str
     persona: Persona
 
 
-class UserUninit(BaseUserUninit):
+class UserUninitData(BaseUserUninitData):
     id: Annotated[PyObjectId, Field(alias="_id")]
 
+    model_config = ConfigDict(populate_by_name=True)
 
-class UserInit(BaseUserInit):
+
+class UserInitData(BaseUserInitData):
     id: Annotated[PyObjectId, Field(alias="_id")]
 
+    model_config = ConfigDict(populate_by_name=True)
 
-class User(RootModel):
-    root: Annotated[UserUninit | UserInit, Field(discriminator="init")]
+
+UserData = Annotated[UserUninitData | UserInitData, Field(discriminator="init")]
+
+user_adapter = TypeAdapter(UserData)
+
+
+class UserUninit(BaseModel):
+    id: PyObjectId
+    init: Literal[False] = False
+
+
+class UserInit(BaseModel):
+    id: PyObjectId
+    init: Literal[True] = True
+    name: str
+
+
+User = Annotated[UserInit | UserUninit, Field(discriminator="init")]
+
+
+def user_from_data(data: UserData) -> User:
+    return UserInit(id=data.id, name=data.name) if data.init else UserUninit(id=data.id)

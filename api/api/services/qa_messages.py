@@ -1,11 +1,10 @@
 import os
-from typing import List
+from typing import Annotated, List
 from uuid import UUID
 
 import httpx
 from pydantic import BaseModel, TypeAdapter
 from pydantic.fields import Field
-from typing_extensions import Annotated
 
 _CONVERSATIONS_URI = os.environ.get("CONVERSATIONS_URI")
 

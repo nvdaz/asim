@@ -9,7 +9,7 @@ from typing import Type, TypeVar
 import aiofiles
 import numpy as np
 import websockets as ws
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 _LLM_URI = os.getenv("LLM_URI")
 
@@ -58,7 +58,7 @@ SchemaType = TypeVar("SchemaType", bound=BaseModel)
 
 
 async def _generate_strict(
-    schema: Type[SchemaType],
+    schema: Type[SchemaType] | TypeAdapter[SchemaType],
     model: str,
     prompt: str,
     system: str,
@@ -70,7 +70,11 @@ async def _generate_strict(
         try:
             response = await _generate(model, prompt, system, temperature)
             data = response[response.index("{") : response.rindex("}") + 1]
-            return schema(**json.loads(data))
+            return (
+                schema.validate_json(data)
+                if isinstance(schema, TypeAdapter)
+                else schema.model_validate_json(data)
+            )
         except Exception as e:
             logging.warning(
                 f"Attempt {attempt + 1}/{max_tries} - Unexpected error: {e}. {response}"
@@ -83,13 +87,14 @@ _GENERATE_CACHE_LOCK = asyncio.Lock()
 
 
 async def generate(
-    schema: Type[SchemaType],
+    schema: Type[SchemaType] | TypeAdapter[SchemaType],
     model: str,
     prompt: str,
     system: str,
     temperature: float = None,
     max_tries: int = 3,
 ):
+
     cache_file = "cache/llm_generate.json"
     async with _GENERATE_CACHE_LOCK:
         if os.path.exists(cache_file):
@@ -101,14 +106,28 @@ async def generate(
 
     key = hashlib.sha256(
         json.dumps(
-            (schema.model_json_schema(), model, prompt, system, temperature),
+            (
+                (
+                    schema.json_schema()
+                    if isinstance(schema, TypeAdapter)
+                    else schema.model_json_schema()
+                ),
+                model,
+                prompt,
+                system,
+                temperature,
+            ),
             sort_keys=True,
         ).encode()
     ).hexdigest()
 
     if key in cache:
         try:
-            return schema(**cache[key])
+            return (
+                schema.validate_python(cache[key])
+                if isinstance(schema, TypeAdapter)
+                else schema.model_validate(cache[key])
+            )
         except ValidationError as e:
             logging.warning(f"Cache invalid: {e.errors()}")
 

@@ -7,7 +7,13 @@ from pydantic import BaseModel
 from api.db import auth_tokens, magic_links
 from api.db import users as users
 from api.schemas.persona import Persona
-from api.schemas.user import BaseUserInit, User, UserInit
+from api.schemas.user import (
+    BaseUserInitData,
+    User,
+    UserData,
+    UserInitData,
+    user_from_data,
+)
 
 from .user_info import generate_user_info
 
@@ -38,7 +44,7 @@ async def login_user(secret: str) -> LoginResult:
 
     token = await _create_auth_token(user.root.id)
 
-    return LoginResult(user=user, token=token)
+    return LoginResult(user=user_from_data(user), token=token)
 
 
 async def create_magic_link(qa_id: UUID) -> str:
@@ -48,7 +54,9 @@ async def create_magic_link(qa_id: UUID) -> str:
 
     if not user:
         persona = await generate_user_info(qa_id)
-        user = await users.create(users.BaseUserUninit(qa_id=qa_id, persona=persona))
+        user = await users.create(
+            users.BaseUserUninitData(qa_id=qa_id, persona=persona)
+        )
 
     link = magic_links.MagicLink(secret=secret, user_id=user.root.id)
     await magic_links.create(link)
@@ -59,12 +67,12 @@ class AlreadyInitialized(Exception):
     pass
 
 
-async def init_user(user_id: ObjectId, name: str) -> User:
+async def init_user(user_id: ObjectId, name: str) -> UserData:
     user_uninit = await users.get(user_id)
-    if isinstance(user_uninit.root, UserInit):
+    if isinstance(user_uninit.root, UserInitData):
         raise AlreadyInitialized()
 
-    user_init = BaseUserInit(
+    user_init = BaseUserInitData(
         qa_id=user_uninit.root.qa_id,
         name=name,
         persona=Persona(

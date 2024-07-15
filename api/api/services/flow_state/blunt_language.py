@@ -107,6 +107,4 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
     ),
 ]
 
-BLUNT_LANGUAGE_LEVEL = Level(
-    mappings=build_mappings(NORMAL_NP_MAPPINGS, BLUNT_MAPPINGS),
-)
+BLUNT_LANGUAGE_LEVEL_MAPPINGS = build_mappings(NORMAL_NP_MAPPINGS, BLUNT_MAPPINGS)

@@ -1,19 +1,11 @@
-from typing import Literal, Union
+from typing import Annotated, Literal
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    RootModel,
-    StringConstraints,
-    TypeAdapter,
-)
-from typing_extensions import Annotated
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter
 
 from api.services.flow_state.base import FlowStateRef
 
 from .objectid import PyObjectId
-from .persona import Persona
+from .persona import Persona, PersonaName
 
 
 class Message(BaseModel):
@@ -30,58 +22,16 @@ class Feedback(BaseModel):
     follow_up: str | None = None
 
 
-class Messages(RootModel):
-    root: list[Message]
-
-    def __getitem__(self, index: Union[int, slice]):
-        if isinstance(index, slice):
-            return Messages(root=self.root[index])
-        else:
-            return self.root[index]
-
-
 class MessageOption(BaseModel):
     response: str
     next: FlowStateRef
 
 
-class ConversationWaitingInternal(BaseModel):
-    waiting: Literal[True] = True
-    options: list[MessageOption]
-
-
-class ConversationNormalInternal(BaseModel):
-    waiting: Literal[False] = False
-    state: FlowStateRef
-
-
-class ConversationWaiting(BaseModel):
-    waiting: Literal[True] = True
-    options: list[str]
-
-
-class ConversationNormal(BaseModel):
-    waiting: Literal[False] = False
-    type: Literal["ap", "np", "feedback"]
-
-
 class ConversationScenario(BaseModel):
     user_perspective: str
-    subject_perspective: str
+    agent_perspective: str
     user_goal: str
     is_user_initiated: bool
-
-
-class LevelConversationInfo(BaseModel):
-    scenario: ConversationScenario
-    user: Persona
-    subject: Persona
-
-
-class PlaygroundConversationInfo(BaseModel):
-    topic: str
-    user: Persona
-    subject: Persona
 
 
 class NpMessageOptionsLogEntry(BaseModel):
@@ -107,279 +57,211 @@ class FeedbackLogEntry(BaseModel):
     content: Feedback
 
 
-class ConversationLogEntry(RootModel):
-    root: Annotated[
-        Union[
-            NpMessageOptionsLogEntry,
-            NpMessageSelectedLogEntry,
-            ApMessageLogEntry,
-            FeedbackLogEntry,
-        ],
-        Field(discriminator="type"),
-    ]
-
-
-class LevelConversationInfoUninit(BaseModel):
-    scenario: ConversationScenario
-
-
-class BaseLevelConversationUninitData(BaseModel):
-    init: Literal[False] = False
-    type: Literal["level"] = "level"
-    user_id: PyObjectId
-    level: int
-    subject_name: str
-    info: LevelConversationInfoUninit
-    user_persona: Persona
-
-
-class BasePlaygroundConversationUninitData(BaseModel):
-    init: Literal[False] = False
-    type: Literal["playground"] = "playground"
-    user_id: PyObjectId
-    subject_name: str
-    info: PlaygroundConversationInfo
-    user_persona: Persona
-
-
-BaseConversationUninitData = Annotated[
-    BaseLevelConversationUninitData | BasePlaygroundConversationUninitData,
+ConversationLogEntry = Annotated[
+    NpMessageOptionsLogEntry
+    | NpMessageSelectedLogEntry
+    | ApMessageLogEntry
+    | FeedbackLogEntry,
     Field(discriminator="type"),
 ]
 
 
-class BaseLevelConversationInitData(BaseModel):
-    init: Literal[True] = True
+class LevelConversationOptions(BaseModel):
     type: Literal["level"] = "level"
-    user_id: PyObjectId
     level: int
-    info: LevelConversationInfo
-    state: Annotated[
-        Union[ConversationWaitingInternal, ConversationNormalInternal],
-        Field(discriminator="waiting"),
-    ]
+
+
+class PlaygroundConversationOptions(BaseModel):
+    type: Literal["playground"] = "playground"
+
+
+ConversationOptions = Annotated[
+    LevelConversationOptions | PlaygroundConversationOptions,
+    Field(discriminator="type"),
+]
+
+
+class StateAwaitingUserChoiceData(BaseModel):
+    waiting: Literal[True] = True
+    options: list[MessageOption]
+    allow_custom: bool
+
+
+class StateActiveData(BaseModel):
+    waiting: Literal[False] = False
+    id: FlowStateRef
+
+
+ConversationStateData = Annotated[
+    StateAwaitingUserChoiceData | StateActiveData,
+    Field(discriminator="waiting"),
+]
+
+
+class PlaygroundConversationInfo(BaseModel):
+    type: Literal["playground"] = "playground"
+    topic: str
+
+
+class LevelConversationInfo(BaseModel):
+    type: Literal["level"] = "level"
+    scenario: ConversationScenario
+    level: Annotated[int, Field(ge=0, le=1)]
+
+
+ConversationInfo = Annotated[
+    PlaygroundConversationInfo | LevelConversationInfo,
+    Field(discriminator="type"),
+]
+
+conversation_info_adapter = TypeAdapter(ConversationInfo)
+
+
+class BaseConversationUninit(BaseModel):
+    init: Literal[False] = False
+    user_id: PyObjectId
+    info: ConversationInfo
+    agent: PersonaName
+    messages: list[Message]
+
+
+class BaseConversationInit(BaseModel):
+    init: Literal[True] = True
+    user_id: PyObjectId
+    info: ConversationInfo
+    agent: Persona
+    state: ConversationStateData
     events: list[ConversationLogEntry]
     messages: list[Message]
     last_feedback_received: int
 
 
-class BasePlaygroundConversationInitData(BaseModel):
-    init: Literal[True] = True
-    type: Literal["playground"] = "playground"
-    user_id: PyObjectId
-    info: PlaygroundConversationInfo
-    level: int = 0
-    state: Annotated[
-        Union[ConversationWaitingInternal, ConversationNormalInternal],
-        Field(discriminator="waiting"),
-    ]
-    events: list[ConversationLogEntry]
-    messages: list[Message]
-    last_feedback_received: int
-
-
-class LevelConversationInitData(BaseLevelConversationInitData):
+class ConversationDataUninit(BaseConversationUninit):
     id: Annotated[PyObjectId, Field(alias="_id")]
 
     model_config = ConfigDict(populate_by_name=True)
 
 
-class LevelConversationUninitData(BaseLevelConversationUninitData):
+class ConversationDataInit(BaseConversationInit):
     id: Annotated[PyObjectId, Field(alias="_id")]
 
     model_config = ConfigDict(populate_by_name=True)
-
-
-class PlaygroundConversationInitData(BasePlaygroundConversationInitData):
-    id: Annotated[PyObjectId, Field(alias="_id")]
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class PlaygroundConversationUninitData(BasePlaygroundConversationUninitData):
-    id: Annotated[PyObjectId, Field(alias="_id")]
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-ConversationUninitData = Annotated[
-    LevelConversationUninitData | PlaygroundConversationUninitData,
-    Field(discriminator="type"),
-]
-
-conversation_uninit_data_adapter = TypeAdapter(ConversationUninitData)
-
-
-PlaygroundConversationData = Annotated[
-    Union[PlaygroundConversationInitData, PlaygroundConversationUninitData],
-    Field(discriminator="init"),
-]
-
-
-LevelConversationData = Annotated[
-    Union[LevelConversationInitData, LevelConversationUninitData],
-    Field(discriminator="init"),
-]
-
-
-class LevelConversationDescriptorData(BaseModel):
-    id: Annotated[PyObjectId, Field(alias="_id")]
-    level: int
-    info: LevelConversationInfo
-
-
-class LevelConversationDescriptor(BaseModel):
-    id: PyObjectId
-    level: int
-    subject_name: str
-
-    @staticmethod
-    def from_data(data: LevelConversationDescriptorData):
-        return LevelConversationDescriptor(
-            id=data.id,
-            level=data.level,
-            subject_name=data.info.subject.name,
-        )
-
-
-class LevelConversationInit(BaseModel):
-    id: PyObjectId
-    type: Literal["level"] = "level"
-    init: Literal[True] = True
-    level: int
-    scenario: ConversationScenario
-    state: Annotated[
-        Union[ConversationWaiting, ConversationNormal],
-        Field(discriminator="waiting"),
-    ]
-    subject_name: str
-    messages: Messages
-
-    @staticmethod
-    def from_data(data: LevelConversationInitData):
-        state = (
-            ConversationWaiting(options=[o.response for o in data.state.options])
-            if data.state.waiting
-            else ConversationNormal(type=data.state.state.root.type)
-        )
-
-        return LevelConversationInit(
-            id=data.id,
-            level=data.level,
-            scenario=data.info.scenario,
-            state=state,
-            subject_name=data.info.subject.name,
-            messages=data.messages,
-        )
-
-
-class LevelConversationUninit(BaseModel):
-    id: PyObjectId
-    type: Literal["level"] = "level"
-    init: Literal[False] = False
-    level: int
-    scenario: ConversationScenario
-    subject_name: str
-    messages: Annotated[list[Message], Field(min_length=0, max_length=0)] = []
-
-    @staticmethod
-    def from_data(data: LevelConversationUninitData):
-        return LevelConversationUninit(
-            id=data.id,
-            level=data.level,
-            scenario=data.info.scenario,
-            subject_name=data.subject_name,
-        )
-
-
-LevelConversation = Annotated[
-    Union[LevelConversationInit, LevelConversationUninit],
-    Field(discriminator="init"),
-]
-
-
-def level_conversation_from_data(data: LevelConversationData) -> LevelConversation:
-    return (
-        LevelConversationInit.from_data(data)
-        if data.init
-        else LevelConversationUninit.from_data(data)
-    )
-
-
-class PlaygroundConversationInit(BaseModel):
-    id: PyObjectId
-    type: Literal["playground"] = "playground"
-    init: Literal[True] = True
-    topic: str
-    state: Annotated[
-        Union[ConversationWaiting, ConversationNormal],
-        Field(discriminator="waiting"),
-    ]
-    messages: Messages
-
-    @staticmethod
-    def from_data(data: PlaygroundConversationInitData):
-        state = (
-            ConversationWaiting(options=[o.response for o in data.state.options])
-            if data.state.waiting
-            else ConversationNormal(type=data.state.state.type)
-        )
-
-        return PlaygroundConversationInit(
-            id=data.id,
-            topic=data.info.topic,
-            state=state,
-            messages=data.messages,
-        )
-
-
-class PlaygroundConversationUninit(BaseModel):
-    id: PyObjectId
-    type: Literal["playground"] = "playground"
-    init: Literal[False] = False
-    topic: str
-    messages: Annotated[list[Message], Field(min_length=0, max_length=0)] = []
-
-    @staticmethod
-    def from_data(data: PlaygroundConversationUninitData):
-        return PlaygroundConversationUninit(
-            id=data.id,
-            topic=data.info.topic,
-        )
-
-
-PlaygroundConversation = Annotated[
-    Union[PlaygroundConversationInit, PlaygroundConversationUninit],
-    Field(discriminator="init"),
-]
-
-
-def playground_conversation_from_data(
-    data: PlaygroundConversationData,
-) -> PlaygroundConversation:
-    return (
-        PlaygroundConversationInit.from_data(data)
-        if data.init
-        else PlaygroundConversationUninit.from_data(data)
-    )
 
 
 ConversationData = Annotated[
-    Union[LevelConversationData, PlaygroundConversationData],
-    Field(discriminator="type"),
+    ConversationDataInit | ConversationDataUninit,
+    Field(discriminator="init"),
 ]
 
 conversation_data_adapter = TypeAdapter(ConversationData)
 
-Conversation = Annotated[
-    Union[LevelConversation, PlaygroundConversation],
+
+class StateAwaitingUserChoice(BaseModel):
+    waiting: Literal[True] = True
+    options: list[str]
+    allow_custom: bool
+
+
+class StateActive(BaseModel):
+    waiting: Literal[False] = False
+    type: Literal["np", "ap", "feedback"]
+
+
+ConversationState = Annotated[
+    StateAwaitingUserChoice | StateActive,
+    Field(discriminator="waiting"),
+]
+
+
+class Conversation(BaseModel):
+    id: PyObjectId
+    info: ConversationInfo
+    agent: str
+    state: ConversationState | None
+    messages: list[Message]
+
+    @staticmethod
+    def from_data(data: ConversationData) -> "Conversation":
+        state = (
+            (
+                StateAwaitingUserChoice(
+                    options=[o.response for o in data.state.options]
+                )
+                if isinstance(data.state, StateAwaitingUserChoiceData)
+                else StateActive(type=data.state.id.type)
+            )
+            if isinstance(data, ConversationDataInit)
+            else None
+        )
+
+        return Conversation(
+            id=data.id,
+            info=data.info,
+            agent=data.agent.name,
+            state=state,
+            messages=data.messages,
+        )
+
+
+class ConversationDescriptorData(BaseModel):
+    id: Annotated[PyObjectId, Field(alias="_id")]
+    info: ConversationInfo
+    agent: PersonaName
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ConversationDescriptor(BaseModel):
+    id: PyObjectId
+    info: ConversationInfo
+    agent: str
+
+    @staticmethod
+    def from_data(data: ConversationDescriptorData) -> "ConversationDescriptor":
+        return ConversationDescriptor(
+            id=data.id,
+            info=data.info,
+            agent=data.agent.name,
+        )
+
+
+class NpMessageStep(BaseModel):
+    type: Literal["np"] = "np"
+    options: list[str]
+    allow_custom: bool
+
+
+class ApMessageStep(BaseModel):
+    type: Literal["ap"] = "ap"
+    content: str
+
+
+class FeedbackStep(BaseModel):
+    type: Literal["feedback"] = "feedback"
+    content: Feedback
+
+
+ConversationStep = Annotated[
+    NpMessageStep | ApMessageStep | FeedbackStep,
     Field(discriminator="type"),
 ]
 
 
-def conversation_from_data(data: ConversationData) -> Conversation:
-    return (
-        level_conversation_from_data(data)
-        if data.type == "level"
-        else playground_conversation_from_data(data)
-    )
+class SelectOptionNone(BaseModel):
+    option: Literal["none"] = "none"
+
+
+class SelectOptionCustom(BaseModel):
+    option: Literal["custom"] = "custom"
+    message: Annotated[str, StringConstraints(max_length=600)]
+
+
+class SelectOptionIndex(BaseModel):
+    option: Literal["index"] = "index"
+    index: int
+
+
+SelectOption = Annotated[
+    SelectOptionNone | SelectOptionCustom | SelectOptionIndex,
+    Field(discriminator="option"),
+]

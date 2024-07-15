@@ -1,7 +1,6 @@
-from typing import Generic, Literal, TypeVar
+from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 BaseNpFlowStateId = Literal["normal"]
 BaseApFlowStateId = Literal["normal"]
@@ -51,7 +50,8 @@ class FlowOption(BaseModel):
 
 class NpFlowState(BaseModel, Generic[NpFlowStateId]):
     type: Literal["np"] = "np"
-    options: list[FlowOption]
+    options: list[FlowOption] = []
+    allow_custom: bool = False
 
 
 class ApFlowState(BaseModel, Generic[ApFlowStateId]):
@@ -140,9 +140,11 @@ def build_mappings(*mappings: list[FlowStateMapping]) -> dict[FlowStateRef, Flow
             if item.id in combined:
                 if item.value.type == "feedback":
                     raise ValueError("Cannot merge mappings with FeedbackFlowState")
+                elif item.value.type == "np":
+                    combined[item.id].allow_custom |= item.value.allow_custom
                 combined[item.id].options.extend(item.value.options)
             else:
-                combined[item.id] = item.value
+                combined[item.id] = item.value.model_copy(deep=True)
 
     return combined
 

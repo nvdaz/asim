@@ -1,6 +1,10 @@
 from pydantic import BaseModel
 
 
+class PersonaName(BaseModel):
+    name: str
+
+
 class BasePersonaUninit(BaseModel):
     age: str
     occupation: str
@@ -9,6 +13,7 @@ class BasePersonaUninit(BaseModel):
 
 class PersonaUninit(BasePersonaUninit):
     description: str
+
 
 class BasePersona(BaseModel):
     name: str

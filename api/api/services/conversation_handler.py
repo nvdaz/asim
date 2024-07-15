@@ -1,45 +1,46 @@
 import asyncio
 import random
-from typing import Literal, Union
 
 from bson import ObjectId
 from faker.providers.job import Provider as JobProvider
 from faker.providers.person.en import Provider as PersonProvider
-from pydantic import BaseModel, Field, RootModel
-from typing_extensions import Annotated
 
 from api.db import conversations
 from api.schemas.conversation import (
     ApMessageLogEntry,
-    BaseLevelConversationUninitData,
-    BasePlaygroundConversationUninitData,
+    ApMessageStep,
+    BaseConversationUninit,
     Conversation,
-    ConversationLogEntry,
-    ConversationNormalInternal,
-    ConversationWaitingInternal,
+    ConversationDataInit,
+    ConversationDataUninit,
+    ConversationDescriptor,
+    ConversationOptions,
+    ConversationStep,
     FeedbackLogEntry,
-    LevelConversation,
-    LevelConversationDescriptor,
+    FeedbackStep,
     LevelConversationInfo,
-    LevelConversationInfoUninit,
-    LevelConversationInitData,
-    LevelConversationUninitData,
+    LevelConversationOptions,
     Message,
     MessageOption,
     NpMessageOptionsLogEntry,
     NpMessageSelectedLogEntry,
+    NpMessageStep,
     PlaygroundConversationInfo,
-    PlaygroundConversationInitData,
-    PlaygroundConversationUninitData,
-    conversation_from_data,
+    PlaygroundConversationOptions,
+    SelectOption,
+    SelectOptionCustom,
+    SelectOptionIndex,
+    SelectOptionNone,
+    StateActiveData,
+    StateAwaitingUserChoiceData,
 )
-from api.schemas.persona import Persona
+from api.schemas.persona import Persona, PersonaName
 
 from .conversation_generation import (
+    generate_agent_persona,
     generate_conversation_scenario,
-    generate_subject_persona,
 )
-from .feedback_generation import Feedback, generate_feedback
+from .feedback_generation import generate_feedback
 from .flow_state.base import (
     ApFlowState,
     FeedbackFlowState,
@@ -47,193 +48,150 @@ from .flow_state.base import (
     NormalNpFlowStateRef,
     NpFlowState,
 )
-from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL
-from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL
+from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL_MAPPINGS
+from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL_MAPPINGS
 from .flow_state.playground import PLAYGROUND_MAPPINGS
 from .message_generation import generate_message
 
-LEVELS = [FIGURATIVE_LANGUAGE_LEVEL, BLUNT_LANGUAGE_LEVEL]
+random.seed(0)
 
-
-class NpMessageEvent(BaseModel):
-    type: Literal["np"] = "np"
-    options: list[str]
-
-
-class ApMessageEvent(BaseModel):
-    type: Literal["ap"] = "ap"
-    content: str
-
-
-class FeedbackEvent(BaseModel):
-    type: Literal["feedback"] = "feedback"
-    content: Feedback
-
-
-class ConversationEvent(RootModel):
-    root: Annotated[
-        Union[NpMessageEvent, ApMessageEvent, FeedbackEvent],
-        Field(discriminator="type"),
-    ]
-
-
-class CreateLevelConversationOptions(BaseModel):
-    type: Literal["level"] = "level"
-    level: int
-
-
-class CreatePlaygroundConversationOptions(BaseModel):
-    type: Literal["playground"] = "playground"
-
-
-CreateConversationOptions = Annotated[
-    CreateLevelConversationOptions | CreatePlaygroundConversationOptions,
-    Field(discriminator="type"),
-]
+LEVEL_MAPPINGS = [FIGURATIVE_LANGUAGE_LEVEL_MAPPINGS, BLUNT_LANGUAGE_LEVEL_MAPPINGS]
 
 
 async def create_conversation(
     user_id: ObjectId,
     user_persona: Persona,
-    options: CreateConversationOptions,
-) -> LevelConversation:
-    subject_name = random.choice(PersonProvider.first_names)
+    options: ConversationOptions,
+) -> Conversation:
+    agent_name = random.choice(PersonProvider.first_names)
 
     match options:
-        case CreateLevelConversationOptions(level=level):
+        case LevelConversationOptions(level=level):
             scenario = await generate_conversation_scenario(
-                user_id, user_persona, subject_name
+                user_id, user_persona, agent_name
             )
 
-            data = BaseLevelConversationUninitData(
-                user_id=user_id,
-                level=level,
-                subject_name=subject_name,
-                info=LevelConversationInfoUninit(scenario=scenario),
-                user_persona=user_persona,
-            )
+            info = LevelConversationInfo(scenario=scenario, level=level)
 
-        case CreatePlaygroundConversationOptions():
+        case PlaygroundConversationOptions():
             topic = random.choice(user_persona.interests)
-            data = BasePlaygroundConversationUninitData(
-                user_id=user_id,
-                subject_name=subject_name,
-                user_persona=user_persona,
-                info=PlaygroundConversationInfo(
-                    topic=topic,
-                    user=user_persona,
-                    subject=Persona(
-                        name=subject_name,
-                        age=str(random.randint(18, 65)),
-                        occupation=random.choice(JobProvider.jobs),
-                        interests=[topic],
-                        description=(
-                            f"You are {subject_name}, an autistic individual who is "
-                            f"extremely passionate about {topic}. You are very "
-                            "knowledgeable about the subject and enjoy discussing it "
-                            "with others."
-                        ),
-                    ),
-                ),
+
+            info = PlaygroundConversationInfo(
+                topic=topic,
             )
+
+    data = BaseConversationUninit(
+        user_id=user_id, info=info, agent=PersonaName(name=agent_name), messages=[]
+    )
 
     conversation = await conversations.insert(data)
 
-    return conversation_from_data(conversation)
+    return Conversation.from_data(conversation)
 
 
-async def list_conversations(
-    user_id: ObjectId, level: int | None = None
-) -> list[LevelConversationDescriptor]:
-    convs = await conversations.list(user_id, level)
-    return [LevelConversationDescriptor.from_data(c) for c in convs]
+async def list_conversations(user_id: ObjectId, options: ConversationOptions):
+    convs = await conversations.query(user_id, options)
+    return [ConversationDescriptor.from_data(c) for c in convs]
 
 
 async def get_conversation(
     conversation_id: ObjectId, user_id: ObjectId
 ) -> Conversation:
     conversation = await conversations.get(conversation_id, user_id)
-    return conversation_from_data(conversation)
+    return Conversation.from_data(conversation)
+
+
+class InvalidSelection(Exception):
+    pass
 
 
 async def progress_conversation(
-    conversation_id: ObjectId, user_id: ObjectId, option: int | None
-) -> ConversationEvent:
+    conversation_id: ObjectId,
+    user_id: ObjectId,
+    user: Persona,
+    option: SelectOption,
+) -> ConversationStep:
     conversation = await conversations.get(conversation_id, user_id)
 
-    if isinstance(conversation, LevelConversationUninitData):
-        subject_persona = await generate_subject_persona(
-            conversation.info.scenario.subject_perspective,
-            conversation.subject_name,
-        )
-        info = LevelConversationInfo(
-            scenario=conversation.info.scenario,
-            user=conversation.user_persona,
-            subject=subject_persona,
-        )
+    if not conversation:
+        raise RuntimeError("Conversation not found")
 
-        level = conversation.level
-
-        conversation = LevelConversationInitData(
-            id=conversation.id,
-            user_id=conversation.user_id,
-            level=level,
-            info=info,
-            state=ConversationNormalInternal(
-                state=(
-                    NormalNpFlowStateRef
-                    if info.scenario.is_user_initiated
-                    else NormalApFlowStateRef
+    if isinstance(conversation, ConversationDataUninit):
+        match conversation.info:
+            case LevelConversationInfo(scenario=scenario):
+                agent = await generate_agent_persona(
+                    conversation.info.scenario.agent_perspective,
+                    conversation.agent.name,
                 )
-            ),
-            events=[],
-            messages=[],
-            last_feedback_received=0,
-        )
+                state = StateActiveData(
+                    id=(
+                        NormalNpFlowStateRef
+                        if scenario.is_user_initiated
+                        else NormalApFlowStateRef
+                    )
+                )
 
-    if isinstance(conversation, PlaygroundConversationUninitData):
-        level = 0
+            case PlaygroundConversationInfo(topic=topic):
+                agent = Persona(
+                    name=conversation.agent.name,
+                    age=str(random.randint(18, 65)),
+                    occupation=random.choice(JobProvider.jobs),
+                    interests=[topic],
+                    description=(f"You are discussing {topic} with {user.name}."),
+                )
 
-        conversation = PlaygroundConversationInitData(
+                state = StateActiveData(id=NormalNpFlowStateRef)
+
+        conversation = ConversationDataInit(
             id=conversation.id,
             user_id=conversation.user_id,
-            subject_name=conversation.subject_name,
             info=conversation.info,
-            user_persona=conversation.user_persona,
-            state=ConversationNormalInternal(state=NormalNpFlowStateRef),
+            agent=agent,
+            state=state,
             events=[],
             messages=[],
             last_feedback_received=0,
         )
 
-    if isinstance(conversation.state, ConversationWaitingInternal):
-        assert option is not None
-        response = conversation.state.options[option]
+    if isinstance(conversation.state, StateAwaitingUserChoiceData):
+        match option:
+            case SelectOptionIndex(index=index) if index < len(
+                conversation.state.options
+            ):
+
+                response = conversation.state.options[index]
+            case SelectOptionCustom(message=message) if conversation.state.allow_custom:
+                response = MessageOption(response=message, next=NormalApFlowStateRef)
+            case _:
+                raise InvalidSelection()
 
         conversation.events.append(
-            ConversationLogEntry(
-                root=NpMessageSelectedLogEntry(
-                    message=response.response,
-                )
+            NpMessageSelectedLogEntry(
+                message=response.response,
             )
         )
 
         conversation.messages.append(
-            Message(sender=conversation.info.user.name, message=response.response)
+            Message(sender=user.name, message=response.response)
         )
 
-        conversation.state = ConversationNormalInternal(state=response.next)
+        conversation.state = StateActiveData(id=response.next)
+    else:
+        if not isinstance(option, SelectOptionNone):
+            raise InvalidSelection()
 
-    assert isinstance(conversation.state, ConversationNormalInternal)
+    assert isinstance(conversation.state, StateActiveData)
 
-    state_data = (
-        LEVELS[conversation.level].get_flow_state(conversation.state.state)
-        if conversation.type == "level"
-        else PLAYGROUND_MAPPINGS[conversation.state.state]
-    )
+    if isinstance(conversation.info, LevelConversationInfo):
+        mappings = LEVEL_MAPPINGS[conversation.info.level]
+    elif isinstance(conversation.info, PlaygroundConversationInfo):
+        mappings = PLAYGROUND_MAPPINGS
+    else:
+        raise RuntimeError(f"Invalid conversation info: {conversation.info}")
+
+    state_data = mappings[conversation.state.id]
 
     if isinstance(state_data, NpFlowState):
-        print(state_data.options)
         state_options = (
             random.sample(state_data.options, 3)
             if len(state_data.options) > 3
@@ -243,16 +201,8 @@ async def progress_conversation(
         responses = await asyncio.gather(
             *[
                 generate_message(
-                    conversation.info.user,
-                    conversation.info.subject,
-                    (
-                        conversation.info.scenario.user_perspective
-                        if conversation.type == "level"
-                        else (
-                            f"You are discussing {conversation.info.topic} with "
-                            f"{conversation.info.subject.name}, who is an expert."
-                        )
-                    ),
+                    user,
+                    conversation.agent,
                     conversation.messages,
                     opt.prompt,
                 )
@@ -271,60 +221,51 @@ async def progress_conversation(
         random.shuffle(options)
 
         conversation.events.append(
-            ConversationLogEntry(
-                root=NpMessageOptionsLogEntry(
-                    state=conversation.state.state.id,
-                    options=options,
-                )
+            NpMessageOptionsLogEntry(
+                state=conversation.state.id.id,
+                options=options,
             )
         )
 
-        conversation.state = ConversationWaitingInternal(options=options)
+        conversation.state = StateAwaitingUserChoiceData(
+            options=options, allow_custom=state_data.allow_custom
+        )
 
-        result = NpMessageEvent(options=[o.response for o in options])
+        result = NpMessageStep(
+            options=[o.response for o in options], allow_custom=state_data.allow_custom
+        )
     elif isinstance(state_data, ApFlowState):
         opt = random.choice(state_data.options)
 
         response = await generate_message(
-            conversation.info.subject,
-            conversation.info.user,
-            (
-                conversation.info.scenario.subject_perspective
-                if conversation.type == "level"
-                else (
-                    f"You are discussing {conversation.info.topic} with "
-                    f"{conversation.info.user.name}."
-                )
-            ),
+            conversation.agent,
+            user,
+            conversation.messages,
             opt.prompt,
         )
 
         conversation.events.append(
-            ConversationLogEntry(
-                root=ApMessageLogEntry(
-                    state=conversation.state.state.id,
-                    message=response,
-                )
+            ApMessageLogEntry(
+                state=conversation.state.id.id,
+                message=response,
             )
         )
 
         conversation.messages.append(
-            Message(sender=conversation.info.subject.name, message=response)
+            Message(sender=conversation.agent.name, message=response)
         )
 
-        conversation.state = ConversationNormalInternal(state=opt.next)
+        conversation.state = StateActiveData(id=opt.next)
 
-        result = ApMessageEvent(content=response)
+        result = ApMessageStep(content=response)
     elif isinstance(state_data, FeedbackFlowState):
-        response = await generate_feedback(conversation, state_data)
+        response = await generate_feedback(user, conversation, state_data)
         conversation.last_feedback_received = len(conversation.messages)
 
         conversation.events.append(
-            ConversationLogEntry(
-                root=FeedbackLogEntry(
-                    state=conversation.state.state.id,
-                    content=response,
-                )
+            FeedbackLogEntry(
+                state=conversation.state.id.id,
+                content=response,
             )
         )
 
@@ -335,14 +276,16 @@ async def progress_conversation(
                 )
             ]
 
-            conversation.state = ConversationWaitingInternal(options=options)
+            conversation.state = StateAwaitingUserChoiceData(
+                options=options, allow_custom=False
+            )
         else:
-            conversation.state = ConversationNormalInternal(state=state_data.next_ok)
+            conversation.state = StateActiveData(state=state_data.next_ok)
 
-        result = FeedbackEvent(content=response)
+        result = FeedbackStep(content=response)
     else:
         raise RuntimeError(f"Invalid state: {state_data}")
 
     await conversations.update(conversation)
 
-    return ConversationEvent(root=result)
+    return result

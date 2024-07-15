@@ -1,15 +1,14 @@
-from typing import Literal, Union
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, RootModel, StringConstraints
-from typing_extensions import Annotated
+from pydantic import BaseModel, Field, StringConstraints, TypeAdapter
 
 from api.schemas.conversation import (
+    ConversationDataInit,
     Feedback,
-    LevelConversationInitData,
     Message,
-    Messages,
     message_list_adapter,
 )
+from api.schemas.persona import Persona
 
 from . import llm
 from .flow_state.base import FeedbackFlowState
@@ -29,34 +28,26 @@ class FeedbackAnalysisOk(BaseModel):
     needs_improvement: Literal[False] = False
 
 
-class BaseFeedbackAnalysis(RootModel):
-    root: Annotated[
-        Union[
-            BaseFeedbackAnalysisNeedsImprovement,
-            FeedbackAnalysisOk,
-        ],
-        Field(discriminator="needs_improvement"),
-    ]
+BaseFeedbackAnalysis = Annotated[
+    BaseFeedbackAnalysisNeedsImprovement | FeedbackAnalysisOk,
+    Field(discriminator="needs_improvement"),
+]
 
 
-class FeedbackAnalysis(RootModel):
-    root: Annotated[
-        Union[
-            FeedbackAnalysisNeedsImprovement,
-            FeedbackAnalysisOk,
-        ],
-        Field(discriminator="needs_improvement"),
-    ]
+FeedbackAnalysis = Annotated[
+    FeedbackAnalysisNeedsImprovement | FeedbackAnalysisOk,
+    Field(discriminator="needs_improvement"),
+]
+
+feedback_analysis_adapter = TypeAdapter(FeedbackAnalysis)
 
 
 async def _analyze_messages_base(
-    conversation: LevelConversationInitData, state: FeedbackFlowState
+    user: Persona, agent: Persona, messages: list[Message], state: FeedbackFlowState
 ) -> FeedbackAnalysis:
-    user, subject = conversation.info.user, conversation.info.subject
-
     system_prompt = (
         "You are a social skills coach. Your task is to analyze the ongoing "
-        f"conversation between the user, {user.name}, and {subject.name}, who is "
+        f"conversation between the user, {user.name}, and {agent.name}, who is "
         "an autistic individual. Determine if communication is going well or if "
         f"there are areas that need improvement.\n{state.prompt_analysis}\nRespond "
         "with a JSON object containing the following keys: 'needs_improvement': a "
@@ -65,11 +56,7 @@ async def _analyze_messages_base(
         "conversation."
     )
 
-    prompt_data = str(
-        message_list_adapter.dump_json(
-            conversation.messages[conversation.last_feedback_received :]
-        )
-    )
+    prompt_data = str(message_list_adapter.dump_json(messages))
 
     response = await llm.generate(
         schema=BaseFeedbackAnalysis,
@@ -79,40 +66,32 @@ async def _analyze_messages_base(
     )
 
     if response.root.needs_improvement:
-        return FeedbackAnalysis(
-            root=FeedbackAnalysisNeedsImprovement(
-                needs_improvement=True, misunderstanding=True
-            )
+        return FeedbackAnalysisNeedsImprovement(
+            needs_improvement=True, misunderstanding=True
         )
     else:
-        return FeedbackAnalysis(root=FeedbackAnalysisOk(needs_improvement=False))
+        return FeedbackAnalysisOk(needs_improvement=False)
 
 
 async def _analyze_messages_with_understanding(
-    conversation: LevelConversationInitData, state: FeedbackFlowState
+    user: Persona, agent: Persona, messages: list[Message], state: FeedbackFlowState
 ):
-    user, subject = conversation.info.user, conversation.info.subject
-
     system_prompt = (
         "You are a social skills coach. Your task is to analyze the ongoing "
-        f"conversation between the user, {user.name}, and {subject.name}, who is "
+        f"conversation between the user, {user.name}, and {agent.name}, who is "
         "an autistic individual. Determine if communication is going well or if "
         f"there are areas that need improvement and possible misunderstandings.\n"
         f"{state.prompt_analysis}\nRespond with a JSON object containing the following "
         f"keys: 'needs_improvement': a boolean indicating whether the messages sent by "
         f"{user.name} need improvement, 'misunderstanding': a boolean indicating "
-        f"whether the offending messages led to a misunderstanding by {subject.name}, "
+        f"whether the offending messages led to a misunderstanding by {agent.name}, "
         "and 'analysis': a string containing your analysis of the conversation."
     )
 
-    prompt_data = str(
-        message_list_adapter.dump_json(
-            conversation.messages[conversation.last_feedback_received :]
-        )
-    )
+    prompt_data = str(message_list_adapter.dump_json(messages))
 
     return await llm.generate(
-        schema=FeedbackAnalysis,
+        schema=feedback_analysis_adapter,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
         prompt=prompt_data,
@@ -120,16 +99,20 @@ async def _analyze_messages_with_understanding(
 
 
 async def _analyze_messages(
-    conversation: LevelConversationInitData, state: FeedbackFlowState
+    user: Persona, agent: Persona, messages: list[Message], state: FeedbackFlowState
 ) -> FeedbackAnalysis:
-    if conversation.messages[-1].sender == conversation.info.user.name:
-        return await _analyze_messages_base(conversation, state)
+    if messages[-1].sender == user.name:
+        return await _analyze_messages_base(user, agent, messages, state)
     else:
-        return await _analyze_messages_with_understanding(conversation, state)
+        return await _analyze_messages_with_understanding(user, agent, messages, state)
 
 
 async def _generate_feedback_with_follow_up(
-    conversation: LevelConversationInitData, feedback: FeedbackFlowState
+    user: Persona,
+    agent: Persona,
+    messages: list[Message],
+    feedback: FeedbackFlowState,
+    conversation: ConversationDataInit,
 ):
     class FeedbackWithPromptResponse(BaseModel):
         title: Annotated[str, StringConstraints(max_length=50)]
@@ -138,18 +121,16 @@ async def _generate_feedback_with_follow_up(
 
     examples = [
         (
-            Messages(
-                root=[
-                    Message(
-                        sender="Ben",
-                        message="I feel like a million bucks today!",
-                    ),
-                    Message(
-                        sender="Chris",
-                        message=("Did you just win the lottery? That's great!"),
-                    ),
-                ]
-            ),
+            [
+                Message(
+                    sender="Ben",
+                    message="I feel like a million bucks today!",
+                ),
+                Message(
+                    sender="Chris",
+                    message=("Did you just win the lottery? That's great!"),
+                ),
+            ],
             FeedbackWithPromptResponse(
                 title="Avoid Similies",
                 body=(
@@ -167,17 +148,15 @@ async def _generate_feedback_with_follow_up(
             ),
         ),
         (
-            Messages(
-                root=[
-                    Message(
-                        sender="Alex", message="Break a leg in your performance today!"
-                    ),
-                    Message(
-                        sender="Taylor",
-                        message="That's mean! Why would you want me to get hurt?",
-                    ),
-                ]
-            ),
+            [
+                Message(
+                    sender="Alex", message="Break a leg in your performance today!"
+                ),
+                Message(
+                    sender="Taylor",
+                    message="That's mean! Why would you want me to get hurt?",
+                ),
+            ],
             FeedbackWithPromptResponse(
                 title="Avoid Idioms",
                 body=(
@@ -195,17 +174,13 @@ async def _generate_feedback_with_follow_up(
             ),
         ),
         (
-            Messages(
-                root=[
-                    Message(
-                        sender="Morgan", message="I can't keep my head above water."
-                    ),
-                    Message(
-                        sender="Jamie",
-                        message="Are you drowning? Should I call someone?",
-                    ),
-                ]
-            ),
+            [
+                Message(sender="Morgan", message="I can't keep my head above water."),
+                Message(
+                    sender="Jamie",
+                    message="Are you drowning? Should I call someone?",
+                ),
+            ],
             FeedbackWithPromptResponse(
                 title="Avoid Metaphors",
                 body=(
@@ -223,10 +198,9 @@ async def _generate_feedback_with_follow_up(
         ),
     ]
 
-    user, subject = conversation.info.user, conversation.info.subject
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between {user.name} and {subject.name}, who is an "
+        f"ongoing conversation between {user.name} and {agent.name}, who is an "
         f"autistic individual. The conversation is happening over text."
         f"\n{feedback.prompt_misunderstanding}\nUse second person pronouns to "
         f"address {user.name} directly. Respond with a JSON object with the key "
@@ -246,11 +220,7 @@ async def _generate_feedback_with_follow_up(
         )
     )
 
-    prompt_data = str(
-        message_list_adapter.dump_json(
-            conversation.messages[conversation.last_feedback_received :]
-        )
-    )
+    prompt_data = str(message_list_adapter.dump_json(messages))
 
     feedback_base = await llm.generate(
         schema=FeedbackWithPromptResponse,
@@ -261,15 +231,7 @@ async def _generate_feedback_with_follow_up(
 
     follow_up = await generate_message(
         user,
-        subject,
-        (
-            conversation.info.scenario.user_perspective
-            if conversation.type == "level"
-            else (
-                f"You are discussing {conversation.info.topic} with "
-                f"{conversation.info.subject.name}, who is an expert."
-            )
-        ),
+        agent,
         conversation.messages,
         extra=feedback_base.instructions,
     )
@@ -282,26 +244,23 @@ async def _generate_feedback_with_follow_up(
 
 
 async def _generate_feedback_needs_improvement(
-    conversation: LevelConversationInitData, feedback: FeedbackFlowState
+    user: Persona,
+    agent: Persona,
+    messages: list[Message],
+    feedback: FeedbackFlowState,
 ):
-    user, subject = conversation.info.user, conversation.info.subject
-
     examples = [
         (
-            Messages(
-                root=[
-                    Message(
-                        sender="Ben",
-                        message="I feel like a million bucks today!",
-                    ),
-                    Message(
-                        sender="Chris",
-                        message=(
-                            "You must have had a great day! That's awesome to hear!"
-                        ),
-                    ),
-                ]
-            ),
+            [
+                Message(
+                    sender="Ben",
+                    message="I feel like a million bucks today!",
+                ),
+                Message(
+                    sender="Chris",
+                    message=("You must have had a great day! That's awesome to hear!"),
+                ),
+            ],
             Feedback(
                 title="Avoid Similies",
                 body=(
@@ -314,17 +273,15 @@ async def _generate_feedback_needs_improvement(
             ),
         ),
         (
-            Messages(
-                root=[
-                    Message(
-                        sender="Alex", message="Break a leg in your performance today!"
-                    ),
-                    Message(
-                        sender="Taylor",
-                        message="Thank you! I'll do my best to impress the audience!",
-                    ),
-                ]
-            ),
+            [
+                Message(
+                    sender="Alex", message="Break a leg in your performance today!"
+                ),
+                Message(
+                    sender="Taylor",
+                    message="Thank you! I'll do my best to impress the audience!",
+                ),
+            ],
             Feedback(
                 title="Avoid Idioms",
                 body=(
@@ -337,14 +294,10 @@ async def _generate_feedback_needs_improvement(
             ),
         ),
         (
-            Messages(
-                root=[
-                    Message(
-                        sender="Morgan", message="I can't keep my head above water."
-                    ),
-                    Message(sender="Jamie", message="Sounds like you're really busy!"),
-                ]
-            ),
+            [
+                Message(sender="Morgan", message="I can't keep my head above water."),
+                Message(sender="Jamie", message="Sounds like you're really busy!"),
+            ],
             Feedback(
                 title="Avoid Metaphors",
                 body=(
@@ -360,7 +313,7 @@ async def _generate_feedback_needs_improvement(
 
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between {user.name} and {subject.name}, who is an "
+        f"ongoing conversation between {user.name} and {agent.name}, who is an "
         "autistic individual. The conversation is happening over text.\n"
         f"{feedback.prompt_needs_improvement}\n Use second person pronouns to address "
         f"{user.name} directly. Respond with a JSON object with the key 'title' "
@@ -368,17 +321,13 @@ async def _generate_feedback_needs_improvement(
         "'body' containing the feedback (less than 100 words). Examples:\n"
         + "\n\n".join(
             [
-                f"{messages.model_dump_json()}\n{fb.model_dump_json()}"
+                f"{message_list_adapter.dump_json(messages)}\n{fb.model_dump_json()}"
                 for messages, fb in examples
             ]
         )
     )
 
-    prompt_data = str(
-        message_list_adapter.dump_json(
-            conversation.messages[conversation.last_feedback_received :]
-        )
-    )
+    prompt_data = str(message_list_adapter.dump_json(messages))
 
     return await llm.generate(
         schema=Feedback,
@@ -389,20 +338,19 @@ async def _generate_feedback_needs_improvement(
 
 
 async def _generate_feedback_ok(
-    conversation: LevelConversationInitData, feedback: FeedbackFlowState
+    user: Persona,
+    agent: Persona,
+    messages: list[Message],
+    feedback: FeedbackFlowState,
 ):
-    user, subject = conversation.info.user, conversation.info.subject
-
     examples = [
         (
-            Messages(
-                root=[
-                    Message(sender="Ben", message="I'm feeling great today!"),
-                    Message(
-                        sender="Chris", message="That's awesome! I'm glad to hear that!"
-                    ),
-                ]
-            ),
+            [
+                Message(sender="Ben", message="I'm feeling great today!"),
+                Message(
+                    sender="Chris", message="That's awesome! I'm glad to hear that!"
+                ),
+            ],
             Feedback(
                 title="Clear Communication",
                 body=(
@@ -418,7 +366,7 @@ async def _generate_feedback_ok(
 
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between {user.name} and {subject.name}, who is an "
+        f"ongoing conversation between {user.name} and {agent.name}, who is an "
         f"autistic individual. The conversation is happening over text.\n"
         f"{feedback.prompt_ok}\nProvide positive reinforcement and encouragement for "
         f"clear communication. Use second person pronouns to address {user.name} "
@@ -426,15 +374,14 @@ async def _generate_feedback_ok(
         "title (less than 50 characters) of your feedback and the key 'body' "
         "containing the feedback (less than 100 words). Examples:\n"
         + "\n\n".join(
-            [f"{msg.model_dump_json()}\n{fb.model_dump_json()}" for msg, fb in examples]
+            [
+                f"{message_list_adapter.dump_json(msg)}\n{fb.model_dump_json()}"
+                for msg, fb in examples
+            ]
         )
     )
 
-    prompt_data = str(
-        message_list_adapter.dump_json(
-            conversation.messages[conversation.last_feedback_received :]
-        )
-    )
+    prompt_data = str(message_list_adapter.dump_json(messages))
 
     return await llm.generate(
         schema=Feedback,
@@ -445,14 +392,21 @@ async def _generate_feedback_ok(
 
 
 async def generate_feedback(
-    conversation: LevelConversationInitData, state: FeedbackFlowState
+    user: Persona, conversation: ConversationDataInit, state: FeedbackFlowState
 ) -> Feedback:
-    analysis = await _analyze_messages(conversation, state)
+    agent = conversation.agent
+    messages = conversation.messages[conversation.last_feedback_received :]
 
-    if isinstance(analysis.root, FeedbackAnalysisNeedsImprovement):
-        if analysis.root.misunderstanding:
-            return await _generate_feedback_with_follow_up(conversation, state)
+    analysis = await _analyze_messages(user, agent, messages, state)
+
+    if isinstance(analysis, FeedbackAnalysisNeedsImprovement):
+        if analysis.misunderstanding:
+            return await _generate_feedback_with_follow_up(
+                user, agent, messages, state, conversation
+            )
         else:
-            return await _generate_feedback_needs_improvement(conversation, state)
+            return await _generate_feedback_needs_improvement(
+                user, agent, messages, state
+            )
     else:
-        return await _generate_feedback_ok(conversation, state)
+        return await _generate_feedback_ok(user, agent, messages, state)

@@ -113,7 +113,7 @@ async def _get_cluster_topic(cluster: list[str]) -> str | None:
     prompt_data = "\n".join(cluster)
     response = await llm.generate(
         schema=ClusterTopicResponse,
-        model=llm.MODEL_GPT_4,
+        model=llm.MODEL_CLAUDE_SONNET,
         system=system_prompt,
         prompt=prompt_data,
     )

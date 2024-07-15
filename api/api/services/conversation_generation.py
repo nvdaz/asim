@@ -1,10 +1,10 @@
 import random
+from typing import Annotated
 
 from bson import ObjectId
 from pydantic import AfterValidator, BaseModel
-from typing_extensions import Annotated
 
-from api.db.conversations import get_previous_level_scenarios
+from api.db.conversations import get_previous_info
 from api.schemas.conversation import ConversationScenario
 from api.schemas.persona import BasePersona, Persona
 
@@ -12,24 +12,24 @@ from . import llm
 
 
 async def generate_conversation_scenario(
-    user_id: ObjectId, user: Persona, subject_name: str
+    user_id: ObjectId, user: Persona, agent_name: str
 ) -> ConversationScenario:
     system_prompt = (
         "As a scenario generator, your task is to generate a casual conversational "
         f"scenario that could happen over a text messaging app based on {user.name}'s "
         "profile. The scenario should be a specific situation that could happen "
-        f"between {user.name} and an unfamiliar person {subject_name} over text "
+        f"between {user.name} and an unfamiliar person {agent_name} over text "
         "messaging. The scenario should be realistic and relatable. Respond with a "
         f"JSON object. The 'user_perspective' key should be a string describing "
         f"{user.name}'s perspective in the scenario (use second person pronouns to "
-        f"refer to {user.name}), the 'subject_perspective' key should be a string "
-        f"describing {subject_name}'s perspective (use second person pronouns to refer "
-        f"to {subject_name}), the 'user_goal' key should be a string describing "
+        f"refer to {user.name}), the 'agent_perspective' key should be a string "
+        f"describing {agent_name}'s perspective (use second person pronouns to refer "
+        f"to {agent_name}), the 'user_goal' key should be a string describing "
         f"{user.name}'s objective in the scenario (begin with an action verb, e.g., "
         "'Convince', 'Explain', 'Find out' and use second person pronouns to refer to "
         f"{user.name}), and the 'is_user_initiated' key should be a boolean that is "
         f"true if the first message would be sent by {user.name} and false if it would "
-        f"be sent by {subject_name}. Do not generate scenarios that involve "
+        f"be sent by {agent_name}. Do not generate scenarios that involve "
         "significant external elements, such as finding a bug in a software program "
         "(it is not possible to send the code). Also do not generate scenarios that "
         "are too similar to a previously generated scenario. Examples:\n"
@@ -44,7 +44,7 @@ async def generate_conversation_scenario(
                             "theoretical physics and wants to discuss different "
                             "areas of the field to explore further."
                         ),
-                        subject_perspective=(
+                        agent_perspective=(
                             "You reach out to Professor Green, a theoretical physics "
                             "professor, over text. Professor Green is excited to chat "
                             "about theoretical physics and share advice on studying "
@@ -64,7 +64,7 @@ async def generate_conversation_scenario(
                             "texting to discuss work, get insights into his role, and "
                             "learn about his interests outside of work."
                         ),
-                        subject_perspective=(
+                        agent_perspective=(
                             "You've given your number to Christina, a new team member "
                             "at the pharmaceutical company you work for. Christina "
                             "wants to chat about work and get to know you better."
@@ -82,7 +82,7 @@ async def generate_conversation_scenario(
                             "a project. Ask about their favorite subjects, tips, and "
                             "projects to discuss further."
                         ),
-                        subject_perspective=(
+                        agent_perspective=(
                             "You met Joe in photography class and asked for his "
                             "number. Joe is excited to talk about photography with "
                             "you, discussing favorite subjects, tips, and projects. "
@@ -102,7 +102,7 @@ async def generate_conversation_scenario(
                             "events, the best dining spots, and any helpful tips for "
                             "newcomers."
                         ),
-                        subject_perspective=(
+                        agent_perspective=(
                             "David, your new neighbor, has reached out to you over "
                             "text. David is eager to chat about local events, dining "
                             "spots, and tips for newcomers."
@@ -120,7 +120,7 @@ async def generate_conversation_scenario(
                             "theory. Get to know Riley better and discuss their "
                             "research, favorite mathematicians, and future projects."
                         ),
-                        subject_perspective=(
+                        agent_perspective=(
                             "After meeting you at a math conference, Eden is eager to "
                             "chat about topological algebra and category theory. Eden "
                             "wants to learn about your research and interests in the "
@@ -140,7 +140,7 @@ async def generate_conversation_scenario(
                             "their favorite trails, future hiking plans, and advice "
                             "for beginners."
                         ),
-                        subject_perspective=(
+                        agent_perspective=(
                             "You met Alex at a social event and exchanged numbers to "
                             "chat about hiking. Alex wants to learn about your "
                             "favorite trails, future hiking plans, and advice for "
@@ -159,7 +159,9 @@ async def generate_conversation_scenario(
 
     sampled_interests = random.sample(user.interests, min(2, len(user.interests)))
 
-    previous_scenarios = await get_previous_level_scenarios(user_id)
+    previous_infos = await get_previous_info(user_id, "level")
+
+    previous_scenarios = [info.scenario.user_perspective for info in previous_infos]
 
     class GenerateConversationScenarioPrompt(BaseModel):
         name: str
@@ -176,8 +178,6 @@ async def generate_conversation_scenario(
         previous_user_scenarios=previous_scenarios,
     ).model_dump_json()
 
-    print(prompt_data)
-
     scenario = await llm.generate(
         schema=ConversationScenario,
         model=llm.MODEL_GPT_4,
@@ -188,13 +188,13 @@ async def generate_conversation_scenario(
     return scenario
 
 
-async def _generate_subject_base(scenario, name):
+async def _generate_agent_base(scenario, name):
     def validate_name(v):
         if v != name:
             raise ValueError(f"Name must be {name}")
         return v
 
-    class SubjectBasePersona(BasePersona):
+    class AgentBasePersona(BasePersona):
         name: Annotated[str, AfterValidator(validate_name)]
 
     system_prompt = (
@@ -207,7 +207,7 @@ async def _generate_subject_base(scenario, name):
     )
 
     response = await llm.generate(
-        schema=SubjectBasePersona,
+        schema=AgentBasePersona,
         model=llm.MODEL_GPT_4,
         system=system_prompt,
         prompt=scenario,
@@ -216,7 +216,7 @@ async def _generate_subject_base(scenario, name):
     return response
 
 
-async def _generate_subject_persona_from_base(subject: BasePersona):
+async def _generate_agent_persona_from_base(agent: BasePersona):
     class PersonaDescriptionResponse(BaseModel):
         persona: str
 
@@ -230,10 +230,10 @@ async def _generate_subject_persona_from_base(subject: BasePersona):
         "realistic and relatable character who is messaging over text with another "
         "person. Respond with a JSON object containing the key 'persona' and the "
         "system prompt as the value. The prompt should start with 'You are "
-        f"{subject.name}...'."
+        f"{agent.name}...'."
     )
 
-    prompt_data = subject.model_dump_json()
+    prompt_data = agent.model_dump_json()
 
     response = await llm.generate(
         schema=PersonaDescriptionResponse,
@@ -242,12 +242,12 @@ async def _generate_subject_persona_from_base(subject: BasePersona):
         prompt=prompt_data,
     )
 
-    return Persona(**subject.model_dump(), description=response.persona)
+    return Persona(**agent.model_dump(), description=response.persona)
 
 
-async def generate_subject_persona(scenario, subject_name):
-    subject_info = await _generate_subject_base(scenario, subject_name)
+async def generate_agent_persona(scenario, agent_name):
+    agent_info = await _generate_agent_base(scenario, agent_name)
 
-    subject_persona = await _generate_subject_persona_from_base(subject_info)
+    agent_persona = await _generate_agent_persona_from_base(agent_info)
 
-    return subject_persona
+    return agent_persona

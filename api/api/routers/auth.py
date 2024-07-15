@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from api.auth.deps import CurrentUser, CurrentUserID
-from api.schemas.user import User
+from api.schemas.user import User, user_from_data
 from api.services.auth import (
     AlreadyInitialized,
     InvalidMagicLink,
@@ -36,14 +36,15 @@ class SetupOptions(BaseModel):
 @router.post("/setup", responses={400: {"description": "User already initialized"}})
 async def setup(current_user_id: CurrentUserID, options: SetupOptions) -> User:
     try:
-        return await init_user(current_user_id, options.name)
+        user = await init_user(current_user_id, options.name)
+        return user_from_data(user)
     except AlreadyInitialized as e:
         raise HTTPException(status_code=400, detail="User already initialized") from e
 
 
 @router.get("/me")
 async def me(current_user: CurrentUser) -> User:
-    return current_user
+    return user_from_data(current_user)
 
 
 @router.post("/internal-create-magic-link")

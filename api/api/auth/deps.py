@@ -1,12 +1,12 @@
+from typing import Annotated
 from uuid import UUID
 
 from bson import ObjectId
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from typing_extensions import Annotated
 
 from api.db import auth_tokens, users
-from api.schemas.user import User
+from api.schemas.user import UserData
 
 auth_scheme = HTTPBearer()
 
@@ -27,7 +27,7 @@ CurrentUserID = Annotated[UUID, Depends(get_current_user_id)]
 
 async def get_current_user(
     authorization: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)]
-) -> User:
+) -> UserData:
     token = await auth_tokens.get(authorization.credentials)
 
     if not token:
@@ -43,4 +43,4 @@ async def get_current_user(
     return user
 
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentUser = Annotated[UserData, Depends(get_current_user)]
