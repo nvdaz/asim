@@ -161,7 +161,7 @@ export default function Header({
                     }}
                   >
                     {showConversationList &&
-                      conversationList.map((l, index) => (
+                      conversationList.map((c, index) => (
                         <ListItem key={index} disablePadding>
                           <ListItemButton
                             style={{
@@ -180,13 +180,13 @@ export default function Header({
                                   sx={{ cursor: "pointer" }}
                                   fontSize="small"
                                   onClick={() =>
-                                    window.location.href = `/lesson/${currentLevel + 1}/${l.id}`
+                                    window.location.href = `/lesson/${currentLevel + 1}/${c.id}`
                                   }
                                 />
                               </ListItemIcon>
                             </Tooltip>
                             <div key={index}>
-                              {index + 1}. {l.subject_name}
+                              {index + 1}. {c.agent}
                             </div>
                           </ListItemButton>
                         </ListItem>

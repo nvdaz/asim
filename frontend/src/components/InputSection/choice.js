@@ -3,7 +3,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import styles from "./index.module.css";
 
 const ChoicesSection = ({ options, handleButtonClick }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [maxWidth, setMaxWidth] = useState(0);
   const elementsRef = useRef([]);
 
@@ -23,10 +23,22 @@ const ChoicesSection = ({ options, handleButtonClick }) => {
         }}
       >
         {isCollapsed ? <div></div> : <div>Choose an option:</div>}
-        <KeyboardArrowDownIcon
-          className={isCollapsed ? styles.arrowRotate : styles.arrow}
+        <div
+          className={styles.choice}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            fontSize: "14px",
+            padding: "3px 4px 4px 10px",
+            border: isCollapsed ? "white 3px solid": "none",
+          }}
           onClick={() => setIsCollapsed(!isCollapsed)}
-        />
+        >
+          {isCollapsed ? "View options" : "Hide options"}
+          <KeyboardArrowDownIcon
+            className={isCollapsed ? styles.arrowRotate : styles.arrow}
+          />
+        </div>
       </div>
       {!isCollapsed && (
         <div className={styles.choices}>

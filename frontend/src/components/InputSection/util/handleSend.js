@@ -1,32 +1,31 @@
 import { Post } from "../../../utils/request";
 
-  function handleSend(
-    chatHistory,
-    setChatHistory,
-    setShowProgress,
-    choice,
-    setChoice,
-    selectedButton,
-    setSelectedButton,
-    conversationID
-  ) {
-    return function (setShowChoicesSection, setSelectedOption, setOptions) {
-
-      send(
-        chatHistory,
-        setChatHistory,
-        setShowProgress,
-        setShowChoicesSection,
-        choice,
-        setChoice,
-        selectedButton,
-        setSelectedButton,
-        setSelectedOption,
-        setOptions,
-        conversationID
-      );
-    };
-  }
+function handleSend(
+  chatHistory,
+  setChatHistory,
+  setShowProgress,
+  choice,
+  setChoice,
+  selectedButton,
+  setSelectedButton,
+  conversationID
+) {
+  return function (setShowChoicesSection, setSelectedOption, setOptions) {
+    send(
+      chatHistory,
+      setChatHistory,
+      setShowProgress,
+      setShowChoicesSection,
+      choice,
+      setChoice,
+      selectedButton,
+      setSelectedButton,
+      setSelectedOption,
+      setOptions,
+      conversationID
+    );
+  };
+}
 
 async function send(
   chatHistory,
@@ -42,9 +41,10 @@ async function send(
   conversationID
 ) {
   const fetchData = async (option = selectedButton) => {
-    const next = await Post(
-      `conversations/${conversationID}/next?option=${option}`
-    );
+    const next = await Post(`conversations/${conversationID}/next`, {
+      option: "index",
+      index: parseInt(option),
+    });
     return next;
   };
 
@@ -62,7 +62,7 @@ async function send(
         content: {
           body: selectionResultContent.body,
           title: selectionResultContent.title,
-        }
+        },
       },
     ];
   };
@@ -123,7 +123,7 @@ async function send(
             selectionResultContent
           )),
     ];
-  };
+  }
 
   const apFollowedByFeedback = async (
     nextFetched,
@@ -133,6 +133,8 @@ async function send(
     // ap followed by feedback with no follow_up
     if (!nextFetched.content.follow_up) {
       console.log("apFollowedByFeedback", selectionResultContent, nextFetched);
+      setChoice(nextFetched.content.follow_up);
+      selectedButton(0);
       return [
         ...oldHistory,
         {
@@ -150,12 +152,14 @@ async function send(
           continue: {
             handleClick: handleContinue,
             oldHistory: oldHistory,
-            selectionResultContent: selectionResultContent
-          }
+            selectionResultContent: selectionResultContent,
+          },
         },
       ];
     } else {
       console.log("apFollowedByFeedbackWithFollowUp", nextFetched);
+      setChoice(nextFetched.content.follow_up);
+      selectedButton(0);
       return [
         ...oldHistory,
         {
@@ -211,7 +215,10 @@ async function send(
 
       setChatHistory([
         ...oldHistory,
-        ...(await feedbackWithNoFollowUpFollowedByNP(nextFetched.data, oldHistory)),
+        ...(await feedbackWithNoFollowUpFollowedByNP(
+          nextFetched.data,
+          oldHistory
+        )),
       ]);
     }
   };
@@ -226,6 +233,8 @@ async function send(
       selectionResultContent?.follow_up
     ) {
       console.log("1");
+      setChoice(selectionResultContent.follow_up);
+      selectedButton(0);
       return [
         ...oldHistory,
         {

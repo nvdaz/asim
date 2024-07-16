@@ -16,18 +16,18 @@ const Feedback = ({
       <div className={styles.title}>{title}</div>
       <div className={styles.body}>{body}</div>
       {choice && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            padding: "5px 0 5px",
-          }}
-        >
-          <Choice
-            index={0}
-            message={choice}
-            func={() => handleButtonClick(0, choice)}
-          />
+        <div>
+          <div>Instead, say:</div>
+          <div
+            style={{
+              margin: "5px 0",
+              padding: "10px 15px",
+              backgroundColor: "#2C2F39",
+              borderRadius: "22px",
+            }}
+          >
+            {choice}
+          </div>
         </div>
       )}
       {choice === null && (

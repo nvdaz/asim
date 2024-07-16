@@ -23,14 +23,18 @@ const Lesson = () => {
   const currentLevel = window.location.href.split("/")[4] - 1;
 
   const fetchNextSteps = async (conversationID, condition) => {
-    const next = await Post(`conversations/${conversationID}/next`);
+    const next = await Post(`conversations/${conversationID}/next`, {
+      option: "none",
+    });
     if (!next.ok) {
       setAlertMessage("Error occurred fetching data");
       return;
     }
 
     if (condition || next.data.type === "ap") {
-      const userOptions = await Post(`conversations/${conversationID}/next`);
+      const userOptions = await Post(`conversations/${conversationID}/next`, {
+        option: "none",
+      });
       if (!userOptions.ok) {
         setAlertMessage("Error occurred fetching data");
         return;
@@ -53,6 +57,7 @@ const Lesson = () => {
 
   const fetchNewConversation = async () => {
     const initConversation = await Post("conversations/", {
+      type: "level",
       level: currentLevel,
     });
     if (!initConversation.ok) {
@@ -63,7 +68,7 @@ const Lesson = () => {
 
     await fetchNextSteps(
       initConversation.data.id,
-      !initConversation.data.scenario.is_user_initiated
+      !initConversation.data.info.scenario.is_user_initiated
     );
   };
 
@@ -74,7 +79,7 @@ const Lesson = () => {
       }
 
       const listConversations = await Get(
-        `conversations/?level=${currentLevel}`
+        `conversations/?type=level&level=${currentLevel}`
       );
       if (!listConversations.ok) {
         setAlertMessage("Error occurred fetching data");
@@ -99,23 +104,34 @@ const Lesson = () => {
 
         setData({
           id: conversationID,
-          subject_name: historyData.subject_name,
-          scenario: historyData.scenario,
-          messages: historyData.messages,
+          subject_name: historyData.agent,
+          scenario: historyData.info.scenario,
+          messages: historyData.elements,
         });
 
-        if (historyData.state.waiting) {
+        if (historyData.state === null) {
+          await fetchNextSteps(conversationID);
+        }
+        else if (historyData.state.waiting) {
           console.log(
             "historyData.state.waiting",
             historyData.state.waiting,
-            "nextConversation",
-            {
-              options: historyData.state.options,
-            }
           );
-          setNextConversation({
-            options: historyData.state.options,
-          });
+
+          if (historyData.elements.length === 0) {
+            setNextConversation({
+              options: historyData.state.options
+            });
+          }
+          else {
+            setNextConversation({
+              options:
+                historyData.elements[historyData.elements.length - 1]
+                  .type !== "feedback"
+                  ? historyData.state.options
+                  : [],
+            });
+          }
         } else {
           await fetchNextSteps(conversationID);
         }
@@ -125,7 +141,7 @@ const Lesson = () => {
     };
 
     fetchData();
-  }, [currentLevel]);
+  }, [conversationIDFromParam, currentLevel]);
 
   const header = useCallback((node) => {
     if (node !== null) {
@@ -177,8 +193,8 @@ const Lesson = () => {
             <Header
               name={data["subject_name"]}
               initData={{
-                scenario: data["scenario"]["user_perspective"],
-                goal: data["scenario"]["user_goal"],
+                scenario: data?.["scenario"]?.["user_perspective"],
+                goal: data?.["scenario"]?.["user_goal"],
               }}
               fetchNewConversation={fetchNewConversation}
               conversationList={conversationList}
@@ -188,11 +204,11 @@ const Lesson = () => {
           <InputAndMessages
             headerHeight={headerHeight}
             initData={{
-              id: data.id,
+              id: data?.id,
               options: nextConversation.options,
-              is_user_initiated: data.scenario.is_user_initiated,
+              is_user_initiated: data?.scenario?.is_user_initiated,
               ap_message: nextConversation?.ap_message,
-              messages: data.messages,
+              messages: data?.messages || [],
             }}
           />
         </div>

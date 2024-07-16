@@ -8,12 +8,30 @@ const InputAndMessages = ({ headerHeight, initData }) => {
   const convertToMessageHistory = () => {
     const userName = localStorage.getItem("name");
     return initData.messages.map((m) => {
+      if (m.type === 'message') {
+        return {
+          type: "text",
+          isSentByUser: userName === m.content.sender,
+          content: m.content.message,
+        };
+      }
       return {
-        type: "text",
-        isSentByUser: userName === m.sender,
-        content: m.message,
+        type: "feedback",
+        content: {
+          body: m.content.body,
+          title: m.content.title,
+          choice: m.content.follow_up,
+        },
       };
     });
+  };
+
+  const setInitChoice = () => {
+    if (initData.messages.length === 0) {
+      return '';
+    }
+    const lastElement = initData.messages[initData.messages.length - 1];
+    return lastElement.type === "feedback" ? lastElement.content.follow_up : "";
   };
 
   const [options, setOptions] = useState(Object.assign({}, initData.options));
@@ -29,8 +47,8 @@ const InputAndMessages = ({ headerHeight, initData }) => {
         ]
       : [...convertToMessageHistory()]
   );
-  const [choice, setChoice] = useState("");
-  const [selectedButton, setSelectedButton] = useState(null);
+  const [choice, setChoice] = useState(setInitChoice());
+  const [selectedButton, setSelectedButton] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
 
   const handleClickFeedback = (index, message) => {
