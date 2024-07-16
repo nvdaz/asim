@@ -18,7 +18,14 @@ function SimpleDialog(props) {
       onClose={onClose}
       open={open}
     >
-      <div style={{ backgroundColor: "#B4B4B5", padding: "30px 25px" }}>
+      <div
+        style={{
+          backgroundColor: "#B4B4B5",
+          padding: "30px 25px",
+          fontSize: "1.5rem",
+          lineHeight: "1.6rem",
+        }}
+      >
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -35,13 +42,11 @@ function SimpleDialog(props) {
         <div
           style={{
             paddingBottom: "5px",
-            fontSize: "15px",
-            lineHeight: "1.2rem",
           }}
         >
           <div
             style={{
-              fontSize: "17px",
+              fontSize: "22px",
               paddingBottom: "5px",
               fontWeight: 550,
             }}
@@ -54,7 +59,7 @@ function SimpleDialog(props) {
         <div>
           <div
             style={{
-              fontSize: "17px",
+              fontSize: "22px",
               padding: "5px 0",
               fontWeight: 550,
             }}

@@ -15,7 +15,7 @@ export default function UnstyledTextareaIntroduction({ value, onChange, placehol
 const TextareaAutosize = styled(BaseTextareaAutosize)(
   () => `
     font-family: 'Roboto', 'Open Sans', 'Lato', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     border-radius: 17px;
     resize: none;
     width: 100%;

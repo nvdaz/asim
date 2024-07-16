@@ -49,13 +49,15 @@
 @media screen and (min-width: 800px) {
   .wrapper {
     padding: 1.5rem 15%;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    line-height: 1.3rem;
   }
 }
 
 @media screen and (min-width: 400px) {
   .wrapper {
-    font-size: 0.9rem;
+    font-size: 1rem;
+    line-height: 1.3rem;
   }
 }
 

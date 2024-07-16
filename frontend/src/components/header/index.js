@@ -58,7 +58,7 @@ export default function Header({
           alignItems: "center",
           padding: "16px",
           color: "white",
-          fontSize: "12px",
+          fontSize: "15px",
         }}
       >
         <Link style={{ color: "white" }} to="/">
