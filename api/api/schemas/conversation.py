@@ -2,7 +2,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter
 
-from api.services.flow_state.base import FlowStateRef
+from api.services.flow_state.base import FeedbackFlowStateRef, FlowStateRef
 
 from .objectid import PyObjectId
 from .persona import Persona, PersonaName
@@ -35,12 +35,13 @@ ConversationElement = Annotated[
 ]
 
 
-message_list_adapter = TypeAdapter(list[Message])
+message_list_adapter: TypeAdapter[list[Message]] = TypeAdapter(list[Message])
 
 
 class MessageOption(BaseModel):
     response: str
     next: FlowStateRef
+    checks: list[FeedbackFlowStateRef]
 
 
 class ConversationScenario(BaseModel):
@@ -130,7 +131,7 @@ ConversationInfo = Annotated[
     Field(discriminator="type"),
 ]
 
-conversation_info_adapter = TypeAdapter(ConversationInfo)
+conversation_info_adapter: TypeAdapter[ConversationInfo] = TypeAdapter(ConversationInfo)
 
 
 class BaseConversationUninit(BaseModel):
@@ -169,7 +170,7 @@ ConversationData = Annotated[
     Field(discriminator="init"),
 ]
 
-conversation_data_adapter = TypeAdapter(ConversationData)
+conversation_data_adapter: TypeAdapter[ConversationData] = TypeAdapter(ConversationData)
 
 
 class StateAwaitingUserChoice(BaseModel):

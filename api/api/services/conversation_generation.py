@@ -180,7 +180,7 @@ async def generate_conversation_scenario(
 
     scenario = await llm.generate(
         schema=ConversationScenario,
-        model=llm.MODEL_GPT_4,
+        model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
@@ -208,7 +208,7 @@ async def _generate_agent_base(scenario, name):
 
     response = await llm.generate(
         schema=AgentBasePersona,
-        model=llm.MODEL_GPT_4,
+        model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=scenario,
     )
@@ -237,7 +237,7 @@ async def _generate_agent_persona_from_base(agent: BasePersona):
 
     response = await llm.generate(
         schema=PersonaDescriptionResponse,
-        model=llm.MODEL_GPT_4,
+        model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )

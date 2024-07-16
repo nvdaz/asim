@@ -4,6 +4,8 @@ import json
 import logging
 import os
 import pickle as pkl
+import re
+from enum import Enum
 from typing import Type, TypeVar
 
 import aiofiles
@@ -13,22 +15,41 @@ from pydantic import BaseModel, TypeAdapter, ValidationError
 
 _LLM_URI = os.getenv("LLM_URI")
 
-_GENERATE_SEMAPHORE = asyncio.Semaphore(4)
+
+class ModelVendor(str, Enum):
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+
+    def concurrency_limit(self) -> int:
+        return 4
 
 
-MODEL_GPT_4 = "gpt4-new"
-MODEL_GPT_3_5 = "gpt3-5"
-MODEL_CLAUDE_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0"
-MODEL_CLAUDE_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0"
+class Model(str, Enum):
+    GPT_4 = "gpt4-new"
+    GPT_3_5 = "gpt3-5"
+    CLAUDE_3_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0"
+    CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0"
+
+    def vendor(self) -> ModelVendor:
+        match self:
+            case Model.GPT_4 | Model.GPT_3_5:
+                return ModelVendor.OPENAI
+            case Model.CLAUDE_3_SONNET | Model.CLAUDE_3_HAIKU:
+                return ModelVendor.ANTHROPIC
+
+
+_GENERATE_SEMAPHORES = {
+    vendor: asyncio.Semaphore(vendor.concurrency_limit()) for vendor in ModelVendor
+}
 
 
 async def _generate(
-    model: str, prompt: str, system: str, temperature: float | None = None
+    model: Model, prompt: str, system: str, temperature: float | None = None
 ):
-    async with _GENERATE_SEMAPHORE, ws.connect(_LLM_URI) as conn:
+    async with _GENERATE_SEMAPHORES[model.vendor()], ws.connect(_LLM_URI) as conn:
         action = {
             "action": "runModel",
-            "model": model,
+            "model": model.value,
             "system": system,
             "prompt": prompt,
             "temperature": temperature,
@@ -59,7 +80,7 @@ SchemaType = TypeVar("SchemaType", bound=BaseModel)
 
 async def _generate_strict(
     schema: Type[SchemaType] | TypeAdapter[SchemaType],
-    model: str,
+    model: Model,
     prompt: str,
     system: str,
     temperature: float = None,
@@ -70,6 +91,9 @@ async def _generate_strict(
         try:
             response = await _generate(model, prompt, system, temperature)
             data = response[response.index("{") : response.rindex("}") + 1]
+
+            # strip control characters from data
+            data = re.sub(r"[\x00-\x1f\x7f]", "", data)
             return (
                 schema.validate_json(data)
                 if isinstance(schema, TypeAdapter)
@@ -86,15 +110,17 @@ async def _generate_strict(
 _GENERATE_CACHE_LOCK = asyncio.Lock()
 
 
+def gen2(adapter: TypeAdapter[SchemaType]) -> Type[SchemaType]: ...
+
+
 async def generate(
     schema: Type[SchemaType] | TypeAdapter[SchemaType],
-    model: str,
+    model: Model,
     prompt: str,
     system: str,
     temperature: float = None,
     max_tries: int = 3,
-):
-
+) -> Type[SchemaType]:
     cache_file = "cache/llm_generate.json"
     async with _GENERATE_CACHE_LOCK:
         if os.path.exists(cache_file):
@@ -112,7 +138,7 @@ async def generate(
                     if isinstance(schema, TypeAdapter)
                     else schema.model_json_schema()
                 ),
-                model,
+                model.value,
                 prompt,
                 system,
                 temperature,

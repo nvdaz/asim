@@ -27,7 +27,7 @@ async def _extract_demographics(messages: list[QaMessage]) -> Demographics:
     prompt_data = "\n".join([message.message for message in messages])
     demographics = await llm.generate(
         schema=Demographics,
-        model=llm.MODEL_GPT_4,
+        model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
@@ -113,7 +113,7 @@ async def _get_cluster_topic(cluster: list[str]) -> str | None:
     prompt_data = "\n".join(cluster)
     response = await llm.generate(
         schema=ClusterTopicResponse,
-        model=llm.MODEL_CLAUDE_SONNET,
+        model=llm.Model.CLAUDE_3_SONNET,
         system=system_prompt,
         prompt=prompt_data,
     )
@@ -144,7 +144,7 @@ async def _get_interests_from_topics(topics: list[str]) -> list[str]:
     prompt_data = "\n".join(topics)
     response = await llm.generate(
         schema=InterestResponse,
-        model=llm.MODEL_GPT_4,
+        model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
@@ -186,7 +186,7 @@ async def _generate_user_persona(user_base: BasePersonaUninit):
 
     response = await llm.generate(
         schema=PersonaResponse,
-        model=llm.MODEL_GPT_4,
+        model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )

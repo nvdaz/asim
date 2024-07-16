@@ -42,7 +42,7 @@ from .conversation_generation import (
     generate_agent_persona,
     generate_conversation_scenario,
 )
-from .feedback_generation import generate_feedback
+from .feedback_generation import check_messages, generate_feedback
 from .flow_state.base import (
     ApFlowState,
     FeedbackFlowState,
@@ -50,14 +50,14 @@ from .flow_state.base import (
     NormalNpFlowStateRef,
     NpFlowState,
 )
-from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL_MAPPINGS
-from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL_MAPPINGS
-from .flow_state.playground import PLAYGROUND_MAPPINGS
+from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL_CONTEXT
+from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL_CONTEXT
+from .flow_state.playground import PLAYGROUND_CONTEXT
 from .message_generation import generate_message
 
 random.seed(0)
 
-LEVEL_MAPPINGS = [FIGURATIVE_LANGUAGE_LEVEL_MAPPINGS, BLUNT_LANGUAGE_LEVEL_MAPPINGS]
+LEVEL_CONTEXTS = [FIGURATIVE_LANGUAGE_LEVEL_CONTEXT, BLUNT_LANGUAGE_LEVEL_CONTEXT]
 
 
 async def create_conversation(
@@ -155,15 +155,25 @@ async def progress_conversation(
             last_feedback_received=0,
         )
 
+    if isinstance(conversation.info, LevelConversationInfo):
+        context = LEVEL_CONTEXTS[conversation.info.level]
+    elif isinstance(conversation.info, PlaygroundConversationInfo):
+        context = PLAYGROUND_CONTEXT
+    else:
+        raise RuntimeError(f"Invalid conversation info: {conversation.info}")
+
     if isinstance(conversation.state, StateAwaitingUserChoiceData):
         match option:
             case SelectOptionIndex(index=index) if index < len(
                 conversation.state.options
             ):
-
                 response = conversation.state.options[index]
             case SelectOptionCustom(message=message) if conversation.state.allow_custom:
-                response = MessageOption(response=message, next=NormalApFlowStateRef)
+                response = MessageOption(
+                    response=message,
+                    checks=context.get_feedback_refs(),
+                    next=NormalApFlowStateRef,
+                )
             case _:
                 raise InvalidSelection()
 
@@ -177,21 +187,29 @@ async def progress_conversation(
             MessageElement(content=Message(sender=user.name, message=response.response))
         )
 
-        conversation.state = StateActiveData(id=response.next)
+        messages = [
+            elem.content
+            for elem in conversation.elements
+            if isinstance(elem, MessageElement)
+        ]
+
+        checks = [(check, context.get_state(check)) for check in response.checks]
+
+        check_result = await check_messages(
+            user.name, conversation.agent.name, messages, checks
+        )
+
+        if check_result is not None:
+            conversation.state = StateActiveData(id=check_result)
+        else:
+            conversation.state = StateActiveData(id=response.next)
     else:
         if not isinstance(option, SelectOptionNone):
             raise InvalidSelection()
 
     assert isinstance(conversation.state, StateActiveData)
 
-    if isinstance(conversation.info, LevelConversationInfo):
-        mappings = LEVEL_MAPPINGS[conversation.info.level]
-    elif isinstance(conversation.info, PlaygroundConversationInfo):
-        mappings = PLAYGROUND_MAPPINGS
-    else:
-        raise RuntimeError(f"Invalid conversation info: {conversation.info}")
-
-    state_data = mappings[conversation.state.id]
+    state_data = context.get_state(conversation.state.id)
 
     messages = [
         elem.content
@@ -221,6 +239,7 @@ async def progress_conversation(
         options = [
             MessageOption(
                 response=response,
+                checks=opt.checks,
                 next=opt.next,
             )
             for response, opt in zip(responses, state_options)
@@ -282,7 +301,9 @@ async def progress_conversation(
         if response.follow_up is not None:
             options = [
                 MessageOption(
-                    response=response.follow_up, next=state_data.next_needs_improvement
+                    response=response.follow_up,
+                    checks=[],
+                    next=state_data.next,
                 )
             ]
 
@@ -290,7 +311,7 @@ async def progress_conversation(
                 options=options, allow_custom=False
             )
         else:
-            conversation.state = StateActiveData(state=state_data.next_ok)
+            conversation.state = StateActiveData(id=state_data.next)
 
         conversation.elements.append(
             FeedbackElement(

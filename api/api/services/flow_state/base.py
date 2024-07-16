@@ -7,7 +7,7 @@ BaseApFlowStateId = Literal["normal"]
 
 NpFlowStateId = TypeVar("NpFlowStateId", bound=str)
 ApFlowStateId = TypeVar("ApFlowStateId", bound=str)
-FeedbackFlowStateId = TypeVar("FeedbackFlowStateId")
+FeedbackFlowStateId = TypeVar("FeedbackFlowStateId", bound=str)
 
 
 class _BaseFlowStateRef(BaseModel):
@@ -48,9 +48,15 @@ class FlowOption(BaseModel):
     next: FlowStateRef
 
 
+class UserFlowOption(BaseModel):
+    prompt: str
+    next: FlowStateRef
+    checks: list[FeedbackFlowStateRef] = []
+
+
 class NpFlowState(BaseModel, Generic[NpFlowStateId]):
     type: Literal["np"] = "np"
-    options: list[FlowOption] = []
+    options: list[UserFlowOption] = []
     allow_custom: bool = False
 
 
@@ -61,12 +67,9 @@ class ApFlowState(BaseModel, Generic[ApFlowStateId]):
 
 class FeedbackFlowState(BaseModel, Generic[FeedbackFlowStateId]):
     type: Literal["feedback"] = "feedback"
-    prompt_analysis: str
-    prompt_misunderstanding: str
-    prompt_needs_improvement: str
-    prompt_ok: str
-    next_needs_improvement: FlowStateRef
-    next_ok: FlowStateRef
+    check: str
+    prompt: str
+    next: FlowStateRef
 
 
 FlowState = Annotated[
@@ -101,7 +104,7 @@ NORMAL_NP_MAPPINGS: list[FlowStateMapping] = [
         id=NpFlowStateRef(id="normal"),
         value=NpFlowState(
             options=[
-                FlowOption(
+                UserFlowOption(
                     prompt=(
                         "Use clear, direct language in your next message. Avoid using "
                         "any language that could be misinterpreted."
@@ -131,7 +134,7 @@ NORMAL_AP_MAPPINGS: list[FlowStateMapping] = [
 ]
 
 
-def build_mappings(*mappings: list[FlowStateMapping]) -> dict[FlowStateRef, FlowState]:
+def _build_mappings(*mappings: list[FlowStateMapping]) -> dict[FlowStateRef, FlowState]:
     # combine options of mappings with the same id
     combined: dict[FlowStateRef, FlowState] = {}
 
@@ -142,6 +145,7 @@ def build_mappings(*mappings: list[FlowStateMapping]) -> dict[FlowStateRef, Flow
                     raise ValueError("Cannot merge mappings with FeedbackFlowState")
                 elif item.value.type == "np":
                     combined[item.id].allow_custom |= item.value.allow_custom
+
                 combined[item.id].options.extend(item.value.options)
             else:
                 combined[item.id] = item.value.model_copy(deep=True)
@@ -149,8 +153,22 @@ def build_mappings(*mappings: list[FlowStateMapping]) -> dict[FlowStateRef, Flow
     return combined
 
 
-class Level(BaseModel):
-    mappings: dict[FlowStateRef, FlowState]
+class ConversationContext:
+    _flow_states: dict[FlowStateRef, FlowState]
+    _feedback_refs: list[FeedbackFlowStateRef]
 
-    def get_flow_state(self, ref: FlowStateRef) -> FlowState:
-        return self.mappings[ref]
+    def __init__(
+        self,
+        flow_states: list[list[FlowStateMapping]],
+    ):
+        self._flow_states = _build_mappings(*flow_states)
+
+        self._feedback_refs = [
+            ref for ref, state in self._flow_states.items() if state.type == "feedback"
+        ]
+
+    def get_state(self, ref: FlowStateRef) -> FlowState:
+        return self._flow_states[ref]
+
+    def get_feedback_refs(self) -> list[FeedbackFlowStateRef]:
+        return self._feedback_refs

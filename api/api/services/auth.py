@@ -42,7 +42,7 @@ async def login_user(secret: str) -> LoginResult:
 
     user = await users.get(link.user_id)
 
-    token = await _create_auth_token(user.root.id)
+    token = await _create_auth_token(user.id)
 
     return LoginResult(user=user_from_data(user), token=token)
 
@@ -58,7 +58,7 @@ async def create_magic_link(qa_id: UUID) -> str:
             users.BaseUserUninitData(qa_id=qa_id, persona=persona)
         )
 
-    link = magic_links.MagicLink(secret=secret, user_id=user.root.id)
+    link = magic_links.MagicLink(secret=secret, user_id=user.id)
     await magic_links.create(link)
     return link.secret
 
@@ -69,18 +69,18 @@ class AlreadyInitialized(Exception):
 
 async def init_user(user_id: ObjectId, name: str) -> UserData:
     user_uninit = await users.get(user_id)
-    if isinstance(user_uninit.root, UserInitData):
+    if isinstance(user_uninit, UserInitData):
         raise AlreadyInitialized()
 
     user_init = BaseUserInitData(
-        qa_id=user_uninit.root.qa_id,
+        qa_id=user_uninit.qa_id,
         name=name,
         persona=Persona(
             name=name,
-            age=user_uninit.root.persona.age,
-            occupation=user_uninit.root.persona.occupation,
-            interests=user_uninit.root.persona.interests,
-            description=user_uninit.root.persona.description.replace("{{NAME}}", name),
+            age=user_uninit.persona.age,
+            occupation=user_uninit.persona.occupation,
+            interests=user_uninit.persona.interests,
+            description=user_uninit.persona.description.replace("{{NAME}}", name),
         ),
     )
 

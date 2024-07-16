@@ -3,12 +3,12 @@ from typing import Literal
 from .base import (
     NORMAL_NP_MAPPINGS,
     ApFlowStateMapping,
+    ConversationContext,
     FeedbackFlowStateMapping,
     FlowOption,
     FlowStateMapping,
-    Level,
     NpFlowStateMapping,
-    build_mappings,
+    UserFlowOption,
 )
 from .base import ApFlowState as _ApFlowState
 from .base import ApFlowStateRef as _ApFlowStateRef
@@ -35,28 +35,30 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
         id=NpFlowStateRef(id="confrontational"),
         value=NpFlowState(
             options=[
-                FlowOption(
+                UserFlowOption(
                     prompt=(
                         "Do not use any confrontational language in your next message."
                         "Keep your message neutral and non-aggressive."
                     ),
                     next=ApFlowStateRef(id="normal"),
                 ),
-                FlowOption(
+                UserFlowOption(
                     prompt=(
                         "Your next message is confrontational. Your message is "
                         "intended to be aggressive and assertive. Example: 'I don't "
                         "appreciate your tone.'"
                     ),
-                    next=FeedbackFlowStateRef(id="blunt"),
+                    checks=[FeedbackFlowStateRef(id="blunt")],
+                    next=ApFlowStateRef(id="normal"),
                 ),
-                FlowOption(
+                UserFlowOption(
                     prompt=(
                         "Your next message is negative. You just received a blunt "
                         "message and take it personally. Example: 'How dare you say "
                         "that?'"
                     ),
-                    next=FeedbackFlowStateRef(id="blunt"),
+                    checks=[FeedbackFlowStateRef(id="blunt")],
+                    next=ApFlowStateRef(id="normal"),
                 ),
             ],
         ),
@@ -80,31 +82,22 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
     FeedbackFlowStateMapping(
         id=FeedbackFlowStateRef(id="blunt"),
         value=FeedbackFlowState(
-            prompt_analysis=(
-                "The conversation needs improvement if there are instances "
-                "where the user is confrontational or negative in response to a "
-                "blunt message."
+            check=(
+                "The user is not confrontational in response to a blunt message from "
+                "the autistic individual"
             ),
-            prompt_ok=(
-                "Point out any areas where the user avoided confrontational language "
-                "and used neutral language instead despite a blunt message."
-            ),
-            prompt_needs_improvement=(
+            prompt=(
                 "The latest message was confrontational and aggressive. The user "
                 "overreacted to a blunt message and needs to use neutral language "
                 "instead. Provide feedback on how the user could have been more "
                 "patient and understanding."
             ),
-            prompt_misunderstanding=(
-                "The latest message was confrontational and aggressive. The user "
-                "overreacted to a blunt message and needs to use neutral language "
-                "instead. Provide feedback on how the user could have been more "
-                "patient and understanding."
-            ),
-            next_needs_improvement=ApFlowStateRef(id="normal"),
-            next_ok=ApFlowStateRef(id="normal"),
+            next=ApFlowStateRef(id="normal"),
         ),
     ),
 ]
 
-BLUNT_LANGUAGE_LEVEL_MAPPINGS = build_mappings(NORMAL_NP_MAPPINGS, BLUNT_MAPPINGS)
+
+BLUNT_LANGUAGE_LEVEL_CONTEXT = ConversationContext(
+    flow_states=[NORMAL_NP_MAPPINGS, BLUNT_MAPPINGS]
+)

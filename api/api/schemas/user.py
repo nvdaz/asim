@@ -37,7 +37,7 @@ class UserInitData(BaseUserInitData):
 
 UserData = Annotated[UserUninitData | UserInitData, Field(discriminator="init")]
 
-user_adapter = TypeAdapter(UserData)
+user_data_adapter: TypeAdapter[UserData] = TypeAdapter(UserData)
 
 
 class UserUninit(BaseModel):
