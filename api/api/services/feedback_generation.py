@@ -183,6 +183,7 @@ async def check_messages(
 
     class FailedCheckNamed(BaseModel):
         check: Annotated[str, AfterValidator(validate_failed_check_name)]
+        offender: str
         reason: str
 
     class Analysis(BaseModel):
@@ -197,8 +198,9 @@ async def check_messages(
         + "\nA check should fail if the user's message does not meets the criteria "
         "described in the check. Provide a JSON object with the key 'failed_checks' "
         "with a list of objects with the keys 'check' containing the ID of the check "
-        "that failed and 'reason' explaining why the check failed. DO NOT perform any "
-        "checks that are not listed above."
+        "that failed, 'offender' containing the name of the person who sent the "
+        f"offending message ({user}), and 'reason' containing the reason why the "
+        "check failed. DO NOT perform any checks that are not listed above."
     )
 
     prompt_data = message_list_adapter.dump_json(messages).decode()
@@ -216,6 +218,7 @@ async def check_messages(
             reason=check.reason,
         )
         for check in result.failed_checks
+        if check.offender == user
     ]
 
     return failed_checks
