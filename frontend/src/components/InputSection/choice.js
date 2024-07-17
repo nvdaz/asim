@@ -3,13 +3,15 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import styles from "./index.module.css";
 
 const ChoicesSection = ({ options, handleButtonClick }) => {
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(
+    Object.keys(options).length > 1
+  );
   const [maxWidth, setMaxWidth] = useState(0);
   const elementsRef = useRef([]);
 
   useEffect(() => {
     const widths = elementsRef.current.map((el) => (el ? el.offsetWidth : 0));
-    setMaxWidth(Math.max(...widths.length === 0 ? ['100%'] : widths));
+    setMaxWidth(Math.max(...(widths.length === 0 ? ["100%"] : widths)));
   }, [isCollapsed]);
 
   return (
@@ -22,7 +24,7 @@ const ChoicesSection = ({ options, handleButtonClick }) => {
           transform: isCollapsed ? "translate(0px, 10px)" : "translate(0px)",
         }}
       >
-        {isCollapsed ? <div></div> : <div>Choose an option:</div>}
+        {isCollapsed ? <div></div> : <div>Choose the best option:</div>}
         <div
           className={styles.choice}
           style={{

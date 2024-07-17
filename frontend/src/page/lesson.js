@@ -64,7 +64,13 @@ const Lesson = () => {
       setAlertMessage("Error occurred fetching data");
       return;
     }
-    setData(initConversation.data);
+    const initData = initConversation.data;
+    setData({
+      id: initData.id,
+      subject_name: initData.agent,
+      scenario: initData.info.scenario,
+      messages: initData.elements,
+    });
 
     await fetchNextSteps(
       initConversation.data.id,
