@@ -214,6 +214,7 @@ const Playground = () => {
               "Write your own response or choose an option to send"
             }
             explanationText={null}
+            allowCustomInput={true}
             initData={{
               id: data?.id,
               options: nextConversation.options,

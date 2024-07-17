@@ -5,6 +5,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import handleSend from "../InputSection/util/handleSend";
 
 const InputAndMessages = ({
+  allowCustomInput,
   inputPlaceholder,
   explanationText, 
   headerHeight,
@@ -79,6 +80,7 @@ const InputAndMessages = ({
         options={options}
       />
       <Inputs
+        allowCustomInput={allowCustomInput}
         explanationText={explanationText}
         inputPlaceholder={inputPlaceholder}
         handleSend={handleSend(

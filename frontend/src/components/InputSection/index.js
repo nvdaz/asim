@@ -6,6 +6,7 @@ import ChoicesSection from "./choice.js";
 import styles from "./index.module.css";
 
 const Input = ({
+  allowCustomInput = false,
   inputPlaceholder,
   explanationText,
   handleSend,
@@ -20,7 +21,9 @@ const Input = ({
 
   const divRef = useRef(null);
 
-  const handleMessageChange = (e) => {};
+  const handleMessageChange = (e) => {
+    allowCustomInput && setChoice(e.target.value);
+  };
 
   const handleButtonClick = (index, message) => {
     setSelectedButton(index);
@@ -75,7 +78,13 @@ const Input = ({
           }}
           onClick={() =>
             choice.length !== 0 &&
-            handleSend(setShowChoicesSection, setSelectedOption, setOptions)
+            handleSend(
+              setShowChoicesSection,
+              setSelectedOption,
+              setOptions,
+              !(Object.values(options).includes(choice) ||
+                Object.values(selectedOption).includes(choice))
+            )
           }
         >
           Send

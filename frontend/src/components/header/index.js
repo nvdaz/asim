@@ -78,7 +78,13 @@ export default function Header({
             }}
             role="presentation"
           >
-            <List>
+            <List
+              sx={{
+                "& .MuiList-root": {
+                  height: "100%",
+                },
+              }}
+            >
               <div ref={header}>
                 <ListItem key={"scenario"} disablePadding>
                   <ListItemButton onClick={() => setOpenDialog(true)}>

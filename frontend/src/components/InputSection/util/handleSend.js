@@ -10,7 +10,7 @@ function handleSend(
   setSelectedButton,
   conversationID
 ) {
-  return function (setShowChoicesSection, setSelectedOption, setOptions) {
+  return function (setShowChoicesSection, setSelectedOption, setOptions, isCustomInput) {
     send(
       chatHistory,
       setChatHistory,
@@ -22,7 +22,8 @@ function handleSend(
       setSelectedButton,
       setSelectedOption,
       setOptions,
-      conversationID
+      conversationID,
+      isCustomInput
     );
   };
 }
@@ -38,18 +39,28 @@ async function send(
   setSelectedButton,
   setSelectedOption,
   setOptions,
-  conversationID
+  conversationID,
+  isCustomInput
 ) {
   const fetchData = async (option = null) => {
-    const next = await Post(
-      `conversations/${conversationID}/next`,
-      option !== null
-        ? {
-            option: "index",
-            index: parseInt(option),
-          }
-        : { option: "none" }
-    );
+    const body = () => {
+      if (option === null) {
+        return { option: "none" };
+      }
+
+      if (isCustomInput) {
+        return {
+          option: "custom",
+          message: choice,
+        };
+      }
+      return {
+        option: isCustomInput ? "custom" : "index",
+        index: parseInt(option),
+      };
+    }
+
+    const next = await Post(`conversations/${conversationID}/next`, body());
     return next;
   };
 
