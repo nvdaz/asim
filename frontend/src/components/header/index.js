@@ -44,6 +44,13 @@ export default function Header({
     }
   }, []);
 
+  const listStyle = () => ({
+    root: {
+      height: "100%",
+      backgroundColor: 'pink',
+    },
+  });
+
   const rightSideContent = () => {
     if (!showMore) {
       return <div>Topic: {initData.topic}</div>;
@@ -79,8 +86,13 @@ export default function Header({
             role="presentation"
           >
             <List
+              classes={{ root: listStyle.root }}
               sx={{
+                height: "100%",
                 "& .MuiList-root": {
+                  height: "100%",
+                },
+                "&.MuiList-padding": {
                   height: "100%",
                 },
               }}
@@ -123,7 +135,7 @@ export default function Header({
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  height: `calc(100vh - ${headerHeight}px - 16px)`,
+                  height: `calc(100% - ${headerHeight}px - 16px)`,
                 }}
               >
                 <div
