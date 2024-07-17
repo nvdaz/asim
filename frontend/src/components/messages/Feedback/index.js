@@ -14,11 +14,9 @@ const Feedback = ({
       <div className={styles.title}>{title}</div>
       <div className={styles.body}>{body}</div>
       {choice && (
-        <div>
-          <div style={{marginBottom: '15px'}}>Instead, say:</div>
-          <div className={styles.choice}>
-            {choice}
-          </div>
+        <div className={styles.follow_up}>
+          <div style={{ marginBottom: "15px" }}>Instead, say:</div>
+          <div className={styles.choice}>{choice}</div>
           <div>Click on Send button to continue the conversation</div>
         </div>
       )}

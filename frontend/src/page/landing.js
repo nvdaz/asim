@@ -37,6 +37,7 @@ const Landing = () => {
         return;
       }
       localStorage.setItem("token", res2.data.token);
+      localStorage.setItem("name", res2.data.user.name);
 
       if (!res2.data.user.init) {
         setFetching(false);
@@ -173,11 +174,20 @@ const Landing = () => {
   }
 
   const btn = (name) => {
+    let style;
+    if (mode !== name) {
+      style =
+        name === "Playground"
+          ? { marginRight: "20px" }
+          : { marginLeft: "20px" };
+    }
+
     return (
       <div
         className={mode === name ? styles.btnSelected : styles.btn}
-        onClick={() =>{
-          selectedMode(name)
+        style={style}
+        onClick={() => {
+          selectedMode(name);
           name === "Playground" &&
             setTimeout(() => {
               window.location.href = "/playground";

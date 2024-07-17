@@ -8,7 +8,7 @@
     border-radius: 12px;
     padding: 10px;
     cursor: pointer;
-    margin: 15px 53px;
+    margin: 15px 0px;
 }
 
 .btnSelected {
@@ -16,7 +16,7 @@
     border: white 3px solid;
     padding: 10px;
     cursor: pointer;
-    margin: 12px 50px;
+    margin: 12px 0px;
 }
 
 .lessonsBtn {
@@ -96,6 +96,7 @@
     flex-direction: row;
     width: 100%;
     margin-bottom: 40px;
+    gap: 3rem;
 }
 
 @media screen and (max-width: 800px) {

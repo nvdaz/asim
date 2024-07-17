@@ -191,7 +191,9 @@ const Playground = () => {
             inputPlaceholder={
               "Write your own response or choose an option to send"
             }
-            explanationText={null}
+            explanationText={
+              "Write your own response or choose an option to send"
+            }
             allowCustomInput={true}
             initData={{
               id: data?.id,

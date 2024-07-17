@@ -209,7 +209,7 @@ const Lesson = () => {
           </div>
           <InputAndMessages
             explanationText={"Choose the best option:"}
-            inputPlaceholder={"Choose an option to send"}
+            inputPlaceholder={"Choose the best option to send"}
             headerHeight={headerHeight}
             initData={{
               id: data?.id,

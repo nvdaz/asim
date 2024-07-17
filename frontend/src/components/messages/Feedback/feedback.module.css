@@ -44,6 +44,11 @@
     }
     .body {
         font-size: 16px;
-        line-height: 1.3rem;
+        line-height: 1.4rem;
+    }
+
+    .follow_up {
+        font-size: 16px;
+        line-height: 1.4rem;
     }
 }

@@ -36,7 +36,13 @@
     display: flex;
     gap: 10px;
     align-items: center;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+}
+
+@media screen and (max-width: 500px) {
+    .profile {
+        font-size: 18px;
+    }
 }
 
 @keyframes rotate {
