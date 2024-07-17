@@ -150,7 +150,7 @@ const Landing = () => {
             backgroundColor: "#797979",
             borderRadius: "50%",
             padding: 0,
-            marginLeft: "80px",
+            marginLeft: "100px",
             "&:hover": {
               backgroundColor: "#A3A3A3",
             },

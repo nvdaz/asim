@@ -218,6 +218,7 @@ export default function Header({
             display: "flex",
             gap: "10px",
             alignItems: "center",
+            fontSize: '1.2rem'
           }}
         >
           <Avatar alt="Jimmy" sx={{ width: 35, height: 35 }} src={pic} />

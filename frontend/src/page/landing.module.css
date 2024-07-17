@@ -1,5 +1,4 @@
 .column {
-    width: 30%;
     color: white;
     border-right: 1px solid white;
     height: 100%;
@@ -21,8 +20,8 @@
 }
 
 .lessonsBtn {
-    width: 80px;
-    height: 80px;
+    width: 130px;
+    height: 130px;
     border-radius: 50%;
     color: white;
     display: flex;

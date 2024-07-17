@@ -22,7 +22,7 @@ function SimpleDialog(props) {
         style={{
           backgroundColor: "#B4B4B5",
           padding: "30px 25px",
-          fontSize: "1.5rem",
+          fontSize: "1.25rem",
           lineHeight: "1.6rem",
         }}
       >
@@ -46,7 +46,7 @@ function SimpleDialog(props) {
         >
           <div
             style={{
-              fontSize: "22px",
+              fontSize: "1.4rem",
               paddingBottom: "5px",
               fontWeight: 550,
             }}
@@ -59,7 +59,7 @@ function SimpleDialog(props) {
         <div>
           <div
             style={{
-              fontSize: "22px",
+              fontSize: "1.4rem",
               padding: "5px 0",
               fontWeight: 550,
             }}
