@@ -9,8 +9,8 @@ const ChoicesSection = ({ options, handleButtonClick }) => {
 
   useEffect(() => {
     const widths = elementsRef.current.map((el) => (el ? el.offsetWidth : 0));
-    setMaxWidth(Math.max(...widths));
-  }, []);
+    setMaxWidth(Math.max(...widths.length === 0 ? ['100%'] : widths));
+  }, [isCollapsed]);
 
   return (
     <div className={styles.choicesWrapper}>
@@ -30,7 +30,7 @@ const ChoicesSection = ({ options, handleButtonClick }) => {
             alignItems: "center",
             fontSize: "14px",
             padding: "3px 4px 4px 10px",
-            border: isCollapsed ? "white 3px solid": "none",
+            border: isCollapsed ? "#FFB930 3px solid" : "none",
           }}
           onClick={() => setIsCollapsed(!isCollapsed)}
         >

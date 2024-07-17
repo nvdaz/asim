@@ -71,6 +71,7 @@ const Input = ({
             cursor: choice.length === 0 ? "default" : "pointer",
           }}
           onClick={() =>
+            choice.length !== 0 &&
             handleSend(setShowChoicesSection, setSelectedOption, setOptions)
           }
         >
