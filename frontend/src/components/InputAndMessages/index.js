@@ -4,11 +4,16 @@ import Messages from "../messages/index.js";
 import LinearProgress from "@mui/material/LinearProgress";
 import handleSend from "../InputSection/util/handleSend";
 
-const InputAndMessages = ({ headerHeight, initData }) => {
+const InputAndMessages = ({
+  inputPlaceholder,
+  explanationText, 
+  headerHeight,
+  initData,
+}) => {
   const convertToMessageHistory = () => {
     const userName = localStorage.getItem("name");
     return initData.messages.map((m) => {
-      if (m.type === 'message') {
+      if (m.type === "message") {
         return {
           type: "text",
           isSentByUser: userName === m.content.sender,
@@ -28,7 +33,7 @@ const InputAndMessages = ({ headerHeight, initData }) => {
 
   const setInitChoice = () => {
     if (initData.messages.length === 0) {
-      return '';
+      return "";
     }
     const lastElement = initData.messages[initData.messages.length - 1];
     return lastElement.type === "feedback" ? lastElement.content.follow_up : "";
@@ -74,6 +79,8 @@ const InputAndMessages = ({ headerHeight, initData }) => {
         options={options}
       />
       <Inputs
+        explanationText={explanationText}
+        inputPlaceholder={inputPlaceholder}
         handleSend={handleSend(
           chatHistory,
           setChatHistory,

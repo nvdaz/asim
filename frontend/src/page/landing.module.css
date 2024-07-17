@@ -91,6 +91,7 @@
 
 .mobileBtnWrapper {
     position: absolute;
+    justify-content: center;
     bottom: 0;
     display: flex;
     flex-direction: row;

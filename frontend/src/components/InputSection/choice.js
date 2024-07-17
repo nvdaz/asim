@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef } from "react";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import styles from "./index.module.css";
 
-const ChoicesSection = ({ options, handleButtonClick }) => {
+const ChoicesSection = ({ explanationText, options, handleButtonClick }) => {
   const [isCollapsed, setIsCollapsed] = useState(
     Object.keys(options).length > 1
   );
@@ -24,7 +24,7 @@ const ChoicesSection = ({ options, handleButtonClick }) => {
           transform: isCollapsed ? "translate(0px, 10px)" : "translate(0px)",
         }}
       >
-        {isCollapsed ? <div></div> : <div>Choose the best option:</div>}
+        {isCollapsed ? <div></div> : <div>{explanationText}</div>}
         <div
           className={styles.choice}
           style={{

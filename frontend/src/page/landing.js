@@ -20,7 +20,7 @@ const Landing = () => {
   const [enteredName, setEnteredName] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [mode, selectedMode] = useState("Learn");
-  const isMobile = useMediaQuery("(max-width:500px)");
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -176,7 +176,13 @@ const Landing = () => {
     return (
       <div
         className={mode === name ? styles.btnSelected : styles.btn}
-        onClick={() => selectedMode(name)}
+        onClick={() =>{
+          selectedMode(name)
+          name === "Playground" &&
+            setTimeout(() => {
+              window.location.href = "/playground";
+            }, "250");
+        }}
       >
         {name}
       </div>

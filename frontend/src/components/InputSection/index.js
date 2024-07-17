@@ -6,6 +6,8 @@ import ChoicesSection from "./choice.js";
 import styles from "./index.module.css";
 
 const Input = ({
+  inputPlaceholder,
+  explanationText,
   handleSend,
   choice,
   setChoice,
@@ -51,6 +53,7 @@ const Input = ({
     >
       {showChoicesSection && Object.keys(options).length > 0 && (
         <ChoicesSection
+          explanationText={explanationText}
           options={options}
           handleButtonClick={handleButtonClick}
         />
@@ -60,7 +63,7 @@ const Input = ({
           <TextareaAutosize
             value={choice}
             onChange={handleMessageChange}
-            placeholder={"Choose an option to send"}
+            placeholder={inputPlaceholder}
           />
         </div>
         <div

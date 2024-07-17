@@ -8,11 +8,11 @@ import CloseIcon from "@mui/icons-material/Close";
 
 import Header from "../components/header/index.js";
 import InputAndMessages from "../components/InputAndMessages/index.js";
-import { Post, Get } from "../utils/request";
+import { Post, Get } from "../utils/request.js";
 
 import styles from "./landing.module.css";
 
-const Lesson = () => {
+const Playground = () => {
   const { conversationIDFromParam } = useParams();
   const [headerHeight, setHeaderHeight] = useState(null);
   const [data, setData] = useState(null);
@@ -68,7 +68,7 @@ const Lesson = () => {
     setData({
       id: initData.id,
       subject_name: initData.agent,
-      scenario: initData.info.scenario,
+      topic: initData.info.topic,
       messages: initData.elements,
     });
 
@@ -85,7 +85,7 @@ const Lesson = () => {
       }
 
       const listConversations = await Get(
-        `conversations/?type=level&level=${currentLevel}`
+        `conversations/?type=playground&level=0`
       );
       if (!listConversations.ok) {
         setAlertMessage("Error occurred fetching data");
@@ -112,6 +112,7 @@ const Lesson = () => {
           id: conversationID,
           subject_name: historyData.agent,
           scenario: historyData.info.scenario,
+          topic: historyData.info.topic,
           messages: historyData.elements,
         });
 
@@ -191,7 +192,7 @@ const Lesson = () => {
           }}
         >
           <CircularProgress />
-          <div style={{ color: "white" }}>Initializing Lesson</div>
+          <div style={{ color: "white" }}>Building Playground</div>
         </div>
       ) : (
         <div style={{ width: "100%", height: "100%" }}>
@@ -199,18 +200,20 @@ const Lesson = () => {
             <Header
               name={data["subject_name"]}
               initData={{
-                scenario: data?.["scenario"]?.["user_perspective"],
-                goal: data?.["scenario"]?.["user_goal"],
+                topic: data["topic"],
               }}
               fetchNewConversation={fetchNewConversation}
               conversationList={conversationList}
               currentLevel={currentLevel}
+              showMore={false}
             />
           </div>
           <InputAndMessages
-            explanationText={"Choose the best option:"}
-            inputPlaceholder={"Choose an option to send"}
             headerHeight={headerHeight}
+            inputPlaceholder={
+              "Write your own response or choose an option to send"
+            }
+            explanationText={null}
             initData={{
               id: data?.id,
               options: nextConversation.options,
@@ -225,4 +228,4 @@ const Lesson = () => {
   );
 };
 
-export default Lesson;
+export default Playground;
