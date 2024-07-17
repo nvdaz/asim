@@ -7,7 +7,6 @@ import styles from "./index.module.css";
 
 export default function Messages({
   chatHistory,
-  handleClickFeedback,
   setShowProgress,
   options,
 }) {
@@ -52,7 +51,6 @@ export default function Messages({
         return (
           <Feedback
             key={index}
-            handleButtonClick={handleClickFeedback}
             title={message.content.title}
             body={message.content.body}
             choice={message.content.choice}

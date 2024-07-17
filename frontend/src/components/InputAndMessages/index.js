@@ -57,11 +57,6 @@ const InputAndMessages = ({
   const [selectedButton, setSelectedButton] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
 
-  const handleClickFeedback = (index, message) => {
-    setSelectedButton(index);
-    setChoice(message);
-  };
-
   return (
     <div
       style={{
@@ -75,7 +70,6 @@ const InputAndMessages = ({
       )}
       <Messages
         chatHistory={chatHistory}
-        handleClickFeedback={handleClickFeedback}
         setShowProgress={setShowProgress}
         options={options}
       />

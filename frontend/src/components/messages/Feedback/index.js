@@ -1,8 +1,6 @@
-import { Choice } from "../../InputSection/choice";
 import styles from "./feedback.module.css";
 
 const Feedback = ({
-  handleButtonClick,
   body,
   title,
   choice,
@@ -17,17 +15,11 @@ const Feedback = ({
       <div className={styles.body}>{body}</div>
       {choice && (
         <div>
-          <div>Instead, say:</div>
-          <div
-            style={{
-              margin: "5px 0",
-              padding: "10px 15px",
-              backgroundColor: "#2C2F39",
-              borderRadius: "22px",
-            }}
-          >
+          <div style={{marginBottom: '15px'}}>Instead, say:</div>
+          <div className={styles.choice}>
             {choice}
           </div>
+          <div>Click on Send button to continue the conversation</div>
         </div>
       )}
       {choice === null && (

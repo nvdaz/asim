@@ -39,39 +39,66 @@ function SimpleDialog(props) {
         >
           <CloseIcon />
         </IconButton>
-        <div
-          style={{
-            paddingBottom: "5px",
-          }}
-        >
+        {initData.topic ? (
           <div
             style={{
-              fontSize: "1.4rem",
-              paddingBottom: "5px",
-              fontWeight: 550,
+              padding: "10px 15px 10px 8px",
             }}
           >
-            Scenario:
+            <div
+              style={{
+                fontSize: "1.4rem",
+                paddingBottom: "5px",
+                fontWeight: 550,
+              }}
+            >
+              Topic:
+            </div>
+            {initData.topic}
           </div>
-          {initData.scenario}
-        </div>
-        <hr />
-        <div>
-          <div
-            style={{
-              fontSize: "1.4rem",
-              padding: "5px 0",
-              fontWeight: 550,
-            }}
-          >
-            Goal:
-          </div>
-          {initData.goal}
-        </div>
+        ) : (
+          scenarioAndGoal()
+        )}
       </div>
     </Dialog>
   );
 }
+
+const scenarioAndGoal = (initData) => {
+  return (
+    <div>
+      <div
+        style={{
+          paddingBottom: "5px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "1.4rem",
+            paddingBottom: "5px",
+            fontWeight: 550,
+          }}
+        >
+          Scenario:
+        </div>
+        {initData.scenario}
+      </div>
+      <hr />
+      <div>
+        <div
+          style={{
+            fontSize: "1.4rem",
+            padding: "5px 0",
+            fontWeight: 550,
+          }}
+        >
+          Goal:
+        </div>
+        {initData.goal}
+      </div>
+    </div>
+  );
+};
 
 SimpleDialog.propTypes = {
   onClose: PropTypes.func.isRequired,

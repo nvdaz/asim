@@ -22,7 +22,7 @@ const Playground = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const currentLevel = window.location.href.split("/")[4] - 1;
 
-  const fetchNextSteps = async (conversationID, condition) => {
+  const fetchNextSteps = async (conversationID) => {
     const next = await Post(`conversations/${conversationID}/next`, {
       option: "none",
     });
@@ -30,35 +30,15 @@ const Playground = () => {
       setAlertMessage("Error occurred fetching data");
       return;
     }
-
-    if (condition || next.data.type === "ap") {
-      const userOptions = await Post(`conversations/${conversationID}/next`, {
-        option: "none",
-      });
-      if (!userOptions.ok) {
-        setAlertMessage("Error occurred fetching data");
-        return;
-      }
-
-      setNextConversation({
-        options: userOptions.data.options,
-        ap_message: next.data.content,
-      });
-
-      console.log("fetchNextSteps 1", {
-        options: userOptions.data.options,
-        ap_message: next.data.content,
-      });
-    } else {
-      console.log("fetchNextSteps 2", next.data);
-      setNextConversation(next.data);
-    }
+    
+    console.log("fetchNextSteps 2", next.data);
+    setNextConversation(next.data);
   };
 
   const fetchNewConversation = async () => {
     const initConversation = await Post("conversations/", {
-      type: "level",
-      level: currentLevel,
+      type: "playground",
+      level: 0,
     });
     if (!initConversation.ok) {
       setAlertMessage("Error occurred fetching data");
@@ -74,7 +54,6 @@ const Playground = () => {
 
     await fetchNextSteps(
       initConversation.data.id,
-      !initConversation.data.info.scenario.is_user_initiated
     );
   };
 
@@ -205,7 +184,6 @@ const Playground = () => {
               fetchNewConversation={fetchNewConversation}
               conversationList={conversationList}
               currentLevel={currentLevel}
-              showMore={false}
             />
           </div>
           <InputAndMessages

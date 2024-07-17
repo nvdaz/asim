@@ -32,7 +32,7 @@ const ChoicesSection = ({ explanationText, options, handleButtonClick }) => {
             alignItems: "center",
             fontSize: "14px",
             padding: "3px 4px 4px 10px",
-            border: isCollapsed ? "#FFB930 3px solid" : "none",
+            border: isCollapsed ? "#FFB930 3px solid" : "#42454E 3px solid",
           }}
           onClick={() => setIsCollapsed(!isCollapsed)}
         >

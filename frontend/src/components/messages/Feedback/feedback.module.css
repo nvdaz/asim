@@ -27,6 +27,13 @@
     width: fit-content;
 }
 
+.choice {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background-color: #2C2F39;
+    border-radius: 22px;
+}
+
 
 @media screen and (max-width: 500px) {
     .wrapper {

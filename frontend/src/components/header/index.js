@@ -30,7 +30,6 @@ export default function Header({
   fetchNewConversation,
   conversationList,
   currentLevel,
-  showMore = true,
 }) {
   const [gettingNewConversation, setGettingNewConversation] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(true);
@@ -44,26 +43,9 @@ export default function Header({
     }
   }, []);
 
-  const listStyle = () => ({
-    root: {
-      height: "100%",
-      backgroundColor: 'pink',
-    },
-  });
-
   const rightSideContent = () => {
-    if (!showMore) {
-      return <div>Topic: {initData.topic}</div>;
-    }
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          gap: "20px",
-          alignItems: "center",
-        }}
-      >
+      <div className={styles.moreWrapper}>
         <MoreHorizIcon
           onClick={() => setOpenDrawer(true)}
           style={{ cursor: "pointer" }}
@@ -79,24 +61,13 @@ export default function Header({
           <Box
             sx={{
               width: 250,
-              maxHeight: "100%",
+              height: "100%",
               backgroundColor: "rgb(30, 30, 30)",
               color: "white",
             }}
             role="presentation"
           >
-            <List
-              classes={{ root: listStyle.root }}
-              sx={{
-                height: "100%",
-                "& .MuiList-root": {
-                  height: "100%",
-                },
-                "&.MuiList-padding": {
-                  height: "100%",
-                },
-              }}
-            >
+            <List sx={{ height: "100%" }}>
               <div ref={header}>
                 <ListItem key={"scenario"} disablePadding>
                   <ListItemButton onClick={() => setOpenDialog(true)}>
@@ -105,7 +76,7 @@ export default function Header({
                         style={{ cursor: "pointer", color: "white" }}
                       />
                     </ListItemIcon>
-                    <ListItemText primary={"View Scenario and Goal"} />
+                    <ListItemText primary={initData.topic ? "View Topic" : "View Scenario and Goal"} />
                   </ListItemButton>
                 </ListItem>
                 <Divider />
@@ -211,35 +182,13 @@ export default function Header({
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        backgroundColor: "#292929",
-        borderBottom: "#333333 1px solid",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "16px",
-          color: "white",
-          fontSize: "15px",
-        }}
-      >
+    <div className={styles.headerWrapper}>
+      <div className={styles.contentWrapper}>
         <Link style={{ color: "white" }} to="/">
           <ArrowBackIosNewIcon style={{ cursor: "pointer" }} />
         </Link>
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            alignItems: "center",
-            fontSize: '1.2rem'
-          }}
-        >
-          <Avatar alt="Jimmy" sx={{ width: 35, height: 35 }} src={pic} />
+        <div className={styles.profile}>
+          <Avatar alt="Profile picture" sx={{ width: 35, height: 35 }} src={pic} />
           <div>{name}</div>
         </div>
         {rightSideContent()}

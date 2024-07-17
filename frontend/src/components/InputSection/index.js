@@ -77,14 +77,29 @@ const Input = ({
             cursor: choice.length === 0 ? "default" : "pointer",
           }}
           onClick={() =>
-            choice.length !== 0 &&
-            handleSend(
-              setShowChoicesSection,
-              setSelectedOption,
-              setOptions,
-              !(Object.values(options).includes(choice) ||
-                Object.values(selectedOption).includes(choice))
-            )
+            {
+              if (choice !== '') {
+                let isCustomMessage = false;
+                if (Object.keys(options).length > 0) {
+                  isCustomMessage = Object.values(options).includes(choice);
+                }
+                if (
+                  selectedOption &&
+                  Object.values(selectedOption).length > 0
+                ) {
+                  isCustomMessage =
+                    !(isCustomMessage ||
+                    Object.values(selectedOption).includes(choice))
+                }
+
+                handleSend(
+                  setShowChoicesSection,
+                  setSelectedOption,
+                  setOptions,
+                  isCustomMessage
+                );
+              }
+            }
           }
         >
           Send
