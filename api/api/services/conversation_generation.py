@@ -188,6 +188,21 @@ async def generate_conversation_scenario(
     return scenario
 
 
+async def generate_conversation_topic(user_id: ObjectId, interests: list[str]) -> str:
+    previous_topics = await get_previous_info(user_id, "playground")
+
+    previous_topic_names = [info.topic for info in previous_topics]
+
+    unused_interests = [
+        interest for interest in interests if interest not in previous_topic_names
+    ]
+
+    if len(unused_interests) == 0:
+        unused_interests = interests
+
+    return random.choice(unused_interests)
+
+
 async def _generate_agent_base(scenario, name):
     def validate_name(v):
         if v != name:

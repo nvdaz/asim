@@ -2,7 +2,6 @@ import asyncio
 import random
 
 from bson import ObjectId
-from faker.providers.job import Provider as JobProvider
 from faker.providers.person.en import Provider as PersonProvider
 
 from api.db import conversations
@@ -15,6 +14,7 @@ from api.schemas.conversation import (
     ConversationDataUninit,
     ConversationDescriptor,
     ConversationOptions,
+    ConversationSetup,
     ConversationStep,
     FeedbackElement,
     FeedbackLogEntry,
@@ -42,6 +42,7 @@ from api.schemas.persona import Persona, PersonaName
 from .conversation_generation import (
     generate_agent_persona,
     generate_conversation_scenario,
+    generate_conversation_topic,
 )
 from .feedback_generation import check_messages, generate_feedback
 from .flow_state.base import (
@@ -76,10 +77,24 @@ async def create_conversation(
             info = LevelConversationInfo(scenario=scenario, level=level)
 
         case PlaygroundConversationOptions():
-            topic = random.choice(user_persona.interests)
+            topic = await generate_conversation_topic(user_id, user_persona.interests)
+
+            setup = ConversationSetup(
+                user_perspective=(
+                    f"You are interested in {topic} and want to learn more about the "
+                    f"topic. Your engage in a conversation with {agent_name}, who is "
+                    "an expert in the field to further your understanding."
+                ),
+                agent_perspective=(
+                    f"You are an expert in {topic} and are highly knowledgeable "
+                    f"about the subject. Your goal is to help {user_persona.name} "
+                    "understand the topic better."
+                ),
+            )
 
             info = PlaygroundConversationInfo(
                 topic=topic,
+                setup=setup,
             )
 
     data = BaseConversationUninit(
@@ -133,15 +148,11 @@ async def progress_conversation(
                     )
                 )
 
-            case PlaygroundConversationInfo(topic=topic):
-                agent = Persona(
-                    name=conversation.agent.name,
-                    age=str(random.randint(18, 65)),
-                    occupation=random.choice(JobProvider.jobs),
-                    interests=[topic],
-                    description=(f"You are discussing {topic} with {user.name}."),
+            case PlaygroundConversationInfo():
+                agent = await generate_agent_persona(
+                    conversation.info.setup.agent_perspective,
+                    conversation.agent.name,
                 )
-
                 state = StateActiveData(id=NormalNpFlowStateRef)
 
         conversation = ConversationDataInit(
@@ -215,6 +226,13 @@ async def progress_conversation(
         if isinstance(elem, MessageElement)
     ]
 
+    if isinstance(conversation.info, LevelConversationInfo):
+        setup = conversation.info.scenario
+    elif isinstance(conversation.info, PlaygroundConversationInfo):
+        setup = conversation.info.setup
+    else:
+        raise RuntimeError(f"Invalid conversation info: {conversation.info}")
+
     if isinstance(conversation.state, StateActiveData):
         state_data = context.get_state(conversation.state.id)
 
@@ -231,7 +249,8 @@ async def progress_conversation(
                         user,
                         conversation.agent,
                         messages,
-                        opt.prompt,
+                        scenario=setup.user_perspective,
+                        instructions=opt.prompt,
                     )
                     for opt in state_options
                 ]
@@ -270,7 +289,8 @@ async def progress_conversation(
                 conversation.agent,
                 user,
                 messages,
-                opt.prompt,
+                scenario=setup.agent_perspective,
+                instructions=opt.prompt,
             )
 
             conversation.events.append(
@@ -297,7 +317,9 @@ async def progress_conversation(
             for check in conversation.state.failed_checks
         ]
 
-        response = await generate_feedback(user, conversation, state_data)
+        response = await generate_feedback(
+            user, conversation, state_data, setup.user_perspective
+        )
         conversation.last_feedback_received = len(conversation.elements)
 
         conversation.events.append(

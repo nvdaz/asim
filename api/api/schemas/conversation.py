@@ -49,9 +49,12 @@ class MessageOption(BaseModel):
     checks: list[FeedbackFlowStateRef]
 
 
-class ConversationScenario(BaseModel):
+class ConversationSetup(BaseModel):
     user_perspective: str
     agent_perspective: str
+
+
+class ConversationScenario(ConversationSetup):
     user_goal: str
     is_user_initiated: bool
 
@@ -128,6 +131,7 @@ ConversationStateData = Annotated[
 
 class PlaygroundConversationInfo(BaseModel):
     type: Literal["playground"] = "playground"
+    setup: ConversationSetup
     topic: str
 
 

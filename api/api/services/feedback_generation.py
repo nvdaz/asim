@@ -24,7 +24,10 @@ class FeedbackWithPromptResponse(BaseModel):
 
 
 async def generate_feedback(
-    user: Persona, conversation: ConversationDataInit, state: list[FeedbackFlowState]
+    user: Persona,
+    conversation: ConversationDataInit,
+    state: list[FeedbackFlowState],
+    user_perspective: str,
 ) -> Feedback:
     agent = conversation.agent
     elements = conversation.elements[conversation.last_feedback_received :]
@@ -150,6 +153,7 @@ async def generate_feedback(
         user,
         agent,
         all_messages,
+        scenario=user_perspective,
         instructions=(
             "You are writing a follow-up to your previous message. "
             f"{feedback_base.instructions}"
