@@ -69,7 +69,6 @@ class FeedbackFlowState(BaseModel, Generic[FeedbackFlowStateId]):
     type: Literal["feedback"] = "feedback"
     check: str
     prompt: str
-    next: FlowStateRef
 
 
 FlowState = Annotated[

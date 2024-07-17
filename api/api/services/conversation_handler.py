@@ -35,6 +35,7 @@ from api.schemas.conversation import (
     SelectOptionNone,
     StateActiveData,
     StateAwaitingUserChoiceData,
+    StateFeedbackData,
 )
 from api.schemas.persona import Persona, PersonaName
 
@@ -45,7 +46,6 @@ from .conversation_generation import (
 from .feedback_generation import check_messages, generate_feedback
 from .flow_state.base import (
     ApFlowState,
-    FeedbackFlowState,
     NormalApFlowStateRef,
     NormalNpFlowStateRef,
     NpFlowState,
@@ -189,27 +189,25 @@ async def progress_conversation(
 
         messages = [
             elem.content
-            for elem in conversation.elements
+            for elem in conversation.elements[conversation.last_feedback_received :]
             if isinstance(elem, MessageElement)
         ]
 
         checks = [(check, context.get_state(check)) for check in response.checks]
 
-        check_result = await check_messages(
+        failed_checks = await check_messages(
             user.name, conversation.agent.name, messages, checks
         )
 
-        if check_result is not None:
-            conversation.state = StateActiveData(id=check_result)
+        if failed_checks:
+            conversation.state = StateFeedbackData(
+                failed_checks=failed_checks, next=response.next
+            )
         else:
             conversation.state = StateActiveData(id=response.next)
     else:
         if not isinstance(option, SelectOptionNone):
             raise InvalidSelection()
-
-    assert isinstance(conversation.state, StateActiveData)
-
-    state_data = context.get_state(conversation.state.id)
 
     messages = [
         elem.content
@@ -217,83 +215,94 @@ async def progress_conversation(
         if isinstance(elem, MessageElement)
     ]
 
-    if isinstance(state_data, NpFlowState):
-        state_options = (
-            random.sample(state_data.options, 3)
-            if len(state_data.options) > 3
-            else state_data.options
-        )
+    if isinstance(conversation.state, StateActiveData):
+        state_data = context.get_state(conversation.state.id)
 
-        responses = await asyncio.gather(
-            *[
-                generate_message(
-                    user,
-                    conversation.agent,
-                    messages,
-                    opt.prompt,
-                )
-                for opt in state_options
-            ]
-        )
-
-        options = [
-            MessageOption(
-                response=response,
-                checks=opt.checks,
-                next=opt.next,
+        if isinstance(state_data, NpFlowState):
+            state_options = (
+                random.sample(state_data.options, 3)
+                if len(state_data.options) > 3
+                else state_data.options
             )
-            for response, opt in zip(responses, state_options)
+
+            responses = await asyncio.gather(
+                *[
+                    generate_message(
+                        user,
+                        conversation.agent,
+                        messages,
+                        opt.prompt,
+                    )
+                    for opt in state_options
+                ]
+            )
+
+            options = [
+                MessageOption(
+                    response=response,
+                    checks=opt.checks,
+                    next=opt.next,
+                )
+                for response, opt in zip(responses, state_options)
+            ]
+
+            random.shuffle(options)
+
+            conversation.events.append(
+                NpMessageOptionsLogEntry(
+                    state=conversation.state.id.id,
+                    options=options,
+                )
+            )
+
+            conversation.state = StateAwaitingUserChoiceData(
+                options=options, allow_custom=state_data.allow_custom
+            )
+
+            result = NpMessageStep(
+                options=[o.response for o in options],
+                allow_custom=state_data.allow_custom,
+            )
+        elif isinstance(state_data, ApFlowState):
+            opt = random.choice(state_data.options)
+
+            response = await generate_message(
+                conversation.agent,
+                user,
+                messages,
+                opt.prompt,
+            )
+
+            conversation.events.append(
+                ApMessageLogEntry(
+                    state=conversation.state.id.id,
+                    message=response,
+                )
+            )
+
+            conversation.elements.append(
+                MessageElement(
+                    content=Message(sender=conversation.agent.name, message=response)
+                )
+            )
+
+            conversation.state = StateActiveData(id=opt.next)
+
+            result = ApMessageStep(content=response)
+        else:
+            raise RuntimeError(f"Invalid state: {state_data}")
+    elif isinstance(conversation.state, StateFeedbackData):
+        state_data = [
+            context.get_state(check.source)
+            for check in conversation.state.failed_checks
         ]
 
-        random.shuffle(options)
-
-        conversation.events.append(
-            NpMessageOptionsLogEntry(
-                state=conversation.state.id.id,
-                options=options,
-            )
-        )
-
-        conversation.state = StateAwaitingUserChoiceData(
-            options=options, allow_custom=state_data.allow_custom
-        )
-
-        result = NpMessageStep(
-            options=[o.response for o in options], allow_custom=state_data.allow_custom
-        )
-    elif isinstance(state_data, ApFlowState):
-        opt = random.choice(state_data.options)
-
-        response = await generate_message(
-            conversation.agent,
-            user,
-            messages,
-            opt.prompt,
-        )
-
-        conversation.events.append(
-            ApMessageLogEntry(
-                state=conversation.state.id.id,
-                message=response,
-            )
-        )
-
-        conversation.elements.append(
-            MessageElement(
-                content=Message(sender=conversation.agent.name, message=response)
-            )
-        )
-
-        conversation.state = StateActiveData(id=opt.next)
-
-        result = ApMessageStep(content=response)
-    elif isinstance(state_data, FeedbackFlowState):
         response = await generate_feedback(user, conversation, state_data)
         conversation.last_feedback_received = len(conversation.elements)
 
         conversation.events.append(
             FeedbackLogEntry(
-                state=conversation.state.id.id,
+                failed_checks=conversation.state.failed_checks,
                 content=response,
             )
         )
@@ -303,7 +312,7 @@ async def progress_conversation(
                 MessageOption(
                     response=response.follow_up,
                     checks=[],
-                    next=state_data.next,
+                    next=conversation.state.next,
                 )
             ]
 
@@ -311,7 +320,7 @@ async def progress_conversation(
                 options=options, allow_custom=False
             )
         else:
-            conversation.state = StateActiveData(id=state_data.next)
+            conversation.state = StateActiveData(id=conversation.state.next)
 
         conversation.elements.append(
             FeedbackElement(
@@ -321,7 +330,7 @@ async def progress_conversation(
 
         result = FeedbackStep(content=response)
     else:
-        raise RuntimeError(f"Invalid state: {state_data}")
+        raise RuntimeError(f"Invalid state: {state}")
 
     await conversations.update(conversation)
 

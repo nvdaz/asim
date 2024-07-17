@@ -58,29 +58,13 @@ FIGURATIVE_MAPPINGS: list[FlowStateMapping] = [
             ],
         ),
     ),
-    # ApFlowStateMapping(
-    #     id=ApFlowStateRef(id="figurative_misunderstood"),
-    #     value=ApFlowState(
-    #         options=[
-    #             FlowOption(
-    #                 prompt=(
-    #                     "Respond to the message in a way that misunderstands the "
-    #                   "figurative language used. Your response should be literal and "
-    #                     "direct, only addressing the literal meaning of the message "
-    #                     "without considering the figurative nature. Example: 'Let's "
-    #                     "hit the books.' -> 'I don't have any books to hit.'"
-    #                 ),
-    #                 next=FeedbackFlowStateRef(id="figurative"),
-    #             )
-    #         ],
-    #     ),
-    # ),
     FeedbackFlowStateMapping(
         id=FeedbackFlowStateRef(id="figurative"),
         value=FeedbackFlowState(
             check=(
-                "The user does not use figurative language in their message, which can "
-                "be misinterpreted by the autistic individual"
+                "The user does not use figurative language in their message, i.e., "
+                "they use language that is meant to be interpreted in a non-literal "
+                "way."
             ),
             prompt=(
                 "The latest message needs improvement as it contains figurative "
@@ -88,7 +72,6 @@ FIGURATIVE_MAPPINGS: list[FlowStateMapping] = [
                 "Provide feedback on how their message could have been clearer and "
                 "more direct."
             ),
-            next=ApFlowStateRef(id="normal"),
         ),
     ),
 ]

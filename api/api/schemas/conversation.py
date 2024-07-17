@@ -8,6 +8,11 @@ from .objectid import PyObjectId
 from .persona import Persona, PersonaName
 
 
+class FailedCheck(BaseModel):
+    source: FeedbackFlowStateRef
+    reason: str
+
+
 class Feedback(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=600)]
@@ -70,7 +75,7 @@ class ApMessageLogEntry(BaseModel):
 
 class FeedbackLogEntry(BaseModel):
     type: Literal["feedback"] = "feedback"
-    state: str
+    failed_checks: list[FailedCheck]
     content: Feedback
 
 
@@ -99,19 +104,25 @@ ConversationOptions = Annotated[
 
 
 class StateAwaitingUserChoiceData(BaseModel):
-    waiting: Literal[True] = True
+    type: Literal["waiting"] = "waiting"
     options: list[MessageOption]
     allow_custom: bool
 
 
+class StateFeedbackData(BaseModel):
+    type: Literal["feedback"] = "feedback"
+    failed_checks: list[FailedCheck]
+    next: FlowStateRef
+
+
 class StateActiveData(BaseModel):
-    waiting: Literal[False] = False
+    type: Literal["active"] = "active"
     id: FlowStateRef
 
 
 ConversationStateData = Annotated[
     StateAwaitingUserChoiceData | StateActiveData,
-    Field(discriminator="waiting"),
+    Field(discriminator="type"),
 ]
 
 
@@ -199,18 +210,22 @@ class Conversation(BaseModel):
 
     @staticmethod
     def from_data(data: ConversationData) -> "Conversation":
-        state = (
-            (
-                StateAwaitingUserChoice(
-                    options=[o.response for o in data.state.options],
-                    allow_custom=data.state.allow_custom,
-                )
-                if isinstance(data.state, StateAwaitingUserChoiceData)
-                else StateActive(type=data.state.id.type)
-            )
-            if isinstance(data, ConversationDataInit)
-            else None
-        )
+        state = None
+        if isinstance(data, ConversationDataInit):
+            match data.state:
+                case StateAwaitingUserChoiceData(
+                    options=options, allow_custom=allow_custom
+                ):
+                    state = StateAwaitingUserChoice(
+                        options=[o.response for o in options],
+                        allow_custom=allow_custom,
+                    )
+                case StateActiveData(id=id):
+                    state = StateActive(type=id.type)
+                case StateFeedbackData():
+                    state = StateActive(type="feedback")
+                case _:
+                    raise ValueError(f"Unknown state type: {data.state}")
 
         return Conversation(
             id=data.id,

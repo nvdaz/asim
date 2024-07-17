@@ -41,14 +41,18 @@ while True:
         for i, option in enumerate(r["options"]):
             print(f"{i + 1}. {option}")
         option_str = input("Option: ")
+
+        for _ in range(len(r["options"]) + 1):
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
+
         try:
             option = int(option_str) - 1
-            for _ in range(len(r["options"]) + 1):
-                sys.stdout.write("\033[F")
-                sys.stdout.write("\033[K")
+            print(f"You: {r['options'][option]}")
         except ValueError:
             option = option_str
-        print(f"You: {r['options'][option]}")
+            print(f"You: {option}")
+
     elif r["type"] == "ap":
         print(f"{sn}: {r['content']}")
     elif r["type"] == "feedback":

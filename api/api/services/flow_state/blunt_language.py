@@ -19,7 +19,7 @@ from .base import NpFlowStateRef as _NpFlowStateRef
 
 NpFlowStateId = Literal["normal", "confrontational"]
 ApFlowStateId = Literal["normal"]
-FeedbackFlowStateId = Literal["blunt"]
+FeedbackFlowStateId = Literal["confrontational"]
 
 NpFlowState = _NpFlowState[NpFlowStateId]
 ApFlowState = _ApFlowState[ApFlowStateId]
@@ -48,7 +48,7 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
                         "intended to be aggressive and assertive. Example: 'I don't "
                         "appreciate your tone.'"
                     ),
-                    checks=[FeedbackFlowStateRef(id="blunt")],
+                    checks=[FeedbackFlowStateRef(id="confrontational")],
                     next=ApFlowStateRef(id="normal"),
                 ),
                 UserFlowOption(
@@ -57,7 +57,7 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
                         "message and take it personally. Example: 'How dare you say "
                         "that?'"
                     ),
-                    checks=[FeedbackFlowStateRef(id="blunt")],
+                    checks=[FeedbackFlowStateRef(id="confrontational")],
                     next=ApFlowStateRef(id="normal"),
                 ),
             ],
@@ -80,11 +80,11 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
         ),
     ),
     FeedbackFlowStateMapping(
-        id=FeedbackFlowStateRef(id="blunt"),
+        id=FeedbackFlowStateRef(id="confrontational"),
         value=FeedbackFlowState(
             check=(
                 "The user is not confrontational in response to a blunt message from "
-                "the autistic individual"
+                "the autistic individual."
             ),
             prompt=(
                 "The latest message was confrontational and aggressive. The user "
