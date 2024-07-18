@@ -19,6 +19,7 @@ const Input = ({
 }) => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [showChoicesSection, setShowChoicesSection] = useState(false);
+  const [disableInput, setDisableInput] = useState(false);
 
   useEffect(() => {
     setShowChoicesSection(showChoices);
@@ -27,7 +28,7 @@ const Input = ({
   const divRef = useRef(null);
 
   const handleMessageChange = (e) => {
-    allowCustomInput && setChoice(e.target.value);
+    (allowCustomInput && !disableInput) && setChoice(e.target.value);
   };
 
   const handleButtonClick = (index, message) => {
@@ -77,7 +78,8 @@ const Input = ({
         setShowChoicesSection,
         setSelectedOption,
         setOptions,
-        !isAnyOptions
+        !isAnyOptions,
+        setDisableInput
       );
     }
   };
