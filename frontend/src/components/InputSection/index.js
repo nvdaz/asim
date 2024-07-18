@@ -21,17 +21,15 @@ const Input = ({
   const [showChoicesSection, setShowChoicesSection] = useState(false);
   const [disableInput, setDisableInput] = useState(false);
 
-  console.log(options, selectedOption);
-
   useEffect(() => {
     setShowChoicesSection(showChoices);
   }, [showChoices]);
 
   useEffect(() => {
     if (Object.keys(options).length === 0) {
-      setDisableInput(true);
+      setDisableInput(!allowCustomInput);
     }
-  }, [options]);
+  }, [options, allowCustomInput]);
 
   const divRef = useRef(null);
 

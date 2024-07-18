@@ -50,12 +50,8 @@ async function send(
   isCustomInput,
   setDisableInput
 ) {
-  const fetchData = async (option = null) => {
+  const fetchData = async () => {
     const body = () => {
-      if (option === null) {
-        return { option: "none" };
-      }
-
       if (isCustomInput) {
         return {
           option: "custom",
@@ -64,11 +60,18 @@ async function send(
       }
       return {
         option: "index",
-        index: parseInt(option),
+        index: parseInt(selectedButton),
       };
     };
 
     const next = await Post(`conversations/${conversationID}/next`, body());
+    return next;
+  };
+
+  const fetchNextMove = async () => {
+    const next = await Post(`conversations/${conversationID}/next`, {
+      option: "none",
+    });
     return next;
   };
 
@@ -100,7 +103,7 @@ async function send(
       selectionResultContent,
       nextFetched
     );
-    const nextFetchedContent2 = await fetchData();
+    const nextFetchedContent2 = await fetchNextMove();
     setOptions(Object.assign({}, nextFetchedContent2.data.options));
     setShowChoicesSection(true);
 
@@ -121,7 +124,7 @@ async function send(
   ) {
     console.log("handleContinue");
     setShowProgress(true);
-    const nextFetched2 = await fetchData();
+    const nextFetched2 = await fetchNextMove();
     setShowProgress(false);
 
     return [
@@ -153,6 +156,7 @@ async function send(
       console.log("apFollowedByFeedback", selectionResultContent, nextFetched);
       setChoice(nextFetched.content.follow_up);
       setSelectedButton(0);
+      setSelectedOption(0);
       return [
         ...oldHistory,
         {
@@ -170,6 +174,7 @@ async function send(
       console.log("apFollowedByFeedbackWithFollowUp", nextFetched);
       setChoice(nextFetched.content.follow_up);
       setSelectedButton(0);
+      setSelectedOption(0);
       return [
         ...oldHistory,
         {
@@ -188,7 +193,7 @@ async function send(
   ) => {
     console.log("handleContinueOnFeedbackWithNoFollowUp");
     setShowProgress(true);
-    const nextFetched = await fetchData();
+    const nextFetched = await fetchNextMove();
     setShowProgress(false);
 
     if (nextFetched.data.type === "ap") {
@@ -210,7 +215,7 @@ async function send(
       ]);
     } else {
       console.log("2 handleContinueOnFeedbackWithNoFollowUp");
-      const nextFetched = await fetchData();
+      const nextFetched = await fetchNextMove();
 
       setChatHistory([
         ...oldHistory,
@@ -234,6 +239,7 @@ async function send(
       console.log("1");
       setChoice(selectionResultContent.follow_up);
       setSelectedButton(0);
+      setSelectedOption(0);
       return [...oldHistory, returnFeedback(selectionResultContent)];
     }
 
@@ -250,7 +256,7 @@ async function send(
       ];
     }
 
-    const nextFetched = await fetchData();
+    const nextFetched = await fetchNextMove();
 
     if (selectionResultType === "ap") {
       if (nextFetched.data.type === "feedback") {
@@ -279,14 +285,6 @@ async function send(
   };
 
   setDisableInput(true);
-
-  const resetStates = () => {
-    setShowChoicesSection(false);
-    setChoice("");
-    setSelectedButton(null);
-    setSelectedOption(null);
-    setShowProgress(true);
-  };
 
   const oldHistoryWithIndicator = [
     ...chatHistory,
@@ -331,10 +329,12 @@ async function send(
     return feedback;
   };
 
-  resetStates();
+  setChoice('');
+  setShowChoicesSection(false);
+  setShowProgress(true);
   setChatHistory(oldHistory);
 
-  const selectionResult = await fetchData(selectedButton);
+  const selectionResult = await fetchData();
   setShowProgress(false);
 
   if (!selectionResult.ok) {
