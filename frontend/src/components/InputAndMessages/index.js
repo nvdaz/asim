@@ -40,17 +40,7 @@ const InputAndMessages = ({
     return lastElement.type === "feedback" ? lastElement.content.follow_up : "";
   };
 
-  const setInitOptions = () => {
-    if (initData.messages.length === 0) {
-      return Object.assign({}, initData.options);
-    }
-    const lastElement = initData.messages[initData.messages.length - 1];
-    return lastElement.type === "feedback"
-      ? { 0: lastElement.content.follow_up }
-      : Object.assign({}, initData.options);
-  };
-
-  const [options, setOptions] = useState(setInitOptions());
+  const [options, setOptions] = useState(Object.assign({}, initData.options));
   const [chatHistory, setChatHistory] = useState(
     initData.ap_message
       ? [

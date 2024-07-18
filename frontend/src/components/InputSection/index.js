@@ -69,6 +69,10 @@ const Input = ({
         }
       }
 
+      if (!showChoicesSection) {
+        isAnyOptions = true;
+      }
+
       handleSend(
         setShowChoicesSection,
         setSelectedOption,

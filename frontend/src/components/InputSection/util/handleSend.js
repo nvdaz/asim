@@ -161,7 +161,6 @@ async function send(
     } else {
       console.log("apFollowedByFeedbackWithFollowUp", nextFetched);
       setChoice(nextFetched.content.follow_up);
-      setOptions({0: nextFetched.content.follow_up});
       setSelectedButton(0);
       return [
         ...oldHistory,
@@ -225,13 +224,9 @@ async function send(
       selectionResultContent?.follow_up
     ) {
       console.log("1");
-      setOptions({0: selectionResultContent.follow_up});
       setChoice(selectionResultContent.follow_up);
       setSelectedButton(0);
-      return [
-        ...oldHistory,
-        returnFeedback(selectionResultContent)
-      ];
+      return [...oldHistory, returnFeedback(selectionResultContent)];
     }
 
     // if the first call fetched feedback with no follow up
@@ -247,7 +242,6 @@ async function send(
       ];
     }
 
-    console.log('250');
     const nextFetched = await fetchData();
 
     if (selectionResultType === "ap") {
@@ -330,7 +324,6 @@ async function send(
   resetStates();
   setChatHistory(oldHistory);
 
-  console.log('333');
   const selectionResult = await fetchData(selectedButton);
   setShowProgress(false);
 
@@ -344,13 +337,13 @@ async function send(
     setChatHistory(oldHistoryWithIndicator);
   }
 
-  setChatHistory(
-    await returnNewHistory(
-      oldHistory,
-      selectionResultType,
-      selectionResult.data?.content
-    )
+  const newChatHistory = await returnNewHistory(
+    oldHistory,
+    selectionResultType,
+    selectionResult.data?.content
   );
+
+  setChatHistory(newChatHistory);
 }
 
 export default handleSend;
