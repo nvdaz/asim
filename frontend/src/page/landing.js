@@ -45,6 +45,12 @@ const Landing = () => {
           return;
         }
       }
+      if (
+        !localStorage.getItem("init") || localStorage.getItem("init") === null
+      ) {
+        setFetching(false);
+        return;
+      }
       setLoading(false);
     };
 
@@ -67,7 +73,7 @@ const Landing = () => {
       );
       return;
     }
-
+    localStorage.setItem("init", true);
     setLoading(false);
   };
 
@@ -119,6 +125,7 @@ const Landing = () => {
             backgroundColor: "#FFB930",
             textTransform: "none",
             borderRadius: "50%",
+            marginRight: "100px",
             padding: 0,
             "&:hover": {
               backgroundColor: "#FF9430",
@@ -204,7 +211,7 @@ const Landing = () => {
     ) : (
       <div className={styles.wrapper}>
         <div className={styles.column}>
-          <div style={{ padding: "3rem 0" }}>
+          <div style={{ padding: "3rem 2rem" }}>
             {btn("Learn")}
             {btn("Playground")}
           </div>
