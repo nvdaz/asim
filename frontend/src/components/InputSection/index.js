@@ -48,6 +48,36 @@ const Input = ({
     }
   };
 
+  const handleClickSend = () => {
+    if (choice !== "") {
+      let isAnyOptions = false;
+
+      if (options && Object.keys(options).length > 0) {
+        if (typeof options === "string") {
+          isAnyOptions = options === choice;
+        } else {
+          isAnyOptions = Object.values(options).includes(choice);
+        }
+      }
+
+      if (selectedOption && Object.values(selectedOption).length > 0) {
+        if (typeof selectedOption === "string") {
+          isAnyOptions = isAnyOptions && selectedOption === choice;
+        } else {
+          isAnyOptions =
+            isAnyOptions || Object.values(selectedOption).includes(choice);
+        }
+      }
+
+      handleSend(
+        setShowChoicesSection,
+        setSelectedOption,
+        setOptions,
+        !isAnyOptions
+      );
+    }
+  };
+
   return (
     <div
       ref={divRef}
@@ -81,55 +111,7 @@ const Input = ({
             color: choice.length === 0 ? "#ACACAC" : "#282828",
             cursor: choice.length === 0 ? "default" : "pointer",
           }}
-          onClick={async () => {
-            if (choice !== "") {
-              let isAnyOptions = false;
-              console.log(choice);
-
-              if (options && Object.keys(options).length > 0) {
-                console.log(1, typeof options, options);
-                if (typeof options === "string") {
-                  isAnyOptions = options === choice;
-                  console.log(options === choice);
-                } else {
-                  isAnyOptions = Object.values(options).includes(choice);
-                  console.log(
-                    Object.values(options).includes(choice),
-                    Object.values(options)
-                  );
-                }
-              }
-
-              if (selectedOption && Object.values(selectedOption).length > 0) {
-                console.log("2", typeof selectedOption, selectedOption);
-
-                if (typeof selectedOption === "string") {
-                  isAnyOptions =
-                    isAnyOptions && selectedOption === choice;
-
-                  console.log(isAnyOptions, selectedOption === choice);
-                } else {
-                  isAnyOptions =
-                    isAnyOptions ||
-                    Object.values(selectedOption).includes(choice);
-
-                  console.log(
-                    isAnyOptions,
-                    Object.values(selectedOption).includes(choice)
-                  );
-                }
-              }
-
-              console.log(!isAnyOptions, choice);
-
-              handleSend(
-                setShowChoicesSection,
-                setSelectedOption,
-                setOptions,
-                !isAnyOptions
-              );
-            }
-          }}
+          onClick={handleClickSend}
         >
           Send
         </div>
