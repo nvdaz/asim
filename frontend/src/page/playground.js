@@ -35,7 +35,7 @@ const Playground = () => {
     setNextConversation(next.data);
   };
 
-  const fetchNewConversation = async () => {
+  const fetchNewConversation = useCallback(async () => {
     const initConversation = await Post("conversations/", {
       type: "playground",
       level: 0,
@@ -52,10 +52,8 @@ const Playground = () => {
       messages: initData.elements,
     });
 
-    await fetchNextSteps(
-      initConversation.data.id,
-    );
-  };
+    await fetchNextSteps(initConversation.data.id);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,7 +74,8 @@ const Playground = () => {
       if (listConversations.data.length === 0) {
         await fetchNewConversation();
       } else {
-        const conversationID = conversationIDFromParam ||
+        const conversationID =
+          conversationIDFromParam ||
           listConversations.data[listConversations.data.length - 1].id;
 
         console.log(conversationIDFromParam, conversationID);
@@ -97,23 +96,18 @@ const Playground = () => {
 
         if (historyData.state === null) {
           await fetchNextSteps(conversationID);
-        }
-        else if (historyData.state.waiting) {
-          console.log(
-            "historyData.state.waiting",
-            historyData.state.waiting,
-          );
+        } else if (historyData.state.waiting) {
+          console.log("historyData.state.waiting", historyData.state.waiting);
 
           if (historyData.elements.length === 0) {
             setNextConversation({
-              options: historyData.state.options
+              options: historyData.state.options,
             });
-          }
-          else {
+          } else {
             setNextConversation({
               options:
-                historyData.elements[historyData.elements.length - 1]
-                  .type !== "feedback"
+                historyData.elements[historyData.elements.length - 1].type !==
+                "feedback"
                   ? historyData.state.options
                   : [],
             });
@@ -127,7 +121,7 @@ const Playground = () => {
     };
 
     fetchData();
-  }, [conversationIDFromParam, currentLevel]);
+  }, [conversationIDFromParam, currentLevel, fetchNewConversation]);
 
   const header = useCallback((node) => {
     if (node !== null) {
@@ -187,14 +181,15 @@ const Playground = () => {
             />
           </div>
           <InputAndMessages
-            headerHeight={headerHeight}
+            allowCustomInput={true}
+            subjectName={data["subject_name"]}
             inputPlaceholder={
               "Write your own response or choose an option to send"
             }
             explanationText={
-              "Write your own response or choose an option to send"
+              "Write your own response\n or choose an option to send"
             }
-            allowCustomInput={true}
+            headerHeight={headerHeight}
             initData={{
               id: data?.id,
               options: nextConversation.options,

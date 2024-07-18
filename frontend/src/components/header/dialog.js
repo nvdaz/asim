@@ -4,6 +4,8 @@ import Dialog from "@mui/material/Dialog";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 
+import styles from "./header.module.css"
+
 function SimpleDialog(props) {
   const { onClose, open, initData } = props;
 
@@ -18,14 +20,7 @@ function SimpleDialog(props) {
       onClose={onClose}
       open={open}
     >
-      <div
-        style={{
-          backgroundColor: "#B4B4B5",
-          padding: "30px 25px",
-          fontSize: "1.25rem",
-          lineHeight: "1.6rem",
-        }}
-      >
+      <div className={styles.dialogContentWrapper}>
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -57,7 +52,7 @@ function SimpleDialog(props) {
             {initData.topic}
           </div>
         ) : (
-          scenarioAndGoal()
+          scenarioAndGoal(initData)
         )}
       </div>
     </Dialog>

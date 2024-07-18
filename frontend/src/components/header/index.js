@@ -137,9 +137,14 @@ export default function Header({
                               <OpenInNewIcon
                                 sx={{ cursor: "pointer" }}
                                 fontSize="small"
-                                onClick={() =>
-                                  (window.location.href = `/lesson/${currentLevel + 1}/${c.id}`)
-                                }
+                                onClick={() => {
+                                  if (window.location.href.includes('lesson')) {
+                                    window.location.href = `/lesson/${currentLevel + 1}/${c.id}`;
+                                  }
+                                  else {
+                                    window.location.href = `/playground/${c.id}`;
+                                  }
+                                }}
                               />
                             </ListItemIcon>
                           </Tooltip>
@@ -159,7 +164,12 @@ export default function Header({
                     onClick={async () => {
                       setGettingNewConversation(true);
                       await fetchNewConversation();
-                      window.location.href = `/lesson/${currentLevel + 1}`;
+                      if (window.location.href.includes('lesson')) {
+                        window.location.href = `/lesson/${currentLevel + 1}`;
+                      }
+                      else {
+                        window.location.href = `/playground`;
+                      }
                     }}
                   >
                     <ListItemIcon>

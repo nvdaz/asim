@@ -24,26 +24,28 @@ const Landing = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const link = localStorage.getItem("link") || uniqueString;
-      if (uniqueString) {
-        localStorage.setItem("link", uniqueString);
-      }
+      const token = localStorage.getItem("token");
 
-      const res2 = await Post("auth/exchange", {
-        magic_link: link,
-      });
-      if (!res2.ok) {
-        setAlertMessage("Error occurred");
-        return;
-      }
-      localStorage.setItem("token", res2.data.token);
-      localStorage.setItem("name", res2.data.user.name);
+      if (!token) {
+        if (!uniqueString) {
+          setAlertMessage("Please use sign-up link");
+          return;
+        }
+        const res2 = await Post("auth/exchange", {
+          magic_link: uniqueString,
+        });
+        if (!res2.ok) {
+          setAlertMessage("Error occurred");
+          return;
+        }
+        localStorage.setItem("token", res2.data.token);
 
-      if (!res2.data.user.init) {
-        setFetching(false);
-      } else {
-        setLoading(false);
+        if (!res2.data.user.init) {
+          setFetching(false);
+          return;
+        }
       }
+      setLoading(false);
     };
 
     fetchData();
@@ -54,11 +56,10 @@ const Landing = () => {
   };
 
   const handleSend = async (e) => {
+    e.preventDefault();
     const setupName = await Post("auth/setup", {
       name: enteredName,
     });
-
-    localStorage.setItem("name", enteredName);
 
     if (!setupName.ok) {
       setAlertMessage(
@@ -72,15 +73,7 @@ const Landing = () => {
 
   const loginAndInitSetUp = () => {
     return fetching ? (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "20px",
-          marginBottom: "10%",
-        }}
-      >
+      <div className={styles.loadingWrapper}>
         <CircularProgress />
         <div style={{ color: "white" }}>Loading</div>
       </div>

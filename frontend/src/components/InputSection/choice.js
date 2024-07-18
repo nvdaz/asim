@@ -24,7 +24,7 @@ const ChoicesSection = ({ explanationText, options, handleButtonClick }) => {
           transform: isCollapsed ? "translate(0px, 10px)" : "translate(0px)",
         }}
       >
-        {isCollapsed ? <div></div> : <div>{explanationText}</div>}
+        {isCollapsed ? <div></div> : <div style={{maxWidth: '60%'}}>{explanationText}</div>}
         <div
           className={styles.choice}
           style={{

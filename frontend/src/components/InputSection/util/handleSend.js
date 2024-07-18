@@ -55,7 +55,7 @@ async function send(
         };
       }
       return {
-        option: isCustomInput ? "custom" : "index",
+        option: "index",
         index: parseInt(option),
       };
     }
@@ -111,6 +111,7 @@ async function send(
     selectionResultContent,
     setShowProgress
   ) {
+    console.log("handleContinue");
     setShowProgress(true);
     const nextFetched2 = await fetchData();
     setShowProgress(false);
@@ -160,6 +161,7 @@ async function send(
     } else {
       console.log("apFollowedByFeedbackWithFollowUp", nextFetched);
       setChoice(nextFetched.content.follow_up);
+      setOptions({0: nextFetched.content.follow_up});
       setSelectedButton(0);
       return [
         ...oldHistory,
@@ -200,6 +202,7 @@ async function send(
         )),
       ]);
     } else {
+      console.log("2 handleContinueOnFeedbackWithNoFollowUp");
       const nextFetched = await fetchData();
 
       setChatHistory([
@@ -222,6 +225,7 @@ async function send(
       selectionResultContent?.follow_up
     ) {
       console.log("1");
+      setOptions({0: selectionResultContent.follow_up});
       setChoice(selectionResultContent.follow_up);
       setSelectedButton(0);
       return [
@@ -243,6 +247,7 @@ async function send(
       ];
     }
 
+    console.log('250');
     const nextFetched = await fetchData();
 
     if (selectionResultType === "ap") {
@@ -313,7 +318,7 @@ async function send(
 
     if (continueContent) {
       feedback["continue"] = {
-        handleClick: handleContinueOnFeedbackWithNoFollowUp,
+        handleClick: handleClick,
         oldHistory: oldHistory,
         selectionResultContent: continueContent,
       };
@@ -325,6 +330,7 @@ async function send(
   resetStates();
   setChatHistory(oldHistory);
 
+  console.log('333');
   const selectionResult = await fetchData(selectedButton);
   setShowProgress(false);
 

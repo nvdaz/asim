@@ -1,23 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Inputs from "../InputSection/index.js";
 import Messages from "../messages/index.js";
 import LinearProgress from "@mui/material/LinearProgress";
 import handleSend from "../InputSection/util/handleSend";
 
 const InputAndMessages = ({
-  allowCustomInput,
+  subjectName,
+  allowCustomInput = false,
   inputPlaceholder,
   explanationText, 
   headerHeight,
   initData,
 }) => {
   const convertToMessageHistory = () => {
-    const userName = localStorage.getItem("name");
     return initData.messages.map((m) => {
       if (m.type === "message") {
         return {
           type: "text",
-          isSentByUser: userName === m.content.sender,
+          isSentByUser: !(subjectName === m.content.sender),
           content: m.content.message,
         };
       }
@@ -40,7 +40,17 @@ const InputAndMessages = ({
     return lastElement.type === "feedback" ? lastElement.content.follow_up : "";
   };
 
-  const [options, setOptions] = useState(Object.assign({}, initData.options));
+  const setInitOptions = () => {
+    if (initData.messages.length === 0) {
+      return Object.assign({}, initData.options);
+    }
+    const lastElement = initData.messages[initData.messages.length - 1];
+    return lastElement.type === "feedback"
+      ? { 0: lastElement.content.follow_up }
+      : Object.assign({}, initData.options);
+  };
+
+  const [options, setOptions] = useState(setInitOptions());
   const [chatHistory, setChatHistory] = useState(
     initData.ap_message
       ? [
@@ -56,6 +66,16 @@ const InputAndMessages = ({
   const [choice, setChoice] = useState(setInitChoice());
   const [selectedButton, setSelectedButton] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
+  const [isLastMessageFeedbackWithFollowUp, setIsLastMessageFeedbackWithFollowUp] = useState(false);
+
+  useEffect(() => {
+    if (chatHistory.length !== 0) {
+      const lastElement = chatHistory[chatHistory.length - 1];
+      if (lastElement.type === "feedback" && lastElement.content.choice) {
+        setIsLastMessageFeedbackWithFollowUp(true);
+      }
+    }
+  }, [chatHistory]);
 
   return (
     <div
@@ -74,6 +94,7 @@ const InputAndMessages = ({
         options={options}
       />
       <Inputs
+        showChoices={!isLastMessageFeedbackWithFollowUp}
         allowCustomInput={allowCustomInput}
         explanationText={explanationText}
         inputPlaceholder={inputPlaceholder}

@@ -39,6 +39,13 @@
     font-size: 1.1rem;
 }
 
+.dialogContentWrapper {
+    background-color: #B4B4B5;
+    padding: 30px 25px;
+    font-size: 1.25rem;
+    line-height: 1.6rem;
+}
+
 @media screen and (max-width: 500px) {
     .profile {
         font-size: 18px;

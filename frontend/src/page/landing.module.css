@@ -99,6 +99,22 @@
     gap: 3rem;
 }
 
+.initLesson {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 10%;
+}
+
+.loadingWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 10%;
+}
+
 @media screen and (max-width: 800px) {
     .setUpWrapper {
         display: flex;

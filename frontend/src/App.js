@@ -18,6 +18,10 @@ function App() {
         <Route path="/lesson/2" element={<Lesson />} />
         <Route path="/lesson/2/:conversationIDFromParam" element={<Lesson />} />
         <Route path="/playground" element={<Playground />} />
+        <Route
+          path="/playground/:conversationIDFromParam"
+          element={<Playground />}
+        />
       </Routes>
     </BrowserRouter>
   );

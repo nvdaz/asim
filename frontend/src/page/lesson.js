@@ -55,7 +55,7 @@ const Lesson = () => {
     }
   };
 
-  const fetchNewConversation = async () => {
+  const fetchNewConversation = useCallback(async () => {
     const initConversation = await Post("conversations/", {
       type: "level",
       level: currentLevel,
@@ -76,7 +76,7 @@ const Lesson = () => {
       initConversation.data.id,
       !initConversation.data.info.scenario.is_user_initiated
     );
-  };
+  }, [currentLevel]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,7 +97,8 @@ const Lesson = () => {
       if (listConversations.data.length === 0) {
         await fetchNewConversation();
       } else {
-        const conversationID = conversationIDFromParam ||
+        const conversationID =
+          conversationIDFromParam ||
           listConversations.data[listConversations.data.length - 1].id;
 
         console.log(conversationIDFromParam, conversationID);
@@ -117,23 +118,18 @@ const Lesson = () => {
 
         if (historyData.state === null) {
           await fetchNextSteps(conversationID);
-        }
-        else if (historyData.state.waiting) {
-          console.log(
-            "historyData.state.waiting",
-            historyData.state.waiting,
-          );
+        } else if (historyData.state.waiting) {
+          console.log("historyData.state.waiting", historyData.state.waiting);
 
           if (historyData.elements.length === 0) {
             setNextConversation({
-              options: historyData.state.options
+              options: historyData.state.options,
             });
-          }
-          else {
+          } else {
             setNextConversation({
               options:
-                historyData.elements[historyData.elements.length - 1]
-                  .type !== "feedback"
+                historyData.elements[historyData.elements.length - 1].type !==
+                "feedback"
                   ? historyData.state.options
                   : [],
             });
@@ -147,7 +143,7 @@ const Lesson = () => {
     };
 
     fetchData();
-  }, [conversationIDFromParam, currentLevel]);
+  }, [conversationIDFromParam, currentLevel, fetchNewConversation]);
 
   const header = useCallback((node) => {
     if (node !== null) {
@@ -155,41 +151,37 @@ const Lesson = () => {
     }
   }, []);
 
+  const alert = () => {
+    return (
+      <Collapse in={alertMessage !== ""}>
+        <Alert
+          action={
+            <IconButton
+              aria-label="close"
+              color="inherit"
+              size="small"
+              onClick={() => {
+                setAlertMessage(null);
+              }}
+            >
+              <CloseIcon fontSize="inherit" />
+            </IconButton>
+          }
+          sx={{ position: "absolute", top: "20px" }}
+          variant="filled"
+          severity="warning"
+        >
+          {alertMessage}
+        </Alert>
+      </Collapse>
+    );
+  };
+
   return (
     <div className={styles.wrapper}>
-      {alertMessage && (
-        <Collapse in={alertMessage !== ""}>
-          <Alert
-            action={
-              <IconButton
-                aria-label="close"
-                color="inherit"
-                size="small"
-                onClick={() => {
-                  setAlertMessage(null);
-                }}
-              >
-                <CloseIcon fontSize="inherit" />
-              </IconButton>
-            }
-            sx={{ position: "absolute", top: "20px" }}
-            variant="filled"
-            severity="warning"
-          >
-            {alertMessage}
-          </Alert>
-        </Collapse>
-      )}
+      {alertMessage && alert()}
       {loading ? (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "20px",
-            marginBottom: "10%",
-          }}
-        >
+        <div className={styles.initLesson}>
           <CircularProgress />
           <div style={{ color: "white" }}>Initializing Lesson</div>
         </div>
@@ -208,6 +200,7 @@ const Lesson = () => {
             />
           </div>
           <InputAndMessages
+            subjectName={data["subject_name"]}
             explanationText={"Choose the best option:"}
             inputPlaceholder={"Choose the best option to send"}
             headerHeight={headerHeight}

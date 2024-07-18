@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 import TextareaAutosize from "./textareaAutosize.js";
 import ChoicesSection from "./choice.js";
@@ -6,6 +6,7 @@ import ChoicesSection from "./choice.js";
 import styles from "./index.module.css";
 
 const Input = ({
+  showChoices,
   allowCustomInput = false,
   inputPlaceholder,
   explanationText,
@@ -17,7 +18,11 @@ const Input = ({
   setOptions,
 }) => {
   const [selectedOption, setSelectedOption] = useState(null);
-  const [showChoicesSection, setShowChoicesSection] = useState(true);
+  const [showChoicesSection, setShowChoicesSection] = useState(false);
+
+  useEffect(() => {
+    setShowChoicesSection(showChoices);
+  }, [showChoices]);
 
   const divRef = useRef(null);
 
@@ -76,31 +81,55 @@ const Input = ({
             color: choice.length === 0 ? "#ACACAC" : "#282828",
             cursor: choice.length === 0 ? "default" : "pointer",
           }}
-          onClick={() =>
-            {
-              if (choice !== '') {
-                let isCustomMessage = false;
-                if (Object.keys(options).length > 0) {
-                  isCustomMessage = Object.values(options).includes(choice);
-                }
-                if (
-                  selectedOption &&
-                  Object.values(selectedOption).length > 0
-                ) {
-                  isCustomMessage =
-                    !(isCustomMessage ||
-                    Object.values(selectedOption).includes(choice))
-                }
+          onClick={async () => {
+            if (choice !== "") {
+              let isAnyOptions = false;
+              console.log(choice);
 
-                handleSend(
-                  setShowChoicesSection,
-                  setSelectedOption,
-                  setOptions,
-                  isCustomMessage
-                );
+              if (options && Object.keys(options).length > 0) {
+                console.log(1, typeof options, options);
+                if (typeof options === "string") {
+                  isAnyOptions = options === choice;
+                  console.log(options === choice);
+                } else {
+                  isAnyOptions = Object.values(options).includes(choice);
+                  console.log(
+                    Object.values(options).includes(choice),
+                    Object.values(options)
+                  );
+                }
               }
+
+              if (selectedOption && Object.values(selectedOption).length > 0) {
+                console.log("2", typeof selectedOption, selectedOption);
+
+                if (typeof selectedOption === "string") {
+                  isAnyOptions =
+                    isAnyOptions && selectedOption === choice;
+
+                  console.log(isAnyOptions, selectedOption === choice);
+                } else {
+                  isAnyOptions =
+                    isAnyOptions ||
+                    Object.values(selectedOption).includes(choice);
+
+                  console.log(
+                    isAnyOptions,
+                    Object.values(selectedOption).includes(choice)
+                  );
+                }
+              }
+
+              console.log(!isAnyOptions, choice);
+
+              handleSend(
+                setShowChoicesSection,
+                setSelectedOption,
+                setOptions,
+                !isAnyOptions
+              );
             }
-          }
+          }}
         >
           Send
         </div>
