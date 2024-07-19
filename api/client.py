@@ -14,6 +14,8 @@ r = requests.post(
 
 if TYPE == "level":
     print(f"Scenario: {r['info']['scenario']['user_perspective']}")
+elif TYPE == "playground":
+    print(f"Topic: {r['info']['topic']}")
 
 id = r["id"]
 sn = r["agent"]
