@@ -186,7 +186,7 @@ async def _generate_user_persona(user_base: BasePersonaUninit):
 
     response = await llm.generate(
         schema=PersonaResponse,
-        model=llm.Model.GPT_4,
+        model=llm.Model.CLAUDE_3_SONNET,
         system=system_prompt,
         prompt=prompt_data,
     )

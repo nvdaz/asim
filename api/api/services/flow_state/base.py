@@ -56,6 +56,7 @@ class UserFlowOption(BaseModel):
 
 class NpFlowState(BaseModel, Generic[NpFlowStateId]):
     type: Literal["np"] = "np"
+    extends: NpFlowStateRef | None = None
     options: list[UserFlowOption] = []
     allow_custom: bool = False
 
@@ -148,6 +149,11 @@ def _build_mappings(*mappings: list[FlowStateMapping]) -> dict[FlowStateRef, Flo
                 combined[item.id].options.extend(item.value.options)
             else:
                 combined[item.id] = item.value.model_copy(deep=True)
+
+    # resolve extends after combining options
+    for ref, state in combined.items():
+        if isinstance(state, NpFlowState) and state.extends is not None:
+            combined[ref].options.extend(combined[state.extends].options)
 
     return combined
 

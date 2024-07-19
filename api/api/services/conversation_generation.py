@@ -189,12 +189,12 @@ async def generate_conversation_scenario(
 
 
 async def generate_conversation_topic(user_id: ObjectId, interests: list[str]) -> str:
-    previous_topics = await get_previous_info(user_id, "playground")
+    previous_info = await get_previous_info(user_id, "playground")
 
-    previous_topic_names = [info.topic for info in previous_topics]
+    previous_topics = set(info.topic for info in previous_info)
 
     unused_interests = [
-        interest for interest in interests if interest not in previous_topic_names
+        interest for interest in interests if interest not in previous_topics
     ]
 
     if len(unused_interests) == 0:
@@ -257,7 +257,12 @@ async def _generate_agent_persona_from_base(agent: BasePersona):
         prompt=prompt_data,
     )
 
-    return Persona(**agent.model_dump(), description=response.persona)
+    return Persona(
+        **agent.model_dump(),
+        description=(
+            f"{response.persona} DO NOT mention how autism affects your communication."
+        ),
+    )
 
 
 async def generate_agent_persona(scenario, agent_name):

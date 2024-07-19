@@ -81,7 +81,7 @@ async def get_previous_info(
     user_id: ObjectId, type: Literal["level", "playground"]
 ) -> list[ConversationInfo]:
     cursor = conversations.find(
-        {"user_id": user_id, "type": type},
+        {"user_id": user_id, "info.type": type},
         {"info": 1},
     )
 

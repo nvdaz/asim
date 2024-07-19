@@ -21,7 +21,11 @@ class ModelVendor(str, Enum):
     ANTHROPIC = "anthropic"
 
     def concurrency_limit(self) -> int:
-        return 4
+        match self:
+            case ModelVendor.OPENAI:
+                return 4
+            case ModelVendor.ANTHROPIC:
+                return 32
 
 
 class Model(str, Enum):
@@ -110,9 +114,6 @@ async def _generate_strict(
 _GENERATE_CACHE_LOCK = asyncio.Lock()
 
 
-def gen2(adapter: TypeAdapter[SchemaType]) -> Type[SchemaType]: ...
-
-
 async def generate(
     schema: Type[SchemaType] | TypeAdapter[SchemaType],
     model: Model,
@@ -175,7 +176,7 @@ async def generate(
     return result
 
 
-_EMBED_SEMAPHORE = asyncio.Semaphore(16)
+_EMBED_SEMAPHORE = asyncio.Semaphore(32)
 
 
 async def _embed(text: str) -> np.ndarray:
