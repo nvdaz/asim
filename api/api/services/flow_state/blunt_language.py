@@ -34,28 +34,20 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
     NpFlowStateMapping(
         id=NpFlowStateRef(id="confrontational"),
         value=NpFlowState(
+            extends=NpFlowStateRef(id="normal"),
             options=[
                 UserFlowOption(
                     prompt=(
-                        "Do not use any confrontational language in your next message."
-                        "Keep your message neutral and non-aggressive."
-                    ),
-                    next=ApFlowStateRef(id="normal"),
-                ),
-                UserFlowOption(
-                    prompt=(
                         "Your next message is confrontational. Your message is "
-                        "intended to be aggressive and assertive. Example: 'I don't "
-                        "appreciate your tone.'"
+                        "intended to be aggressive and assertive."
                     ),
                     checks=[FeedbackFlowStateRef(id="confrontational")],
                     next=ApFlowStateRef(id="normal"),
                 ),
                 UserFlowOption(
                     prompt=(
-                        "Your next message is negative. You just received a blunt "
-                        "message and take it personally. Example: 'How dare you say "
-                        "that?'"
+                        "Your next message is dismissive. You just received a blunt "
+                        "message and take it personally."
                     ),
                     checks=[FeedbackFlowStateRef(id="confrontational")],
                     next=ApFlowStateRef(id="normal"),
@@ -70,9 +62,8 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
                 FlowOption(
                     prompt=(
                         "Your next message is blunt. Your message is intended "
-                        "to be direct and straightforward. Example: 'I don't have "
-                        "an opinion on that.', 'Stop talking, you don't know what "
-                        "you're talking about.', 'I don't care what you think.'"
+                        "to be direct and straightforward, which will be perceived "
+                        "as rude."
                     ),
                     next=NpFlowStateRef(id="confrontational"),
                 ),

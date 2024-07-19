@@ -257,7 +257,12 @@ async def _generate_agent_persona_from_base(agent: BasePersona):
         prompt=prompt_data,
     )
 
-    return Persona(**agent.model_dump(), description=response.persona)
+    return Persona(
+        **agent.model_dump(),
+        description=(
+            f"{response.persona} DO NOT mention how autism affects your communication."
+        ),
+    )
 
 
 async def generate_agent_persona(scenario, agent_name):

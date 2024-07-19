@@ -56,8 +56,6 @@ from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL_CONTEXT
 from .flow_state.playground import PLAYGROUND_CONTEXT
 from .message_generation import generate_message
 
-random.seed(0)
-
 LEVEL_CONTEXTS = [FIGURATIVE_LANGUAGE_LEVEL_CONTEXT, BLUNT_LANGUAGE_LEVEL_CONTEXT]
 
 
@@ -83,12 +81,15 @@ async def create_conversation(
                 user_perspective=(
                     f"You are interested in {topic} and want to learn more about the "
                     f"topic. Your engage in a conversation with {agent_name}, who is "
-                    "an expert in the field to further your understanding."
+                    "an expert in the field to further your understanding. Ask "
+                    "questions and engage in a conversation to learn more."
                 ),
                 agent_perspective=(
                     f"You are an expert in {topic} and are highly knowledgeable "
                     f"about the subject. Your goal is to help {user_persona.name} "
-                    "understand the topic better."
+                    "understand the topic better by engaging in a conversation with "
+                    "them detailing the key points and answering any questions they "
+                    "may have."
                 ),
             )
 
@@ -198,16 +199,10 @@ async def progress_conversation(
             MessageElement(content=Message(sender=user.name, message=response.response))
         )
 
-        messages = [
-            elem.content
-            for elem in conversation.elements[conversation.last_feedback_received :]
-            if isinstance(elem, MessageElement)
-        ]
-
         checks = [(check, context.get_state(check)) for check in response.checks]
 
         failed_checks = await check_messages(
-            user.name, conversation.agent.name, messages, checks
+            user.name, conversation.agent.name, conversation, checks
         )
 
         if failed_checks:

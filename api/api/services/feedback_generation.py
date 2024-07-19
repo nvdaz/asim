@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, StringConstraints
+from pydantic import AfterValidator, BaseModel, StringConstraints, TypeAdapter
 
 from api.schemas.conversation import (
     ConversationDataInit,
@@ -17,6 +17,22 @@ from .flow_state.base import FeedbackFlowState, FeedbackFlowStateRef
 from .message_generation import generate_message
 
 
+def _extract_messages_for_feedback(conversation: ConversationDataInit):
+    messages = [
+        elem.content
+        for elem in conversation.elements
+        if isinstance(elem, MessageElement)
+    ]
+    start = 0
+    # take all messages since the user's last message
+    for i in reversed(range(len(messages) - 2)):
+        if messages[i].sender != conversation.agent.name:
+            start = i + 1
+            break
+
+    return messages[start:]
+
+
 class FeedbackWithPromptResponse(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=600)]
@@ -30,8 +46,7 @@ async def generate_feedback(
     user_perspective: str,
 ) -> Feedback:
     agent = conversation.agent
-    elements = conversation.elements[conversation.last_feedback_received :]
-    messages = [elem.content for elem in elements if isinstance(elem, MessageElement)]
+    messages = _extract_messages_for_feedback(conversation)
 
     examples = [
         (
@@ -138,7 +153,7 @@ async def generate_feedback(
 
     feedback_base = await llm.generate(
         schema=FeedbackWithPromptResponse,
-        model=llm.Model.GPT_4,
+        model=llm.Model.CLAUDE_3_SONNET,
         system=system_prompt,
         prompt=prompt_data,
     )
@@ -170,9 +185,13 @@ async def generate_feedback(
 async def check_messages(
     user: str,
     agent: str,
-    messages: list[Message],
+    conversation: ConversationDataInit,
     checks: list[tuple[FeedbackFlowStateRef, FeedbackFlowState]],
 ) -> list[FailedCheck]:
+    if not checks:
+        return []
+
+
     check_names: set[str] = set(check.id for check, _ in checks)
 
     def validate_failed_check_name(failed_check: str) -> str:
@@ -182,39 +201,49 @@ async def check_messages(
         return failed_check
 
     class FailedCheckNamed(BaseModel):
-        check: Annotated[str, AfterValidator(validate_failed_check_name)]
+        id: Annotated[str, AfterValidator(validate_failed_check_name)]
         offender: str
         reason: str
 
     class Analysis(BaseModel):
         failed_checks: list[FailedCheckNamed]
 
+    class Check(BaseModel):
+        id: str
+        check: str
+
+    check_list_adapter = TypeAdapter(list[Check])
+
+    checks = [Check(id=ref.id, check=check.check) for ref, check in checks]
+
     system = (
         "You are a social skills coach. Your task is to analyze the following "
         f"conversation between the user, {user}, and {agent}, who is an autistic "
         f"individual, and determine whether the latest message sent by {user} passes "
         "the provided checks. Here is list of checks that you should perform:\n"
-        + "\n".join(f"{id}: {check.check}" for id, check in checks)
+        f"{check_list_adapter.dump_json(checks).decode()}"
         + "\nA check should fail if the user's message does not meets the criteria "
         "described in the check. Provide a JSON object with the key 'failed_checks' "
-        "with a list of objects with the keys 'check' containing the ID of the check "
-        "that failed, 'offender' containing the name of the person who sent the "
+        "with a list of objects with the keys 'id' containing the semantic ID of the "
+        "check that failed, 'offender' containing the name of the person who sent the "
         f"offending message ({user}), and 'reason' containing the reason why the "
-        "check failed. DO NOT perform any checks that are not listed above."
+        "check failed. If no checks fail, provide an empty list. DO NOT perform any "
+        "checks that are not listed above."
     )
 
+    messages = _extract_messages_for_feedback(conversation)
     prompt_data = message_list_adapter.dump_json(messages).decode()
 
     result = await llm.generate(
         schema=Analysis,
-        model=llm.Model.GPT_4,
+        model=llm.Model.CLAUDE_3_SONNET,
         system=system,
         prompt=prompt_data,
     )
 
     failed_checks = [
         FailedCheck(
-            source=FeedbackFlowStateRef(id=check.check),
+            source=FeedbackFlowStateRef(id=check.id),
             reason=check.reason,
         )
         for check in result.failed_checks
