@@ -330,6 +330,7 @@ async function send(
   };
 
   setChoice('');
+  setSelectedOption(null);
   setShowChoicesSection(false);
   setShowProgress(true);
   setChatHistory(oldHistory);

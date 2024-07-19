@@ -39,15 +39,14 @@ const Landing = () => {
           return;
         }
         localStorage.setItem("token", res2.data.token);
+        localStorage.setItem("init", res2.data.user.init);
 
         if (!res2.data.user.init) {
           setFetching(false);
           return;
         }
       }
-      if (
-        !localStorage.getItem("init") || localStorage.getItem("init") === null
-      ) {
+      if (localStorage.getItem("init") === null) {
         setFetching(false);
         return;
       }
@@ -73,8 +72,9 @@ const Landing = () => {
       );
       return;
     }
+
     localStorage.setItem("init", true);
-    setLoading(false);
+    window.location.href = '/';
   };
 
   const loginAndInitSetUp = () => {
