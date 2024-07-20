@@ -51,7 +51,7 @@ class UserInit(BaseModel):
     id: PyObjectId
     init: Literal[True] = True
     name: str
-    unlocked: list[str]
+    max_unlocked_stage: str
 
 
 User = Annotated[UserInit | UserUninit, Field(discriminator="init")]
@@ -59,7 +59,7 @@ User = Annotated[UserInit | UserUninit, Field(discriminator="init")]
 
 def user_from_data(data: UserData) -> User:
     return (
-        UserInit(id=data.id, name=data.name, unlocked=data.unlocked)
+        UserInit(id=data.id, name=data.name, max_unlocked_stage=data.max_unlocked_stage)
         if data.init
         else UserUninit(id=data.id)
     )
