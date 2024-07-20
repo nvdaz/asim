@@ -43,7 +43,6 @@ from api.schemas.user import UserInitData
 from .conversation_generation import (
     generate_agent_persona,
     generate_conversation_scenario,
-    generate_conversation_topic,
 )
 from .feedback_generation import check_messages, generate_feedback
 from .flow_state.base import (
@@ -106,26 +105,25 @@ async def create_conversation(
             info = LevelConversationInfo(scenario=scenario, level=level)
 
         case PlaygroundConversationOptions():
-            topic = await generate_conversation_topic(user.id, user.persona.interests)
+            # topic = await generate_conversation_topic(user.id, user.persona.interests)
 
             setup = ConversationSetup(
                 user_perspective=(
-                    f"You are interested in {topic} and want to learn more about the "
-                    f"topic. Your engage in a conversation with {agent_name}, who is "
-                    "an expert in the field to further your understanding. Ask "
-                    "questions and engage in a conversation to learn more."
+                    "You are interested in learning more about a topic of your choice. "
+                    "Engage in a conversation with an expert to further your "
+                    "understanding. Ask questions and engage in a conversation to "
+                    "learn more."
                 ),
                 agent_perspective=(
-                    f"You are an expert in {topic} and are highly knowledgeable "
-                    f"about the subject. Your goal is to help {user.persona.name} "
-                    "understand the topic better by engaging in a conversation with "
-                    "them detailing the key points and answering any questions they "
-                    "may have."
+                    "You are an expert and are highly knowledgeable in various fields. "
+                    "Your goal is to help the user understand their chosen topic "
+                    "better by engaging in a conversation with them, detailing the key "
+                    "points, and answering any questions they may have."
                 ),
             )
 
             info = PlaygroundConversationInfo(
-                topic=topic,
+                topic="none",
                 setup=setup,
             )
 
