@@ -334,7 +334,8 @@ async def progress_conversation(
             ]
 
             conversation.state = StateAwaitingUserChoiceData(
-                options=options, allow_custom=False
+                options=options,
+                allow_custom=isinstance(conversation.info, PlaygroundConversationInfo),
             )
         else:
             conversation.state = StateActiveData(id=conversation.state.next)
