@@ -21,6 +21,8 @@ class BaseUserInitData(BaseUserData):
     init: Literal[True] = True
     name: str
     persona: Persona
+    sent_message_counts: dict[str, int] = {}
+    max_unlocked_stage: str = "level-0"
 
 
 class UserUninitData(BaseUserUninitData):
@@ -49,10 +51,15 @@ class UserInit(BaseModel):
     id: PyObjectId
     init: Literal[True] = True
     name: str
+    unlocked: list[str]
 
 
 User = Annotated[UserInit | UserUninit, Field(discriminator="init")]
 
 
 def user_from_data(data: UserData) -> User:
-    return UserInit(id=data.id, name=data.name) if data.init else UserUninit(id=data.id)
+    return (
+        UserInit(id=data.id, name=data.name, unlocked=data.unlocked)
+        if data.init
+        else UserUninit(id=data.id)
+    )

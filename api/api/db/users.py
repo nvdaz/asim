@@ -36,3 +36,20 @@ async def update(user_id: ObjectId, user: UserData):
     )
 
     return user_data_adapter.validate_python(raw_user) if raw_user else None
+
+
+async def increment_message_count(user_id: ObjectId, stage: str) -> dict[str, int]:
+    res = await users.find_one_and_update(
+        {"_id": user_id},
+        {"$inc": {f"sent_message_counts.{stage}": 1}},
+        {"sent_message_counts": 1},
+        return_document=True,
+    )
+
+    return res["sent_message_counts"]
+
+async def unlock_stage(user_id: ObjectId, stage: str) :
+    await users.update_one(
+        {"_id": user_id},
+        {"$set": {"max_unlocked_stage": stage}}
+    )

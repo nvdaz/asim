@@ -16,7 +16,12 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 
 @router.post(
-    "/", status_code=201, responses={400: {"description": "User not initialized"}}
+    "/",
+    status_code=201,
+    responses={
+        400: {"description": "User not initialized"},
+        401: {"description": "Stage not unlocked"},
+    },
 )
 async def create_conversation(
     current_user: CurrentUser,
@@ -25,9 +30,12 @@ async def create_conversation(
     if not current_user.init:
         raise HTTPException(status_code=400, detail="User not initialized")
 
-    conversation = await conversation_handler.create_conversation(
-        current_user.id, current_user.persona, options
-    )
+    try:
+        conversation = await conversation_handler.create_conversation(
+            current_user, options
+        )
+    except conversation_handler.StageNotUnlocked as e:
+        raise HTTPException(status_code=401, detail="Stage not unlocked") from e
 
     return conversation
 
@@ -71,7 +79,7 @@ async def progress_conversation(
 ) -> conversation_handler.ConversationStep:
     try:
         return await conversation_handler.progress_conversation(
-            conversation_id, current_user.id, current_user.persona, option
+            conversation_id, current_user, option
         )
     except conversation_handler.InvalidSelection as e:
         raise HTTPException(status_code=400, detail="Invalid selection") from e

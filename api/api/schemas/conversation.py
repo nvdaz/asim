@@ -95,9 +95,15 @@ class LevelConversationOptions(BaseModel):
     type: Literal["level"] = "level"
     level: int
 
+    def stage_name(self) -> str:
+        return f"level-{self.level}"
+
 
 class PlaygroundConversationOptions(BaseModel):
     type: Literal["playground"] = "playground"
+
+    def stage_name(self) -> str:
+        return "playground"
 
 
 ConversationOptions = Annotated[
@@ -134,11 +140,17 @@ class PlaygroundConversationInfo(BaseModel):
     setup: ConversationSetup
     topic: str
 
+    def stage_name(self) -> str:
+        return "playground"
+
 
 class LevelConversationInfo(BaseModel):
     type: Literal["level"] = "level"
     scenario: ConversationScenario
     level: Annotated[int, Field(ge=0, le=1)]
+
+    def stage_name(self) -> str:
+        return f"level-{self.level}"
 
 
 ConversationInfo = Annotated[
@@ -266,16 +278,19 @@ class NpMessageStep(BaseModel):
     type: Literal["np"] = "np"
     options: list[str]
     allow_custom: bool
+    max_unlocked_stage: str | None
 
 
 class ApMessageStep(BaseModel):
     type: Literal["ap"] = "ap"
     content: str
+    max_unlocked_stage: str | None
 
 
 class FeedbackStep(BaseModel):
     type: Literal["feedback"] = "feedback"
     content: Feedback
+    max_unlocked_stage: str | None
 
 
 ConversationStep = Annotated[
