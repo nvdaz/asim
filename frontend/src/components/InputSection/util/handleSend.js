@@ -155,6 +155,7 @@ async function send(
     if (!nextFetched.content.follow_up) {
       console.log("apFollowedByFeedback", selectionResultContent, nextFetched);
       setChoice(nextFetched.content.follow_up);
+      setOptions({ 0: nextFetched.content.follow_up });
       setSelectedButton(0);
       setSelectedOption(0);
       return [
@@ -237,6 +238,7 @@ async function send(
       selectionResultContent?.follow_up
     ) {
       console.log("1");
+      setOptions({ 0: selectionResultContent.follow_up });
       setChoice(selectionResultContent.follow_up);
       setSelectedButton(0);
       setSelectedOption(0);
