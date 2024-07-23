@@ -25,6 +25,7 @@ const Landing = () => {
   const isMobile = useMediaQuery("(max-width:600px)");
   const allowedLessons = localStorage.getItem("max_unlocked_stage");
   const [open, setOpen] = useState(false);
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
 
   const handleTooltipClose = () => {
     setOpen(false);
@@ -244,11 +245,20 @@ const Landing = () => {
         className={mode === name ? styles.btnSelected : styles.btn}
         style={style}
         onClick={() => {
+          if (name === "Playground") {
+            if (allowedLessons.includes("playground")) {
+              selectedMode(name);
+              setTimeout(() => {
+                window.location.href = "/playground";
+              }, "250");
+            }
+            else {
+              console.log('here');
+              setPlaygroundOpen(true);
+              return;
+            }
+          }
           selectedMode(name);
-          name === "Playground" &&
-            setTimeout(() => {
-              window.location.href = "/playground";
-            }, "250");
         }}
       >
         {name}
@@ -256,13 +266,35 @@ const Landing = () => {
     );
   };
 
+  const playgroundBtn = () => {
+    return (
+      <ClickAwayListener onClickAway={() => setPlaygroundOpen(false)}>
+        <Tooltip
+          placement="bottom-start"
+          PopperProps={{
+            disablePortal: true,
+          }}
+          onClose={handleTooltipClose}
+          open={playgroundOpen}
+          disableFocusListener
+          disableHoverListener
+          disableTouchListener
+          title="Complete lessons to unlock!"
+          arrow
+        >
+          {btn("Playground")}
+        </Tooltip>
+      </ClickAwayListener>
+    );
+  }
+
   const landingPage = () => {
     return isMobile ? (
       <div style={{ width: "100%", margin: "16px" }}>
         {lessonsSection()}
         <div className={styles.mobileBtnWrapper}>
           {btn("Learn")}
-          {btn("Playground")}
+          {playgroundBtn()}
         </div>
       </div>
     ) : (
@@ -270,7 +302,7 @@ const Landing = () => {
         <div className={styles.column}>
           <div style={{ padding: "3rem 2rem" }}>
             {btn("Learn")}
-            {btn("Playground")}
+            {playgroundBtn()}
           </div>
         </div>
         {lessonsSection()}
