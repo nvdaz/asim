@@ -338,6 +338,10 @@ async function send(
   setChatHistory(oldHistory);
 
   const selectionResult = await fetchData();
+  localStorage.setItem(
+    "max_unlocked_stage",
+    selectionResult.data.max_unlocked_stage
+  );
   setShowProgress(false);
 
   if (!selectionResult.ok) {

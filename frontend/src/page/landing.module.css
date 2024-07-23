@@ -41,6 +41,12 @@
     margin-bottom: 120px;
 }
 
+.columnRightBtnWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .setUpWrapper {
     display: flex;
     flex-direction: column;
