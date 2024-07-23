@@ -141,21 +141,15 @@ const Landing = () => {
           <div style={{ marginBottom: "10px" }}>Figurative Language</div>
           <Button
             sx={{
-              backgroundColor: allowedLessons.includes("level-0")
-                ? "#FFB930"
-                : "#797979",
+              backgroundColor: "#FFB930",
               textTransform: "none",
               borderRadius: "50%",
               padding: 0,
               "&:hover": {
-                backgroundColor: allowedLessons.includes("level-0")
-                  ? "#FF9430"
-                  : "##A3A3A3",
+                backgroundColor: "#FF9430",
               },
               "& .MuiTouchRipple-child": {
-                backgroundColor: allowedLessons.includes("level-0")
-                  ? "#FFCC69"
-                  : "#637BC4",
+                backgroundColor: "#FFCC69",
               },
             }}
           >
@@ -167,7 +161,7 @@ const Landing = () => {
                 }, "250")
               }
             >
-              {!allowedLessons.includes("level-1") && "Start"}
+              {allowedLessons === "level-0" && "Start"}
             </div>
           </Button>
         </div>
@@ -191,28 +185,37 @@ const Landing = () => {
             >
               <Button
                 sx={{
-                  backgroundColor: allowedLessons.includes("level-1")
-                    ? "#FFB930"
-                    : "#797979",
+                  backgroundColor:
+                    allowedLessons === "level-1" ||
+                    allowedLessons === "playground"
+                      ? "#FFB930"
+                      : "#797979",
                   textTransform: "none",
                   borderRadius: "50%",
                   padding: 0,
                   "&:hover": {
-                    backgroundColor: allowedLessons.includes("level-1")
-                      ? "#FF9430"
-                      : "##A3A3A3",
+                    backgroundColor:
+                      allowedLessons === "level-1" ||
+                      allowedLessons === "playground"
+                        ? "#FF9430"
+                        : "##A3A3A3",
                   },
                   "& .MuiTouchRipple-child": {
-                    backgroundColor: allowedLessons.includes("level-1")
-                      ? "#FFCC69"
-                      : "#637BC4",
+                    backgroundColor:
+                      allowedLessons === "level-1" ||
+                      allowedLessons === "playground"
+                        ? "#FFCC69"
+                        : "#637BC4",
                   },
                 }}
               >
                 <div
                   className={styles.lessonsBtn}
                   onClick={() => {
-                    if (allowedLessons.includes("level-1")) {
+                    if (
+                      allowedLessons === "level-1" ||
+                      allowedLessons === "playground"
+                    ) {
                       setTimeout(() => {
                         window.location.href = "/lesson/2";
                       }, "250");
@@ -221,7 +224,7 @@ const Landing = () => {
                     }
                   }}
                 >
-                  {allowedLessons.includes("level-1") && "Start"}
+                  {allowedLessons === "level-1" && "Start"}
                 </div>
               </Button>
             </Tooltip>
@@ -246,14 +249,13 @@ const Landing = () => {
         style={style}
         onClick={() => {
           if (name === "Playground") {
-            if (allowedLessons.includes("playground")) {
+            if (allowedLessons === "playground") {
               selectedMode(name);
               setTimeout(() => {
                 window.location.href = "/playground";
               }, "250");
             }
             else {
-              console.log('here');
               setPlaygroundOpen(true);
               return;
             }
