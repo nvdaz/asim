@@ -76,10 +76,14 @@ export default function Header({
                         style={{ cursor: "pointer", color: "white" }}
                       />
                     </ListItemIcon>
-                    <ListItemText primary={initData.topic ? "View Topic" : "View Scenario and Goal"} />
+                    <ListItemText
+                      primary={
+                        initData.topic ? "View Topic" : "View Scenario and Goal"
+                      }
+                    />
                   </ListItemButton>
                 </ListItem>
-                <Divider />
+                <Divider sx={{ borderColor: "#42454E" }} />
                 <ListItem key={"check"} disablePadding>
                   <ListItemButton
                     onClick={() =>
@@ -99,7 +103,9 @@ export default function Header({
                     />
                   </ListItemButton>
                 </ListItem>
-                {conversationList.length > 0 && <Divider />}
+                {conversationList.length > 0 && (
+                  <Divider sx={{ borderColor: "#42454E" }} />
+                )}
               </div>
 
               <div
@@ -138,10 +144,9 @@ export default function Header({
                                 sx={{ cursor: "pointer" }}
                                 fontSize="small"
                                 onClick={() => {
-                                  if (window.location.href.includes('lesson')) {
+                                  if (window.location.href.includes("lesson")) {
                                     window.location.href = `/lesson/${currentLevel + 1}/${c.id}`;
-                                  }
-                                  else {
+                                  } else {
                                     window.location.href = `/playground/${c.id}`;
                                   }
                                 }}
@@ -156,6 +161,8 @@ export default function Header({
                     ))}
                 </div>
 
+                <Divider sx={{ borderColor: "#42454E" }} />
+
                 <ListItem key={"getNew"} disablePadding>
                   <ListItemButton
                     sx={{
@@ -164,10 +171,9 @@ export default function Header({
                     onClick={async () => {
                       setGettingNewConversation(true);
                       await fetchNewConversation();
-                      if (window.location.href.includes('lesson')) {
+                      if (window.location.href.includes("lesson")) {
                         window.location.href = `/lesson/${currentLevel + 1}`;
-                      }
-                      else {
+                      } else {
                         window.location.href = `/playground`;
                       }
                     }}
