@@ -34,26 +34,7 @@ function SimpleDialog(props) {
         >
           <CloseIcon />
         </IconButton>
-        {initData.topic ? (
-          <div
-            style={{
-              padding: "10px 15px 10px 8px",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "1.4rem",
-                paddingBottom: "5px",
-                fontWeight: 550,
-              }}
-            >
-              Topic:
-            </div>
-            {initData.topic}
-          </div>
-        ) : (
-          scenarioAndGoal(initData)
-        )}
+        {scenarioAndGoal(initData)}
       </div>
     </Dialog>
   );

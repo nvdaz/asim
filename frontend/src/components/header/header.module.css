@@ -46,6 +46,14 @@
     line-height: 1.6rem;
 }
 
+.profileWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    gap: 10px;
+    width: 100%;
+}
+
 @media screen and (max-width: 500px) {
     .profile {
         font-size: 18px;

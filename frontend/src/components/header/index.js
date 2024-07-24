@@ -8,6 +8,7 @@ import PreviewIcon from "@mui/icons-material/Preview";
 import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import Tooltip from "@mui/material/Tooltip";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
@@ -36,6 +37,7 @@ export default function Header({
   const [openDialog, setOpenDialog] = useState(true);
   const [headerHeight, setHeaderHeight] = useState(null);
   const [showConversationList, setShowConversationList] = useState(false);
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   const header = useCallback((node) => {
     if (node !== null) {
@@ -50,8 +52,13 @@ export default function Header({
           onClick={() => setOpenDrawer(true)}
           style={{ cursor: "pointer" }}
         />
-
-        <Dialog open={openDialog} setOpen={setOpenDialog} initData={initData} />
+        {initData.scenario && (
+          <Dialog
+            open={openDialog}
+            setOpen={setOpenDialog}
+            initData={initData}
+          />
+        )}
 
         <Drawer
           anchor={"right"}
@@ -67,23 +74,24 @@ export default function Header({
             }}
             role="presentation"
           >
-            <List sx={{ height: "100%" }}>
+            <List sx={{ height: "100%", padding: 0 }}>
               <div ref={header}>
-                <ListItem key={"scenario"} disablePadding>
-                  <ListItemButton onClick={() => setOpenDialog(true)}>
-                    <ListItemIcon>
-                      <PreviewIcon
-                        style={{ cursor: "pointer", color: "white" }}
-                      />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={
-                        initData.topic ? "View Topic" : "View Scenario and Goal"
-                      }
-                    />
-                  </ListItemButton>
-                </ListItem>
-                <Divider sx={{ borderColor: "#42454E" }} />
+                {initData.scenario && (
+                  <div>
+                    <ListItem key={"scenario"} disablePadding>
+                      <ListItemButton onClick={() => setOpenDialog(true)}>
+                        <ListItemIcon>
+                          <PreviewIcon
+                            style={{ cursor: "pointer", color: "white" }}
+                          />
+                        </ListItemIcon>
+                        <ListItemText primary={"View Scenario and Goal"} />
+                      </ListItemButton>
+                    </ListItem>
+                    <Divider sx={{ borderColor: "#42454E" }} />
+                  </div>
+                )}
+
                 <ListItem key={"check"} disablePadding>
                   <ListItemButton
                     onClick={() =>
@@ -112,7 +120,7 @@ export default function Header({
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  height: `calc(100% - ${headerHeight}px - 16px)`,
+                  height: `calc(100% - ${headerHeight}px)`,
                 }}
               >
                 <div
@@ -203,9 +211,21 @@ export default function Header({
         <Link style={{ color: "white" }} to="/">
           <ArrowBackIosNewIcon style={{ cursor: "pointer" }} />
         </Link>
-        <div className={styles.profile}>
-          <Avatar alt="Profile picture" sx={{ width: 35, height: 35 }} src={pic} />
-          <div>{name}</div>
+        <div
+          className={styles.profileWrapper}
+          style={{
+            flexDirection: isMobile ? "column" : "row",
+          }}
+        >
+          <div className={styles.profile}>
+            <Avatar
+              alt="Profile picture"
+              sx={{ width: 35, height: 35 }}
+              src={pic}
+            />
+            <div>{name}</div>
+          </div>
+          {typeof initData.topic === "string" && `Topic: ${initData.topic}`}
         </div>
         {rightSideContent()}
       </div>
