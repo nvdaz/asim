@@ -14,7 +14,7 @@ from api.schemas.conversation import (
     ConversationDataUninit,
     ConversationDescriptor,
     ConversationOptions,
-    ConversationSetup,
+    ConversationScenario,
     ConversationStep,
     FeedbackElement,
     FeedbackLogEntry,
@@ -106,7 +106,7 @@ async def create_conversation(
             info = LevelConversationInfo(scenario=scenario, level=level)
 
         case PlaygroundConversationOptions():
-            setup = ConversationSetup(
+            scenario = ConversationScenario(
                 user_perspective=(
                     "You are interested in learning more about a topic of your choice. "
                     "Engage in a conversation with an expert to further your "
@@ -119,11 +119,13 @@ async def create_conversation(
                     "better by engaging in a conversation with them, detailing the key "
                     "points, and answering any questions they may have."
                 ),
+                user_goal=None,
+                is_user_initiated=True,
             )
 
             info = PlaygroundConversationInfo(
                 topic=None,
-                setup=setup,
+                scenario=scenario,
             )
 
     data = BaseConversationUninit(
@@ -178,7 +180,7 @@ async def progress_conversation(
 
             case PlaygroundConversationInfo():
                 agent = await generate_agent_persona(
-                    conversation.info.setup.agent_perspective,
+                    conversation.info.scenario.agent_perspective,
                     conversation.agent.name,
                 )
                 state = StateActiveData(id=NormalNpFlowStateRef)
@@ -225,9 +227,7 @@ async def progress_conversation(
         )
 
         conversation.elements.append(
-            MessageElement(
-                content=Message(sender=user.persona.name, message=response.response)
-            )
+            MessageElement(content=Message(user_sent=True, message=response.response))
         )
 
         if (
@@ -270,13 +270,6 @@ async def progress_conversation(
         if isinstance(elem, MessageElement)
     ]
 
-    if isinstance(conversation.info, LevelConversationInfo):
-        setup = conversation.info.scenario
-    elif isinstance(conversation.info, PlaygroundConversationInfo):
-        setup = conversation.info.setup
-    else:
-        raise RuntimeError(f"Invalid conversation info: {conversation.info}")
-
     if isinstance(conversation.state, StateActiveData):
         state_data = context.get_state(conversation.state.id)
 
@@ -290,10 +283,11 @@ async def progress_conversation(
             responses = await asyncio.gather(
                 *[
                     generate_message(
-                        user.persona,
-                        conversation.agent,
-                        messages,
-                        scenario=setup.user_perspective,
+                        user_sent=True,
+                        user=user.persona,
+                        agent=conversation.agent,
+                        messages=messages,
+                        scenario=conversation.info.scenario,
                         instructions=opt.prompt,
                     )
                     for opt in state_options
@@ -331,10 +325,11 @@ async def progress_conversation(
             opt = random.choice(state_data.options)
 
             response = await generate_message(
-                conversation.agent,
-                user.persona,
-                messages,
-                scenario=setup.agent_perspective,
+                user_sent=False,
+                user=user.persona,
+                agent=conversation.agent,
+                messages=messages,
+                scenario=conversation.info.scenario,
                 instructions=opt.prompt,
             )
 
@@ -346,9 +341,7 @@ async def progress_conversation(
             )
 
             conversation.elements.append(
-                MessageElement(
-                    content=Message(sender=conversation.agent.name, message=response)
-                )
+                MessageElement(content=Message(user_sent=False, message=response))
             )
 
             conversation.state = StateActiveData(id=opt.next)
@@ -362,9 +355,7 @@ async def progress_conversation(
             for check in conversation.state.failed_checks
         ]
 
-        response = await generate_feedback(
-            user.persona, conversation, state_data, setup.user_perspective
-        )
+        response = await generate_feedback(user.persona, conversation, state_data)
         conversation.last_feedback_received = len(conversation.elements)
 
         conversation.events.append(

@@ -5,18 +5,8 @@ class PersonaName(BaseModel):
     name: str
 
 
-class BasePersonaUninit(BaseModel):
-    age: str
-    occupation: str
-    interests: list[str]
-
-
-class PersonaUninit(BasePersonaUninit):
-    description: str
-
-
 class BasePersona(BaseModel):
-    name: str
+    name: str | None = None
     age: str
     occupation: str
     interests: list[str]

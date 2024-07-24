@@ -20,8 +20,16 @@ class Feedback(BaseModel):
 
 
 class Message(BaseModel):
-    sender: str
+    user_sent: bool
     message: str
+
+
+class UserMessage(Message):
+    user_sent: Literal[True] = True
+
+
+class AgentMessage(Message):
+    user_sent: Literal[False] = False
 
 
 class MessageElement(BaseModel):
@@ -49,13 +57,10 @@ class MessageOption(BaseModel):
     checks: list[FeedbackFlowStateRef]
 
 
-class ConversationSetup(BaseModel):
+class ConversationScenario(BaseModel):
     user_perspective: str
     agent_perspective: str
-
-
-class ConversationScenario(ConversationSetup):
-    user_goal: str
+    user_goal: str | None
     is_user_initiated: bool
 
 
@@ -137,7 +142,7 @@ ConversationStateData = Annotated[
 
 class PlaygroundConversationInfo(BaseModel):
     type: Literal["playground"] = "playground"
-    setup: ConversationSetup
+    scenario: ConversationScenario
     topic: str | None
 
     def stage_name(self) -> str:

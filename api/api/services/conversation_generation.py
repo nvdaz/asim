@@ -21,19 +21,19 @@ async def generate_conversation_scenario(
 ) -> ConversationScenario:
     system_prompt = (
         "As a scenario generator, your task is to generate a casual conversational "
-        f"scenario that could happen over a text messaging app based on {user.name}'s "
+        f"scenario that could happen over a text messaging app based on the user's "
         "profile. The scenario should be a specific situation that could happen "
-        f"between {user.name} and an unfamiliar person {agent_name} over text "
+        f"between the user and an unfamiliar person {agent_name} over text "
         "messaging. The scenario should be realistic and relatable. Respond with a "
         f"JSON object. The 'user_perspective' key should be a string describing "
-        f"{user.name}'s perspective in the scenario (use second person pronouns to "
-        f"refer to {user.name}), the 'agent_perspective' key should be a string "
+        f"the user's perspective in the scenario (use second person pronouns to "
+        f"refer to the user), the 'agent_perspective' key should be a string "
         f"describing {agent_name}'s perspective (use second person pronouns to refer "
         f"to {agent_name}), the 'user_goal' key should be a string describing "
-        f"{user.name}'s objective in the scenario (begin with an action verb, e.g., "
+        f"the user's objective in the scenario (begin with an action verb, e.g., "
         "'Convince', 'Explain', 'Find out' and use second person pronouns to refer to "
-        f"{user.name}), and the 'is_user_initiated' key should be a boolean that is "
-        f"true if the first message would be sent by {user.name} and false if it would "
+        f"the user), and the 'is_user_initiated' key should be a boolean that is "
+        f"true if the first message would be sent by the user and false if it would "
         f"be sent by {agent_name}. Do not generate scenarios that involve "
         "significant external elements, such as finding a bug in a software program "
         "(it is not possible to send the code). Also do not generate scenarios that "
@@ -50,8 +50,8 @@ async def generate_conversation_scenario(
                             "areas of the field to explore further."
                         ),
                         agent_perspective=(
-                            "You reach out to Professor Green, a theoretical physics "
-                            "professor, over text. Professor Green is excited to chat "
+                            "You reach out to the user, a theoretical physics "
+                            "professor, over text. The user is excited to chat "
                             "about theoretical physics and share advice on studying "
                             "the field and their experiences in it."
                         ),
@@ -70,8 +70,8 @@ async def generate_conversation_scenario(
                             "learn about his interests outside of work."
                         ),
                         agent_perspective=(
-                            "You've given your number to Christina, a new team member "
-                            "at the pharmaceutical company you work for. Christina "
+                            "You've given your number to the user, a new team member "
+                            "at the pharmaceutical company you work for. The user "
                             "wants to chat about work and get to know you better."
                         ),
                         user_goal=(
@@ -88,10 +88,10 @@ async def generate_conversation_scenario(
                             "projects to discuss further."
                         ),
                         agent_perspective=(
-                            "You met Joe in photography class and asked for his "
-                            "number. Joe is excited to talk about photography with "
-                            "you, discussing favorite subjects, tips, and projects. "
-                            "You want to potentially collaborate on a project."
+                            "You met the user in photography class and asked for his "
+                            "number. The user is excited to talk about photography "
+                            "with you, discussing favorite subjects, tips, and "
+                            "projects. You want to potentially collaborate."
                         ),
                         user_goal=(
                             "Engage with Avery in a discussion about photography, "
@@ -108,9 +108,9 @@ async def generate_conversation_scenario(
                             "newcomers."
                         ),
                         agent_perspective=(
-                            "David, your new neighbor, has reached out to you over "
-                            "text. David is eager to chat about local events, dining "
-                            "spots, and tips for newcomers."
+                            "The uesr, your new neighbor, has reached out to you over "
+                            "text. The user is eager to chat about local events, "
+                            "dining spots, and tips for newcomers."
                         ),
                         user_goal=(
                             "Learn about the community and build a friendly "
@@ -126,10 +126,10 @@ async def generate_conversation_scenario(
                             "research, favorite mathematicians, and future projects."
                         ),
                         agent_perspective=(
-                            "After meeting you at a math conference, Eden is eager to "
-                            "chat about topological algebra and category theory. Eden "
-                            "wants to learn about your research and interests in the "
-                            "field."
+                            "After meeting you at a math conference, the user is eager "
+                            "to chat about topological algebra and category theory. "
+                            "The user wants to learn about your research and interests "
+                            "in the field."
                         ),
                         user_goal=(
                             "Dive into a discussion about topological algebra and "
@@ -146,8 +146,8 @@ async def generate_conversation_scenario(
                             "for beginners."
                         ),
                         agent_perspective=(
-                            "You met Alex at a social event and exchanged numbers to "
-                            "chat about hiking. Alex wants to learn about your "
+                            "You met the user at a social event and exchanged numbers "
+                            "to chat about hiking. The user wants to learn about your "
                             "favorite trails, future hiking plans, and advice for "
                             "beginners."
                         ),
@@ -169,14 +169,12 @@ async def generate_conversation_scenario(
     previous_scenarios = [info.scenario.user_perspective for info in previous_infos]
 
     class GenerateConversationScenarioPrompt(BaseModel):
-        name: str
         age: str
         occupation: str
         interests: list[str]
         previous_user_scenarios: list[str]
 
     prompt_data = GenerateConversationScenarioPrompt(
-        name=user.name,
         age=user.age,
         occupation=user.occupation,
         interests=sampled_interests,

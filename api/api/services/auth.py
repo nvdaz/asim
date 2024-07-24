@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 from api.db import auth_tokens, magic_links
 from api.db import users as users
-from api.schemas.persona import Persona
 from api.schemas.user import (
     BaseUserInitData,
     User,
@@ -75,13 +74,7 @@ async def init_user(user_id: ObjectId, name: str) -> UserData:
     user_init = BaseUserInitData(
         qa_id=user_uninit.qa_id,
         name=name,
-        persona=Persona(
-            name=name,
-            age=user_uninit.persona.age,
-            occupation=user_uninit.persona.occupation,
-            interests=user_uninit.persona.interests,
-            description=user_uninit.persona.description.replace("{{NAME}}", name),
-        ),
+        persona=user_uninit.persona,
     )
 
     return await users.update(user_id, user_init)

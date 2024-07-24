@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from pydantic.fields import Field
 
 from .objectid import PyObjectId
-from .persona import Persona, PersonaUninit
+from .persona import Persona
 
 
 class BaseUserData(BaseModel):
@@ -14,12 +14,12 @@ class BaseUserData(BaseModel):
 
 class BaseUserUninitData(BaseUserData):
     init: Literal[False] = False
-    persona: PersonaUninit
+    persona: Persona
 
 
 class BaseUserInitData(BaseUserData):
     init: Literal[True] = True
-    name: str
+    name: str | None
     persona: Persona
     sent_message_counts: dict[str, int] = {}
     max_unlocked_stage: str = "level-0"

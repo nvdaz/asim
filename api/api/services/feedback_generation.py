@@ -26,7 +26,7 @@ def _extract_messages_for_feedback(conversation: ConversationDataInit):
     start = 0
     # take all messages since the user's last message
     for i in reversed(range(len(messages) - 2)):
-        if messages[i].sender != conversation.agent.name:
+        if not messages[i].user_sent:
             start = i + 1
             break
 
@@ -43,7 +43,6 @@ async def generate_feedback(
     user: Persona,
     conversation: ConversationDataInit,
     state: list[FeedbackFlowState],
-    user_perspective: str,
 ) -> Feedback:
     agent = conversation.agent
     messages = _extract_messages_for_feedback(conversation)
@@ -52,12 +51,8 @@ async def generate_feedback(
         (
             [
                 Message(
-                    sender="Ben",
+                    user_sent=True,
                     message="I feel like a million bucks today!",
-                ),
-                Message(
-                    sender="Chris",
-                    message=("Did you just win the lottery? That's great!"),
                 ),
             ],
             FeedbackWithPromptResponse(
@@ -79,11 +74,8 @@ async def generate_feedback(
         (
             [
                 Message(
-                    sender="Alex", message="Break a leg in your performance today!"
-                ),
-                Message(
-                    sender="Taylor",
-                    message="That's mean! Why would you want me to get hurt?",
+                    user_sent=True,
+                    message="Break a leg in your performance today!",
                 ),
             ],
             FeedbackWithPromptResponse(
@@ -102,44 +94,21 @@ async def generate_feedback(
                 ),
             ),
         ),
-        (
-            [
-                Message(sender="Morgan", message="I can't keep my head above water."),
-                Message(
-                    sender="Jamie",
-                    message="Are you drowning? Should I call someone?",
-                ),
-            ],
-            FeedbackWithPromptResponse(
-                title="Avoid Metaphors",
-                body=(
-                    "Phrases like 'I can't keep my head above water', which rely on "
-                    "metaphors, can sometimes be confusing for autistic individuals. "
-                    "Jamie interpreted your message literally and thought you were in "
-                    "danger. To avoid misunderstandings, use clear, direct language."
-                ),
-                instructions=(
-                    "Your next message should apologize for using a metaphor and "
-                    "clarify that you're not actually drowning but are just really  "
-                    "busy. Be direct and avoid figurative language."
-                ),
-            ),
-        ),
     ]
 
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between {user.name} and {agent.name}, who is an "
+        f"ongoing conversation between the user and {agent.name}, who is an "
         f"autistic individual. The conversation is happening over text. Address the "
         "following points in your feedback:\n"
         + "\n".join(f"{fb.prompt}" for fb in state)
-        + f"\nUse second person pronouns to address {user.name} directly. Respond with "
+        + "\nUse second person pronouns to address the uesr directly. Respond with "
         "a JSON object with the key 'title' containing the title (less than 50 "
         "characters) of your feedback, the key 'body' containing the feedback (less "
-        f"than 100 words), and the key 'instructions' explaining what {user.name} "
+        "than 100 words), and the key 'instructions' explaining what the user "
         "could do to clarify the situation. The 'instructions' should not be a "
-        f"message, but a string that outlines what {user.name} should do to clarify "
-        f"the misunderstanding.The instructions should tell {user.name} to apologize "
+        "message, but a string that outlines what the user should do to clarify "
+        "the misunderstanding.The instructions should tell the user to apologize "
         "for their mistake and clarify their message. Examples: \n"
         + "\n\n".join(
             [
@@ -165,10 +134,11 @@ async def generate_feedback(
     ]
 
     follow_up = await generate_message(
-        user,
-        agent,
-        all_messages,
-        scenario=user_perspective,
+        user_sent=True,
+        user=user,
+        agent=agent,
+        messages=all_messages,
+        scenario=conversation.info.scenario,
         instructions=(
             "You are writing a follow-up to your previous message. "
             f"{feedback_base.instructions}"
@@ -190,7 +160,6 @@ async def check_messages(
 ) -> list[FailedCheck]:
     if not checks:
         return []
-
 
     check_names: set[str] = set(check.id for check, _ in checks)
 
