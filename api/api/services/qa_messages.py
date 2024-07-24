@@ -7,6 +7,7 @@ import aiofiles
 import httpx
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 from pydantic.fields import Field
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 _CONVERSATIONS_URI = os.environ.get("CONVERSATIONS_URI")
 
@@ -22,7 +23,8 @@ class QaMessage(BaseModel):
 qa_message_list_adapter: TypeAdapter[list[QaMessage]] = TypeAdapter(list[QaMessage])
 
 
-async def _get_messages_from_server() -> list[QaMessage]:
+@retry(wait=wait_random_exponential(), stop=stop_after_attempt(3))
+async def _get_messages_from_remote() -> list[QaMessage]:
     async with httpx.AsyncClient() as client:
         response = await client.get(_CONVERSATIONS_URI, timeout=60)
         response.raise_for_status()
@@ -43,13 +45,13 @@ _MESSAGES_FILE_LOCK = asyncio.Lock()
 
 
 async def get_messages() -> list[QaMessage]:
-    cache_file = "cache/qa_messages.json"
+    cache_file = ".cached_qa_messages.json"
     if os.path.exists(cache_file):
         async with _MESSAGES_FILE_LOCK, aiofiles.open(cache_file, "r") as f:
             content = await f.read()
             return qa_message_list_adapter.validate_json(content)
     else:
-        messages = await _get_messages_from_server()
+        messages = await _get_messages_from_remote()
         async with _MESSAGES_FILE_LOCK, aiofiles.open(cache_file, "w") as f:
             await f.write(qa_message_list_adapter.dump_json(messages).decode())
         return messages

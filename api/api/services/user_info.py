@@ -39,7 +39,7 @@ async def _extract_demographics(messages: list[QaMessage]) -> Demographics:
 async def _cluster_messages(
     messages: list[str], epsilon: float, alpha: float, c: int
 ) -> list[list[int]]:
-    message_embeddings = await llm.embed(messages)
+    message_embeddings = await llm.embed_many(messages)
 
     clusters = []
     sum_embeddings = []
@@ -209,7 +209,10 @@ async def _generate_user_info_base(messages: list[QaMessage]):
 
 
 async def generate_user_info(qa_id: UUID):
-    messages = await get_messages_by_user(qa_id)
+    try:
+        messages = await get_messages_by_user(qa_id)
+    except Exception as e:
+        raise RuntimeError("Failed to fetch user messages from endpoint") from e
     user_base = await _generate_user_info_base(messages)
     user_persona = await _generate_user_persona(user_base)
 
