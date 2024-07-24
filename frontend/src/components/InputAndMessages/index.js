@@ -10,6 +10,7 @@ const InputAndMessages = ({
   inputPlaceholder,
   explanationText, 
   headerHeight,
+  setShowConfetti,
   initData,
 }) => {
   const convertToMessageHistory = () => {
@@ -106,7 +107,8 @@ const InputAndMessages = ({
           setChoice,
           selectedButton,
           setSelectedButton,
-          initData.id
+          initData.id,
+          setShowConfetti
         )}
         choice={choice}
         setChoice={setChoice}

@@ -8,7 +8,8 @@ function handleSend(
   setChoice,
   selectedButton,
   setSelectedButton,
-  conversationID
+  conversationID,
+  setShowConfetti
 ) {
   return function (
     setShowChoicesSection,
@@ -30,7 +31,8 @@ function handleSend(
       setOptions,
       conversationID,
       isCustomInput,
-      setDisableInput
+      setDisableInput,
+      setShowConfetti
     );
   };
 }
@@ -48,7 +50,8 @@ async function send(
   setOptions,
   conversationID,
   isCustomInput,
-  setDisableInput
+  setDisableInput,
+  setShowConfetti
 ) {
   const fetchData = async () => {
     const body = () => {
@@ -331,17 +334,27 @@ async function send(
     return feedback;
   };
 
-  setChoice('');
+  const max_level_unlocked_copy = localStorage.getItem("max_unlocked_stage");
+
+  setChoice("");
   setSelectedOption(null);
   setShowChoicesSection(false);
   setShowProgress(true);
   setChatHistory(oldHistory);
 
   const selectionResult = await fetchData();
-  localStorage.setItem(
-    "max_unlocked_stage",
-    selectionResult.data.max_unlocked_stage
-  );
+  const max_unlocked_stage = selectionResult.data.max_unlocked_stage;
+
+  if (max_level_unlocked_copy !== max_unlocked_stage) {
+    let unlockedLevel = 'Playground';
+    if (max_unlocked_stage === 'level-1') {
+      unlockedLevel = 'Level 2';
+    }
+    setShowConfetti([true, `Congratulations! You unlocked ${unlockedLevel}!`]);
+  }
+
+  localStorage.setItem("max_unlocked_stage", max_unlocked_stage);
+
   setShowProgress(false);
 
   if (!selectionResult.ok) {

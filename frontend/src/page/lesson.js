@@ -5,6 +5,8 @@ import Alert from "@mui/material/Alert";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
+import CelebrationIcon from "@mui/icons-material/Celebration";
+import Confetti from "react-confetti";
 
 import Header from "../components/header/index.js";
 import InputAndMessages from "../components/InputAndMessages/index.js";
@@ -19,6 +21,7 @@ const Lesson = () => {
   const [conversationList, setConversationList] = useState(null);
   const [nextConversation, setNextConversation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showConfetti, setShowConfetti] = useState([false, undefined]);
   const [alertMessage, setAlertMessage] = useState("");
   const currentLevel = window.location.href.split("/")[4] - 1;
 
@@ -151,10 +154,11 @@ const Lesson = () => {
     }
   }, []);
 
-  const alert = () => {
+  const alert = (severity, icon) => {
     return (
-      <Collapse in={alertMessage !== ""}>
+      <Collapse in={showConfetti[0] || alertMessage !== ""} sx={{ zIndex: 3 }}>
         <Alert
+          icon={icon}
           action={
             <IconButton
               aria-label="close"
@@ -162,16 +166,17 @@ const Lesson = () => {
               size="small"
               onClick={() => {
                 setAlertMessage(null);
+                setShowConfetti([false, undefined]);
               }}
             >
               <CloseIcon fontSize="inherit" />
             </IconButton>
           }
-          sx={{ position: "absolute", top: "20px" }}
+          sx={{ position: "absolute", top: "20px", right: "20px", zIndex: 3 }}
           variant="filled"
-          severity="warning"
+          severity={severity}
         >
-          {alertMessage}
+          {showConfetti[1] || alertMessage}
         </Alert>
       </Collapse>
     );
@@ -179,7 +184,7 @@ const Lesson = () => {
 
   return (
     <div className={styles.wrapper}>
-      {alertMessage && alert()}
+      {alertMessage && alert("warning")}
       {loading ? (
         <div className={styles.initLesson}>
           <CircularProgress />
@@ -187,6 +192,12 @@ const Lesson = () => {
         </div>
       ) : (
         <div style={{ width: "100%", height: "100%" }}>
+          {showConfetti[0] && (
+            <div>
+              <Confetti />
+              {alert("success", <CelebrationIcon />)}
+            </div>
+          )}
           <div ref={header}>
             <Header
               name={data["subject_name"]}
@@ -204,6 +215,7 @@ const Lesson = () => {
             explanationText={"Choose the best option:"}
             inputPlaceholder={"Choose the best option to send"}
             headerHeight={headerHeight}
+            setShowConfetti={setShowConfetti}
             initData={{
               id: data?.id,
               options: nextConversation.options,
