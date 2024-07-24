@@ -43,11 +43,6 @@ const Lesson = () => {
         return;
       }
 
-      setNextConversation({
-        options: userOptions.data.options,
-        ap_message: next.data.content,
-      });
-
       console.log("fetchNextSteps 1", {
         options: userOptions.data.options,
         ap_message: next.data.content,
@@ -67,13 +62,6 @@ const Lesson = () => {
       setAlertMessage("Error occurred fetching data");
       return;
     }
-    const initData = initConversation.data;
-    setData({
-      id: initData.id,
-      subject_name: initData.agent,
-      scenario: initData.info.scenario,
-      messages: initData.elements,
-    });
 
     await fetchNextSteps(
       initConversation.data.id,
