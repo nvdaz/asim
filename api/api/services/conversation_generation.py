@@ -5,7 +5,12 @@ from bson import ObjectId
 from pydantic import AfterValidator, BaseModel
 
 from api.db.conversations import get_previous_info
-from api.schemas.conversation import ConversationScenario
+from api.schemas.conversation import (
+    ConversationElement,
+    ConversationScenario,
+    MessageElement,
+    message_list_adapter,
+)
 from api.schemas.persona import BasePersona, Persona
 
 from . import llm
@@ -271,3 +276,35 @@ async def generate_agent_persona(scenario, agent_name):
     agent_persona = await _generate_agent_persona_from_base(agent_info)
 
     return agent_persona
+
+
+class GenerateConversationTopicResult(BaseModel):
+    topic: str | None
+
+
+async def determine_conversation_topic(
+    elements: list[ConversationElement],
+) -> str | None:
+    system_prompt = (
+        "Determine the topic of the conversation happening between the two individuals "
+        "from the provided messages. The conversation topic is a string that describes "
+        "the main subject of the conversation. The topic should be a specific subject "
+        "that the two individuals are discussing. Respond with a JSON object with the "
+        "key 'topic' and the topic as the value in title case. If the topic cannot be "
+        "determined, set 'topic' to null."
+    )
+
+    messages = [
+        element.content for element in elements if isinstance(element, MessageElement)
+    ]
+
+    prompt_data = str(message_list_adapter.dump_json(messages))
+
+    response = await llm.generate(
+        schema=GenerateConversationTopicResult,
+        model=llm.Model.GPT_4,
+        system=system_prompt,
+        prompt=prompt_data,
+    )
+
+    return response.topic

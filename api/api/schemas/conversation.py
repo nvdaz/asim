@@ -138,7 +138,7 @@ ConversationStateData = Annotated[
 class PlaygroundConversationInfo(BaseModel):
     type: Literal["playground"] = "playground"
     setup: ConversationSetup
-    topic: str
+    topic: str | None
 
     def stage_name(self) -> str:
         return "playground"

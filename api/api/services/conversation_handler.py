@@ -41,6 +41,7 @@ from api.schemas.persona import PersonaName
 from api.schemas.user import UserInitData
 
 from .conversation_generation import (
+    determine_conversation_topic,
     generate_agent_persona,
     generate_conversation_scenario,
 )
@@ -105,8 +106,6 @@ async def create_conversation(
             info = LevelConversationInfo(scenario=scenario, level=level)
 
         case PlaygroundConversationOptions():
-            # topic = await generate_conversation_topic(user.id, user.persona.interests)
-
             setup = ConversationSetup(
                 user_perspective=(
                     "You are interested in learning more about a topic of your choice. "
@@ -123,7 +122,7 @@ async def create_conversation(
             )
 
             info = PlaygroundConversationInfo(
-                topic="none",
+                topic=None,
                 setup=setup,
             )
 
@@ -230,6 +229,13 @@ async def progress_conversation(
                 content=Message(sender=user.persona.name, message=response.response)
             )
         )
+
+        if (
+            isinstance(conversation.info, PlaygroundConversationInfo)
+            and conversation.info.topic is None
+        ):
+            topic = await determine_conversation_topic(conversation.elements)
+            conversation.info.topic = topic
 
         sent_message_counts = await users.increment_message_count(
             user.id, conversation.info.stage_name()

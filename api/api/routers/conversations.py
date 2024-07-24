@@ -40,7 +40,7 @@ async def create_conversation(
     return conversation
 
 
-async def get_conversation_options(
+async def _get_conversation_options(
     type: Literal["level", "playground"], level: int | None = None
 ) -> ConversationOptions:
     if type == "level" and level is not None:
@@ -55,7 +55,7 @@ async def get_conversation_options(
 async def list_conversations(
     current_user: CurrentUser,
     options: Annotated[
-        conversation_handler.ConversationOptions, Depends(get_conversation_options)
+        conversation_handler.ConversationOptions, Depends(_get_conversation_options)
     ],
 ) -> list[conversation_handler.ConversationDescriptor]:
     return await conversation_handler.list_conversations(current_user.id, options)

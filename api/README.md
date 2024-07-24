@@ -12,7 +12,7 @@ To run:
 
 The LLM endpoint should be exported as an environment variable called `LLM_URI`; conversations endpoint to `CONVERSATIONS_URI`; and an internal API key (some random string) to `INTERNAL_API_KEY`.
 
-The internal API key is used to authorize requests *only* to the `/internal-create-magic-link` endpoint.
+The internal API key is used to authorize requests _only_ to the `/internal-create-magic-link` endpoint.
 
 A MongoDB URI is also read from `MONGO_URI` else `mongodb://localhost:27017` is used.
 
