@@ -180,7 +180,7 @@ const Landing = () => {
               disableFocusListener
               disableHoverListener
               disableTouchListener
-              title="Complete all levels above to unlock!"
+              title="Send 8 messages in Level 1 to unlock!"
               arrow
             >
               <Button
