@@ -6,14 +6,9 @@ from pydantic import BaseModel
 
 from api.db import auth_tokens, magic_links
 from api.db import users as users
-from api.schemas.user import (
-    BaseUserInitData,
-    User,
-    UserData,
-    UserInitData,
-    user_from_data,
-)
+from api.schemas.user import BaseUserData, User, UserData, user_from_data
 
+from .conversation_handler import setup_initial_state
 from .user_info import generate_user_info
 
 
@@ -54,8 +49,10 @@ async def create_magic_link(qa_id: UUID) -> str:
     if not user:
         persona = await generate_user_info(qa_id)
         user = await users.create(
-            users.BaseUserUninitData(qa_id=qa_id, persona=persona)
+            BaseUserData(qa_id=qa_id, persona=persona)
         )
+
+        await setup_initial_state(user)
 
     link = magic_links.MagicLink(secret=secret, user_id=user.id)
     await magic_links.create(link)
@@ -67,14 +64,11 @@ class AlreadyInitialized(Exception):
 
 
 async def init_user(user_id: ObjectId, name: str) -> UserData:
-    user_uninit = await users.get(user_id)
-    if isinstance(user_uninit, UserInitData):
+    user = await users.get(user_id)
+
+    if user.name is not None:
         raise AlreadyInitialized()
 
-    user_init = BaseUserInitData(
-        qa_id=user_uninit.qa_id,
-        name=name,
-        persona=user_uninit.persona,
-    )
+    user.name = name
 
-    return await users.update(user_id, user_init)
+    return await users.update(user_id, user)

@@ -38,7 +38,7 @@ from api.schemas.conversation import (
     StateFeedbackData,
 )
 from api.schemas.persona import PersonaName
-from api.schemas.user import UserInitData
+from api.schemas.user import UserData
 
 from .conversation_generation import (
     determine_conversation_topic,
@@ -89,13 +89,20 @@ class StageNotUnlocked(Exception):
 
 
 async def create_conversation(
-    user: UserInitData,
+    user: UserData,
+    options: ConversationOptions,
+) -> Conversation:
+    if not _is_unlocked_stage(options.stage_name(), user.max_unlocked_stage):
+        raise StageNotUnlocked()
+
+    return await create_conversation_unchecked(user, options)
+
+
+async def create_conversation_unchecked(
+    user: UserData,
     options: ConversationOptions,
 ) -> Conversation:
     agent_name = random.choice(PersonProvider.first_names)
-
-    if not _is_unlocked_stage(options.stage_name(), user.max_unlocked_stage):
-        raise StageNotUnlocked()
 
     match options:
         case LevelConversationOptions(level=level):
@@ -155,7 +162,7 @@ class InvalidSelection(Exception):
 
 async def progress_conversation(
     conversation_id: ObjectId,
-    user: UserInitData,
+    user: UserData,
     option: SelectOption,
 ) -> ConversationStep:
     conversation = await conversations.get(conversation_id, user.id)
@@ -394,3 +401,27 @@ async def progress_conversation(
     await conversations.update(conversation)
 
     return result
+
+
+async def setup_initial_level_state(user: UserData, options: ConversationOptions):
+    conversation = await create_conversation_unchecked(user, options)
+
+    step = None
+
+    while not isinstance(step, NpMessageStep):
+        step = await progress_conversation(
+            conversation.id,
+            user,
+            SelectOptionNone(),
+        )
+
+
+async def setup_initial_state(user: UserData):
+    options = [
+        LevelConversationOptions(level=0),
+        LevelConversationOptions(level=1),
+        PlaygroundConversationOptions(),
+    ]
+    await asyncio.gather(
+        *[setup_initial_level_state(user, option) for option in options]
+    )
