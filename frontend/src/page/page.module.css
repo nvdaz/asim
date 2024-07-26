@@ -121,6 +121,22 @@
     margin-bottom: 10%;
 }
 
+.unavailableWrapper {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+    padding-bottom: 10rem;
+}
+
+.unavailableTitle {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+
+}
+
 @media screen and (max-width: 800px) {
     .setUpWrapper {
         display: flex;

@@ -18,7 +18,7 @@ const InputAndMessages = ({
       if (m.type === "message") {
         return {
           type: "text",
-          isSentByUser: !(subjectName === m.content.sender),
+          isSentByUser: m.content.user_sent,
           content: m.content.message,
         };
       }

@@ -13,7 +13,7 @@ import ClickAwayListener from "@mui/material/ClickAwayListener";
 import TextareaAutosize from "../components/InputSection/textareaAutosize";
 import { Post } from "../utils/request";
 
-import styles from "./landing.module.css";
+import styles from "./page.module.css";
 
 const Landing = () => {
   const { uniqueString } = useParams();
@@ -281,7 +281,7 @@ const Landing = () => {
           disableFocusListener
           disableHoverListener
           disableTouchListener
-          title="Complete lessons to unlock!"
+          title="Send 8 messages in each lesson to unlock!"
           arrow
         >
           {btn("Playground")}

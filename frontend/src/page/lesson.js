@@ -6,13 +6,14 @@ import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import CelebrationIcon from "@mui/icons-material/Celebration";
+import LockIcon from "@mui/icons-material/Lock";
 import Confetti from "react-confetti";
 
 import Header from "../components/header/index.js";
 import InputAndMessages from "../components/InputAndMessages/index.js";
 import { Post, Get } from "../utils/request";
 
-import styles from "./landing.module.css";
+import styles from "./page.module.css";
 
 const Lesson = () => {
   const { conversationIDFromParam } = useParams();
@@ -24,6 +25,15 @@ const Lesson = () => {
   const [showConfetti, setShowConfetti] = useState([false, undefined]);
   const [alertMessage, setAlertMessage] = useState("");
   const currentLevel = window.location.href.split("/")[4] - 1;
+  const max_unlocked_stage = localStorage.getItem("max_unlocked_stage");
+
+  useEffect(() => {
+    if (max_unlocked_stage !== `level-${currentLevel}`) {
+      setTimeout(() => {
+        window.location.href = `/`;
+      }, 2000);
+    }
+  }, [max_unlocked_stage, currentLevel]);
 
   const fetchNextSteps = async (conversationID, condition) => {
     const next = await Post(`conversations/${conversationID}/next`, {
@@ -170,49 +180,76 @@ const Lesson = () => {
     );
   };
 
-  return (
-    <div className={styles.wrapper}>
-      {alertMessage && alert("warning")}
-      {loading ? (
-        <div className={styles.initLesson}>
-          <CircularProgress />
-          <div style={{ color: "white" }}>Initializing Lesson</div>
-        </div>
-      ) : (
-        <div style={{ width: "100%", height: "100%" }}>
-          {showConfetti[0] && (
-            <div>
-              <Confetti />
-              {alert("success", <CelebrationIcon />)}
+  const lesson = () => {
+    return (
+      <div className={styles.wrapper}>
+        {alertMessage && alert("warning")}
+        {loading ? (
+          <div className={styles.initLesson}>
+            <CircularProgress />
+            <div style={{ color: "white" }}>Initializing Lesson</div>
+          </div>
+        ) : (
+          <div style={{ width: "100%", height: "100%" }}>
+            {showConfetti[0] && (
+              <div>
+                <Confetti />
+                {alert("success", <CelebrationIcon />)}
+              </div>
+            )}
+            <div ref={header}>
+              <Header
+                name={data?.["subject_name"]}
+                initData={{
+                  scenario: data?.["scenario"]?.["user_perspective"],
+                  goal: data?.["scenario"]?.["user_goal"],
+                }}
+                fetchNewConversation={fetchNewConversation}
+                conversationList={conversationList}
+                currentLevel={currentLevel}
+              />
             </div>
-          )}
-          <div ref={header}>
-            <Header
-              name={data["subject_name"]}
+            <InputAndMessages
+              subjectName={data?.["subject_name"]}
+              explanationText={"Choose the best option:"}
+              inputPlaceholder={"Choose the best option to send"}
+              headerHeight={headerHeight}
+              setShowConfetti={setShowConfetti}
               initData={{
-                scenario: data?.["scenario"]?.["user_perspective"],
-                goal: data?.["scenario"]?.["user_goal"],
+                id: data?.id,
+                options: nextConversation?.options,
+                is_user_initiated: data?.scenario?.is_user_initiated,
+                ap_message: nextConversation?.ap_message,
+                messages: data?.messages || [],
               }}
-              fetchNewConversation={fetchNewConversation}
-              conversationList={conversationList}
-              currentLevel={currentLevel}
             />
           </div>
-          <InputAndMessages
-            subjectName={data["subject_name"]}
-            explanationText={"Choose the best option:"}
-            inputPlaceholder={"Choose the best option to send"}
-            headerHeight={headerHeight}
-            setShowConfetti={setShowConfetti}
-            initData={{
-              id: data?.id,
-              options: nextConversation.options,
-              is_user_initiated: data?.scenario?.is_user_initiated,
-              ap_message: nextConversation?.ap_message,
-              messages: data?.messages || [],
-            }}
-          />
+        )}
+      </div>
+    );
+
+  }
+
+  return (
+    <div className={styles.wrapper}>
+      {max_unlocked_stage !== `level-${currentLevel}` ? (
+        <div className={styles.unavailableWrapper}>
+          <div className={styles.unavailableTitle}>Lesson 2 Locked<LockIcon/></div>
+          <div>Send 8 messages in Lesson 1 to unlock</div>
+          <div>Going back to main page...</div>
+          <div>
+            Click{" "}
+            <a
+              href="/"
+              style={{ color: "turquoise", textDecoration: "underline" }}
+            >
+              here
+            </a>{" "}
+            if nothing is happening
+          </div>
         </div>
+      ) : (
+        lesson()
       )}
     </div>
   );
