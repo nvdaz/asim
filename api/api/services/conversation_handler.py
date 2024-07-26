@@ -43,6 +43,7 @@ from api.schemas.user import UserData
 from .conversation_generation import (
     determine_conversation_topic,
     generate_agent_persona,
+    generate_agent_persona_from_topic,
     generate_conversation_scenario,
 )
 from .feedback_generation import check_messages, generate_feedback
@@ -76,7 +77,6 @@ def _should_unlock_next_stage(
 
 
 def _is_unlocked_stage(stage: str, max_unlocked_stage: str) -> bool:
-    print(stage, max_unlocked_stage)
     return {
         "playground": True,
         "level-1": stage in ["level-0", "level-1"],
@@ -115,16 +115,18 @@ async def create_conversation_unchecked(
         case PlaygroundConversationOptions():
             scenario = ConversationScenario(
                 user_perspective=(
-                    "You are interested in learning more about a topic of your choice. "
-                    "Engage in a conversation with an expert to further your "
-                    "understanding. Ask questions and engage in a conversation to "
-                    "learn more."
+                    "You have the opportunity to learn more about a topic that you "
+                    "are interested in. You are chatting with an expert who will help "
+                    "you understand the topic of your choice better. You are just "
+                    "meeting the expert for the first time. Ask questions about the "
+                    "topic and engage in a conversation with the expert."
                 ),
                 agent_perspective=(
                     "You are an expert and are highly knowledgeable in various fields. "
-                    "Your goal is to help the user understand their chosen topic "
-                    "better by engaging in a conversation with them, detailing the key "
-                    "points, and answering any questions they may have."
+                    "Your goal is to help the user select a topic of interest "
+                    "to chat about. You will help the user understand their "
+                    "chosen topic better by engaging in a conversation with them, "
+                    "detailing the key points, and answering any questions they have."
                 ),
                 user_goal=None,
                 is_user_initiated=True,
@@ -244,6 +246,34 @@ async def progress_conversation(
             topic = await determine_conversation_topic(conversation.elements)
             conversation.info.topic = topic
 
+            if topic is not None:
+                conversation.agent = await generate_agent_persona_from_topic(
+                    conversation.agent.name, topic
+                )
+
+                conversation.info.scenario = ConversationScenario(
+                    user_perspective=(
+                        f"You have the opportunity to explore {topic} by engaging in "
+                        "a conversation with an expert who you are meeting for the "
+                        "first time and are eager to share your thoughts and feelings. "
+                        "Ask questions about the topic, share your own experiences, "
+                        "and ask about the expert's background. Open up about your "
+                        "interests and engage in a meaningful conversation that "
+                        "connects with the expert on a personal level."
+                    ),
+                    agent_perspective=(
+                        "Connect with the user on a personal level by considering "
+                        "their perspective. Ask open-ended questions to learn more "
+                        "about them and actively listen to their responses. Share "
+                        "relevant personal experiences and insights as an expert in "
+                        f"{topic} to foster a meaningful and engaging conversation. "
+                        "Your goal is to create an emotionally captivating dialogue "
+                        "that resonates with the user."
+                    ),
+                    user_goal=None,
+                    is_user_initiated=True,
+                )
+
         sent_message_counts = await users.increment_message_count(
             user.id, conversation.info.stage_name()
         )
@@ -258,7 +288,7 @@ async def progress_conversation(
         checks = [(check, context.get_state(check)) for check in response.checks]
 
         failed_checks = await check_messages(
-            user.persona.name, conversation.agent.name, conversation, checks
+            user.persona, conversation.agent, conversation, checks
         )
 
         if failed_checks:
@@ -287,18 +317,28 @@ async def progress_conversation(
                 else state_data.options
             )
 
-            responses = await asyncio.gather(
-                *[
-                    generate_message(
-                        user_sent=True,
-                        user=user.persona,
-                        agent=conversation.agent,
-                        messages=messages,
-                        scenario=conversation.info.scenario,
-                        instructions=opt.prompt,
+            def generate_message_for_option(opt: SelectOption):
+                instructions = opt.prompt
+                if (
+                    isinstance(conversation.info, PlaygroundConversationInfo)
+                    and conversation.info.topic is None
+                ):
+                    selected_topic = random.choice(user.persona.interests)
+                    instructions = (
+                        f"Your chosen topic is {selected_topic}. {instructions}"
                     )
-                    for opt in state_options
-                ]
+
+                return generate_message(
+                    user_sent=True,
+                    user=user.persona,
+                    agent=conversation.agent,
+                    messages=messages,
+                    scenario=conversation.info.scenario,
+                    instructions=instructions,
+                )
+
+            responses = await asyncio.gather(
+                *[generate_message_for_option(opt) for opt in state_options]
             )
 
             options = [

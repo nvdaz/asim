@@ -153,8 +153,8 @@ async def generate_feedback(
 
 
 async def check_messages(
-    user: str,
-    agent: str,
+    user: Persona,
+    agent: Persona,
     conversation: ConversationDataInit,
     checks: list[tuple[FeedbackFlowStateRef, FeedbackFlowState]],
 ) -> list[FailedCheck]:
@@ -185,19 +185,20 @@ async def check_messages(
 
     checks = [Check(id=ref.id, check=check.check) for ref, check in checks]
 
+    user_name = f"{user.name} (the user)" if user.name else "the user"
+
     system = (
         "You are a social skills coach. Your task is to analyze the following "
-        f"conversation between the user, {user}, and {agent}, who is an autistic "
-        f"individual, and determine whether the latest message sent by {user} passes "
-        "the provided checks. Here is list of checks that you should perform:\n"
+        f"conversation between {user_name}, and {agent.name}, who is an autistic "
+        f"individual, and determine whether the latest message sent by {user_name} "
+        "passes the provided checks. Here is list of checks that you should perform:\n"
         f"{check_list_adapter.dump_json(checks).decode()}"
         + "\nA check should fail if the user's message does not meets the criteria "
         "described in the check. Provide a JSON object with the key 'failed_checks' "
         "with a list of objects with the keys 'id' containing the semantic ID of the "
-        "check that failed, 'offender' containing the name of the person who sent the "
-        f"offending message ({user}), and 'reason' containing the reason why the "
-        "check failed. If no checks fail, provide an empty list. DO NOT perform any "
-        "checks that are not listed above."
+        f"check that failed, 'reason' containing the reason why the check failed, and "
+        f"'offender' containing '{user_name}. If no checks fail, provide an empty "
+        "list. DO NOT perform any checks that are not listed above."
     )
 
     messages = _extract_messages_for_feedback(conversation)
@@ -216,7 +217,7 @@ async def check_messages(
             reason=check.reason,
         )
         for check in result.failed_checks
-        if check.offender == user
+        if check.offender == user_name
     ]
 
     return failed_checks

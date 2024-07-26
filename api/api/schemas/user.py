@@ -9,6 +9,7 @@ from .persona import Persona
 
 
 class BaseUserData(BaseModel):
+    init: bool = False
     qa_id: UUID
     name: str | None = None
     persona: Persona

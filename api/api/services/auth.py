@@ -48,9 +48,7 @@ async def create_magic_link(qa_id: UUID) -> str:
 
     if not user:
         persona = await generate_user_info(qa_id)
-        user = await users.create(
-            BaseUserData(qa_id=qa_id, persona=persona)
-        )
+        user = await users.create(BaseUserData(qa_id=qa_id, persona=persona))
 
         await setup_initial_state(user)
 
@@ -66,7 +64,7 @@ class AlreadyInitialized(Exception):
 async def init_user(user_id: ObjectId, name: str) -> UserData:
     user = await users.get(user_id)
 
-    if user.name is not None:
+    if user.init:
         raise AlreadyInitialized()
 
     user.name = name

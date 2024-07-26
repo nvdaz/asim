@@ -5,7 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from .routers import auth, conversations
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 origins = ["http://localhost:3000", "https://autsim.pages.dev"]

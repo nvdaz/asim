@@ -67,6 +67,13 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
                     ),
                     next=NpFlowStateRef(id="confrontational"),
                 ),
+                FlowOption(
+                    prompt=(
+                        "Your next message is somewhat blunt. Your message is direct "
+                        "and straightforward, which may be perceived as blunt."
+                    ),
+                    next=NpFlowStateRef(id="confrontational"),
+                ),
             ],
         ),
     ),

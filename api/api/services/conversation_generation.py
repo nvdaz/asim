@@ -306,3 +306,22 @@ async def determine_conversation_topic(
     )
 
     return response.topic
+
+
+async def generate_agent_persona_from_topic(name: str, topic: str) -> Persona:
+    system_prompt = (
+        f"Generate a persona for {name}, a notable figure in the field of {topic}. "
+        "The persona should be engaging and interesting to someone who is interested "
+        f"in {topic}. Respond with a JSON object containing the keys 'name' (string), "
+        "'age' (age range), 'occupation', 'interests' (list of strings), and "
+        f"'description' (string). The description should be a short blurb about {name} "
+        f"and their work in the field of {topic}. Begin the description with 'You are "
+        f"{name}...'."
+    )
+
+    return await llm.generate(
+        schema=Persona,
+        model=llm.Model.GPT_4,
+        system=system_prompt,
+        prompt=topic,
+    )
