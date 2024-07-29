@@ -2,6 +2,7 @@ from uuid import UUID
 
 from bson import ObjectId
 
+from api.schemas.conversation import ConversationStage
 from api.schemas.user import BaseUserData, UserData
 
 from .client import db
@@ -30,13 +31,15 @@ async def update(user_id: ObjectId, user: UserData):
         {"_id": user_id}, {"$set": user.model_dump()}, return_document=True
     )
 
-    return UserData(**raw_user) if raw_user else None
+    return UserData(**raw_user)
 
 
-async def increment_message_count(user_id: ObjectId, stage: str) -> dict[str, int]:
+async def increment_message_count(
+    user_id: ObjectId, stage: ConversationStage
+) -> dict[str, int]:
     res = await users.find_one_and_update(
         {"_id": user_id},
-        {"$inc": {f"sent_message_counts.{stage}": 1}},
+        {"$inc": {f"sent_message_counts.{str(stage)}": 1}},
         {"sent_message_counts": 1},
         return_document=True,
     )
@@ -44,5 +47,7 @@ async def increment_message_count(user_id: ObjectId, stage: str) -> dict[str, in
     return res["sent_message_counts"]
 
 
-async def unlock_stage(user_id: ObjectId, stage: str):
-    await users.update_one({"_id": user_id}, {"$set": {"max_unlocked_stage": stage}})
+async def unlock_stage(user_id: ObjectId, stage: ConversationStage):
+    await users.update_one(
+        {"_id": user_id}, {"$set": {"max_unlocked_stage": stage.model_dump()}}
+    )

@@ -90,7 +90,6 @@ BLUNT_MAPPINGS: list[FlowStateMapping] = [
                 "instead. Provide feedback on how the user could have been more "
                 "patient and understanding."
             ),
-            next=ApFlowStateRef(id="normal"),
         ),
     ),
 ]

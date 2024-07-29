@@ -3,21 +3,21 @@ from typing import Annotated
 from pydantic import AfterValidator, BaseModel, StringConstraints, TypeAdapter
 
 from api.schemas.conversation import (
-    ConversationDataInit,
+    ConversationData,
     FailedCheck,
     Feedback,
-    Message,
     MessageElement,
+    UserMessage,
     message_list_adapter,
 )
-from api.schemas.persona import Persona
+from api.schemas.persona import AgentPersona, UserPersona
 
 from . import llm
 from .flow_state.base import FeedbackFlowState, FeedbackFlowStateRef
 from .message_generation import generate_message
 
 
-def _extract_messages_for_feedback(conversation: ConversationDataInit):
+def _extract_messages_for_feedback(conversation: ConversationData):
     messages = [
         elem.content
         for elem in conversation.elements
@@ -40,8 +40,8 @@ class FeedbackWithPromptResponse(BaseModel):
 
 
 async def generate_feedback(
-    user: Persona,
-    conversation: ConversationDataInit,
+    user: UserPersona,
+    conversation: ConversationData,
     state: list[FeedbackFlowState],
 ) -> Feedback:
     agent = conversation.agent
@@ -50,8 +50,7 @@ async def generate_feedback(
     examples = [
         (
             [
-                Message(
-                    user_sent=True,
+                UserMessage(
                     message="I feel like a million bucks today!",
                 ),
             ],
@@ -73,8 +72,7 @@ async def generate_feedback(
         ),
         (
             [
-                Message(
-                    user_sent=True,
+                UserMessage(
                     message="Break a leg in your performance today!",
                 ),
             ],
@@ -153,9 +151,9 @@ async def generate_feedback(
 
 
 async def check_messages(
-    user: Persona,
-    agent: Persona,
-    conversation: ConversationDataInit,
+    user: UserPersona,
+    agent: AgentPersona,
+    conversation: ConversationData,
     checks: list[tuple[FeedbackFlowStateRef, FeedbackFlowState]],
 ) -> list[FailedCheck]:
     if not checks:
@@ -183,7 +181,7 @@ async def check_messages(
 
     check_list_adapter = TypeAdapter(list[Check])
 
-    checks = [Check(id=ref.id, check=check.check) for ref, check in checks]
+    checks_to_do = [Check(id=ref.id, check=check.check) for ref, check in checks]
 
     user_name = f"{user.name} (the user)" if user.name else "the user"
 
@@ -192,7 +190,7 @@ async def check_messages(
         f"conversation between {user_name}, and {agent.name}, who is an autistic "
         f"individual, and determine whether the latest message sent by {user_name} "
         "passes the provided checks. Here is list of checks that you should perform:\n"
-        f"{check_list_adapter.dump_json(checks).decode()}"
+        f"{check_list_adapter.dump_json(checks_to_do).decode()}"
         + "\nA check should fail if the user's message does not meets the criteria "
         "described in the check. Provide a JSON object with the key 'failed_checks' "
         "with a list of objects with the keys 'id' containing the semantic ID of the "

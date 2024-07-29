@@ -4,7 +4,7 @@ from uuid import UUID
 import numpy as np
 from pydantic import BaseModel
 
-from api.schemas.persona import BasePersona, Persona
+from api.schemas.persona import UserBasePersona, UserPersona
 
 from . import llm
 from .qa_messages import QaMessage, get_messages_by_user
@@ -169,7 +169,7 @@ async def _extract_interests(messages: list[QaMessage]) -> list[str]:
     return interests
 
 
-async def _generate_user_persona(user_base: BasePersona):
+async def _generate_user_persona(user_base: UserBasePersona):
     class PersonaResponse(BaseModel):
         persona: str
 
@@ -190,7 +190,7 @@ async def _generate_user_persona(user_base: BasePersona):
         prompt=prompt_data,
     )
 
-    return Persona(**user_base.model_dump(), description=response.persona)
+    return UserPersona(**user_base.model_dump(), description=response.persona)
 
 
 async def _generate_user_info_base(messages: list[QaMessage]):
@@ -198,7 +198,7 @@ async def _generate_user_info_base(messages: list[QaMessage]):
         _extract_interests(messages), _extract_demographics(messages)
     )
 
-    user_base = BasePersona(
+    user_base = UserBasePersona(
         age=demographics.age,
         occupation=demographics.occupation,
         interests=interests,

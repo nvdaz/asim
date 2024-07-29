@@ -47,5 +47,5 @@ class _ObjectIdField:
 PyObjectId = Annotated[
     ObjectId,
     _ObjectIdField,
-    Field(format="objectid"),
+    Field(json_schema_extra={"format": "objectid"}),
 ]

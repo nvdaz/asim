@@ -5,12 +5,27 @@ class PersonaName(BaseModel):
     name: str
 
 
-class BasePersona(BaseModel):
+class UserBasePersona(BaseModel):
     name: str | None = None
     age: str
     occupation: str
     interests: list[str]
 
 
-class Persona(BasePersona):
+class UserPersona(UserBasePersona):
     description: str
+
+
+class AgentBasePersona(BaseModel):
+    name: str
+    age: str
+    occupation: str
+    interests: list[str]
+
+
+class AgentPersona(AgentBasePersona):
+    description: str
+
+
+BasePersona = UserBasePersona | AgentBasePersona
+Persona = UserPersona | AgentPersona

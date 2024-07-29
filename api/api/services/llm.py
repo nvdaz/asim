@@ -4,14 +4,16 @@ import logging
 import os
 import re
 from enum import Enum
-from typing import Type, TypeVar
+from typing import TypeVar
 
 import numpy as np
 import websockets as ws
 from pydantic import BaseModel, TypeAdapter
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-_LLM_URI = os.getenv("LLM_URI")
+_LLM_URI: str = os.getenv("LLM_URI", "")
+
+assert _LLM_URI != "", "LLM_URI environment variable must be set"
 
 
 class ModelVendor(str, Enum):
@@ -79,14 +81,15 @@ async def _generate_unchecked(
 
 SchemaType = TypeVar("SchemaType", bound=BaseModel)
 
+
 @retry(wait=wait_random_exponential(), stop=stop_after_attempt(3))
 async def generate(
-    schema: Type[SchemaType] | TypeAdapter[SchemaType],
+    schema: type[SchemaType] | TypeAdapter[SchemaType],
     model: Model,
     prompt: str,
     system: str,
-    temperature: float = None,
-) -> Type[SchemaType]:
+    temperature: float | None = None,
+) -> SchemaType:
     response = None
     try:
         response = await _generate_unchecked(model, prompt, system, temperature)

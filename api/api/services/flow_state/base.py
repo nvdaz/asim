@@ -10,27 +10,28 @@ ApFlowStateId = TypeVar("ApFlowStateId", bound=str)
 FeedbackFlowStateId = TypeVar("FeedbackFlowStateId", bound=str)
 
 
-class _BaseFlowStateRef(BaseModel):
-    type: str
-    id: str
+class NpFlowStateRef(BaseModel, Generic[NpFlowStateId]):
+    type: Literal["np"] = "np"
+    id: NpFlowStateId
 
     def __hash__(self) -> int:
         return hash((self.type, self.id))
 
 
-class NpFlowStateRef(_BaseFlowStateRef, Generic[NpFlowStateId]):
-    type: Literal["np"] = "np"
-    id: NpFlowStateId
-
-
-class ApFlowStateRef(_BaseFlowStateRef, Generic[ApFlowStateId]):
+class ApFlowStateRef(BaseModel, Generic[ApFlowStateId]):
     type: Literal["ap"] = "ap"
     id: ApFlowStateId
 
+    def __hash__(self) -> int:
+        return hash((self.type, self.id))
 
-class FeedbackFlowStateRef(_BaseFlowStateRef, Generic[FeedbackFlowStateId]):
+
+class FeedbackFlowStateRef(BaseModel, Generic[FeedbackFlowStateId]):
     type: Literal["feedback"] = "feedback"
     id: FeedbackFlowStateId
+
+    def __hash__(self) -> int:
+        return hash((self.type, self.id))
 
 
 FlowStateRef = Annotated[
@@ -141,6 +142,9 @@ def _build_mappings(*mappings: list[FlowStateMapping]) -> dict[FlowStateRef, Flo
     for mapping in mappings:
         for item in mapping:
             if item.id in combined:
+                if combined[item.id].type != item.value.type:
+                    raise ValueError("Cannot merge mappings with different types")
+
                 if item.value.type == "feedback":
                     raise ValueError("Cannot merge mappings with FeedbackFlowState")
                 elif item.value.type == "np":
@@ -169,7 +173,9 @@ class ConversationContext:
         self._flow_states = _build_mappings(*flow_states)
 
         self._feedback_refs = [
-            ref for ref, state in self._flow_states.items() if state.type == "feedback"
+            ref
+            for ref, state in self._flow_states.items()
+            if isinstance(state, FeedbackFlowState)
         ]
 
     def get_state(self, ref: FlowStateRef) -> FlowState:

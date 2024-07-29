@@ -1,6 +1,5 @@
 import os
 from typing import Annotated, Literal
-from uuid import UUID
 
 from bson import ObjectId
 from fastapi import Depends, HTTPException
@@ -25,7 +24,7 @@ async def get_current_user_id(
     return token.user_id
 
 
-CurrentUserID = Annotated[UUID, Depends(get_current_user_id)]
+CurrentUserID = Annotated[ObjectId, Depends(get_current_user_id)]
 
 
 async def get_current_user(

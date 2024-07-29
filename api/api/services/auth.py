@@ -8,7 +8,7 @@ from api.db import auth_tokens, magic_links
 from api.db import users as users
 from api.schemas.user import BaseUserData, User, UserData, user_from_data
 
-from .conversation_handler import setup_initial_state
+from .conversation_handler import pregenerate_initial_conversations
 from .user_info import generate_user_info
 
 
@@ -36,6 +36,9 @@ async def login_user(secret: str) -> LoginResult:
 
     user = await users.get(link.user_id)
 
+    if not user:
+        raise InvalidMagicLink()
+
     token = await _create_auth_token(user.id)
 
     return LoginResult(user=user_from_data(user), token=token)
@@ -50,7 +53,7 @@ async def create_magic_link(qa_id: UUID) -> str:
         persona = await generate_user_info(qa_id)
         user = await users.create(BaseUserData(qa_id=qa_id, persona=persona))
 
-        await setup_initial_state(user)
+        await pregenerate_initial_conversations(user)
 
     link = magic_links.MagicLink(secret=secret, user_id=user.id)
     await magic_links.create(link)
@@ -63,6 +66,9 @@ class AlreadyInitialized(Exception):
 
 async def init_user(user_id: ObjectId, name: str) -> UserData:
     user = await users.get(user_id)
+
+    if not user:
+        raise ValueError("User not found")
 
     if user.init:
         raise AlreadyInitialized()

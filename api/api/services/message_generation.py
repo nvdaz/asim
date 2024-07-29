@@ -2,18 +2,22 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel
 
-from api.schemas.conversation import ConversationScenario, Message, message_list_adapter
-from api.schemas.persona import Persona
+from api.schemas.conversation import (
+    BaseConversationScenario,
+    Message,
+    message_list_adapter,
+)
+from api.schemas.persona import AgentPersona, UserPersona
 
 from . import llm
 
 
 async def generate_message(
     user_sent: bool,
-    user: Persona,
-    agent: Persona,
+    user: UserPersona,
+    agent: AgentPersona,
     messages: list[Message],
-    scenario: ConversationScenario,
+    scenario: BaseConversationScenario,
     instructions: str | None = None,
 ) -> str:
     user_name = f"{user.name} (the user)" if user.name else "the user"

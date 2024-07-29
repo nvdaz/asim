@@ -4,191 +4,68 @@ from typing import Annotated
 from bson import ObjectId
 from pydantic import AfterValidator, BaseModel
 
+from api.data.level_scenarios import get_base_level_scenario
 from api.db.conversations import get_previous_info
 from api.schemas.conversation import (
     ConversationElement,
-    ConversationScenario,
+    LevelConversationScenario,
+    LevelConversationStage,
     MessageElement,
     message_list_adapter,
 )
-from api.schemas.persona import BasePersona, Persona
+from api.schemas.persona import AgentBasePersona, AgentPersona, UserPersona
 
 from . import llm
 
 
-async def generate_conversation_scenario(
-    user_id: ObjectId, user: Persona, agent_name: str
-) -> ConversationScenario:
+async def adapt_scenario_to_user(
+    scenario: LevelConversationScenario, user: UserPersona, agent_name: str
+) -> LevelConversationScenario:
     system_prompt = (
-        "As a scenario generator, your task is to generate a casual conversational "
-        f"scenario that could happen over a text messaging app based on the user's "
-        "profile. The scenario should be a specific situation that could happen "
-        f"between the user and an unfamiliar person {agent_name} over text "
-        "messaging. The scenario should be realistic and relatable. Respond with a "
-        f"JSON object. The 'user_perspective' key should be a string describing "
-        f"the user's perspective in the scenario (use second person pronouns to "
-        f"refer to the user), the 'agent_perspective' key should be a string "
+        "As a scenario adapter, your task is to adapt the provided scenario to be "
+        "tailored to the user's profile. Add details to the scenario that would make "
+        "it more relatable and engaging for the user. Respond with a JSON object "
+        "containing the keys 'user_perspective', 'agent_perspective', 'user_goal', "
+        "and 'is_user_initiated'. The 'user_perspective' key should be a string "
+        "describing the user's perspective in the scenario (use second person pronouns "
+        "to refer to the user), the 'agent_perspective' key should be a string "
         f"describing {agent_name}'s perspective (use second person pronouns to refer "
-        f"to {agent_name}), the 'user_goal' key should be a string describing "
-        f"the user's objective in the scenario (begin with an action verb, e.g., "
+        f"to {agent_name}), the 'user_goal' key should be a string describing the "
+        "user's objective in the scenario (begin with an action verb, e.g., "
         "'Convince', 'Explain', 'Find out' and use second person pronouns to refer to "
-        f"the user), and the 'is_user_initiated' key should be a boolean that is "
-        f"true if the first message would be sent by the user and false if it would "
-        f"be sent by {agent_name}. Do not generate scenarios that involve "
-        "significant external elements, such as finding a bug in a software program "
-        "(it is not possible to send the code). Also do not generate scenarios that "
-        "are too similar to a previously generated scenario. Examples:\n"
-        "\n".join(
-            [
-                ex.model_dump_json()
-                for ex in [
-                    ConversationScenario(
-                        user_perspective=(
-                            "Phil, a theoretical physics student, has reached out to "
-                            "you over text. Phil is looking for advice on studying "
-                            "theoretical physics and wants to discuss different "
-                            "areas of the field to explore further."
-                        ),
-                        agent_perspective=(
-                            "You reach out to the user, a theoretical physics "
-                            "professor, over text. The user is excited to chat "
-                            "about theoretical physics and share advice on studying "
-                            "the field and their experiences in it."
-                        ),
-                        user_goal=(
-                            "Provide advice on studying theoretical physics to Phil, "
-                            "discussing different areas of the field that Phil can "
-                            "explore further."
-                        ),
-                        is_user_initiated=False,
-                    ),
-                    ConversationScenario(
-                        user_perspective=(
-                            "Having just started at a pharmaceutical company, you "
-                            "exchanged numbers with your colleague, Jake. Start "
-                            "texting to discuss work, get insights into his role, and "
-                            "learn about his interests outside of work."
-                        ),
-                        agent_perspective=(
-                            "You've given your number to the user, a new team member "
-                            "at the pharmaceutical company you work for. The user "
-                            "wants to chat about work and get to know you better."
-                        ),
-                        user_goal=(
-                            "Understand Jake's role at the company and his interests "
-                            "to build a friendly working relationship."
-                        ),
-                        is_user_initiated=True,
-                    ),
-                    ConversationScenario(
-                        user_perspective=(
-                            "After meeting Avery in photography class and exchanging "
-                            "numbers, you start texting to potentially collaborate on "
-                            "a project. Ask about their favorite subjects, tips, and "
-                            "projects to discuss further."
-                        ),
-                        agent_perspective=(
-                            "You met the user in photography class and asked for his "
-                            "number. The user is excited to talk about photography "
-                            "with you, discussing favorite subjects, tips, and "
-                            "projects. You want to potentially collaborate."
-                        ),
-                        user_goal=(
-                            "Engage with Avery in a discussion about photography, "
-                            "learning about their interests and projects to explore "
-                            "collaboration opportunities."
-                        ),
-                        is_user_initiated=False,
-                    ),
-                    ConversationScenario(
-                        user_perspective=(
-                            "Being new to the neighborhood, you start texting your "
-                            "neighbor Jordan to get acquainted. Ask about local "
-                            "events, the best dining spots, and any helpful tips for "
-                            "newcomers."
-                        ),
-                        agent_perspective=(
-                            "The uesr, your new neighbor, has reached out to you over "
-                            "text. The user is eager to chat about local events, "
-                            "dining spots, and tips for newcomers."
-                        ),
-                        user_goal=(
-                            "Learn about the community and build a friendly "
-                            "relationship with Jordan."
-                        ),
-                        is_user_initiated=True,
-                    ),
-                    ConversationScenario(
-                        user_perspective=(
-                            "At a math conference, you start texting Riley, a fellow "
-                            "attendee interested in topological algebra and category "
-                            "theory. Get to know Riley better and discuss their "
-                            "research, favorite mathematicians, and future projects."
-                        ),
-                        agent_perspective=(
-                            "After meeting you at a math conference, the user is eager "
-                            "to chat about topological algebra and category theory. "
-                            "The user wants to learn about your research and interests "
-                            "in the field."
-                        ),
-                        user_goal=(
-                            "Dive into a discussion about topological algebra and "
-                            "category theory with Riley, learning about their research "
-                            "and interests to build a professional connection."
-                        ),
-                        is_user_initiated=False,
-                    ),
-                    ConversationScenario(
-                        user_perspective=(
-                            "After meeting Finn, an avid hiker, at a social event, "
-                            "you start texting to share hiking experiences. Ask about "
-                            "their favorite trails, future hiking plans, and advice "
-                            "for beginners."
-                        ),
-                        agent_perspective=(
-                            "You met the user at a social event and exchanged numbers "
-                            "to chat about hiking. The user wants to learn about your "
-                            "favorite trails, future hiking plans, and advice for "
-                            "beginners."
-                        ),
-                        user_goal=(
-                            "Discuss hiking with Finn, discovering their experiences "
-                            "and gaining advice."
-                        ),
-                        is_user_initiated=True,
-                    ),
-                ]
-            ]
-        )
+        "the user), and the 'is_user_initiated' key should be a boolean that is true "
+        "if the first message would be sent by the user and false if it would be sent "
+        f"by {agent_name}. Do not generate scenarios that involve significant external "
+        "elements, such as finding a bug in a software program (it is not possible to "
+        "send the code)."
     )
 
-    sampled_interests = random.sample(user.interests, min(2, len(user.interests)))
+    class AdaptScenarioPrompt(BaseModel):
+        user: UserPersona
+        agent_name: str
+        scenario: LevelConversationScenario
 
-    previous_infos = await get_previous_info(user_id, "level")
-
-    previous_scenarios = [info.scenario.user_perspective for info in previous_infos]
-
-    class GenerateConversationScenarioPrompt(BaseModel):
-        age: str
-        occupation: str
-        interests: list[str]
-        previous_user_scenarios: list[str]
-
-    prompt_data = GenerateConversationScenarioPrompt(
-        age=user.age,
-        occupation=user.occupation,
-        interests=sampled_interests,
-        previous_user_scenarios=previous_scenarios,
+    prompt_data = AdaptScenarioPrompt(
+        user=user, agent_name=agent_name, scenario=scenario
     ).model_dump_json()
 
-    scenario = await llm.generate(
-        schema=ConversationScenario,
+    return await llm.generate(
+        schema=LevelConversationScenario,
         model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
 
-    return scenario
+
+async def generate_level_conversation_scenario(
+    user: UserPersona, agent_name: str, stage: LevelConversationStage
+) -> LevelConversationScenario:
+    base_scenario = get_base_level_scenario(stage)
+
+    adapted_scenario = await adapt_scenario_to_user(base_scenario, user, agent_name)
+
+    return adapted_scenario
+
 
 
 async def generate_conversation_topic(user_id: ObjectId, interests: list[str]) -> str:
@@ -212,7 +89,7 @@ async def _generate_agent_base(scenario, name):
             raise ValueError(f"Name must be {name}")
         return v
 
-    class AgentBasePersona(BasePersona):
+    class NamedAgentBasePersona(AgentBasePersona):
         name: Annotated[str, AfterValidator(validate_name)]
 
     system_prompt = (
@@ -225,7 +102,7 @@ async def _generate_agent_base(scenario, name):
     )
 
     response = await llm.generate(
-        schema=AgentBasePersona,
+        schema=NamedAgentBasePersona,
         model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=scenario,
@@ -234,7 +111,7 @@ async def _generate_agent_base(scenario, name):
     return response
 
 
-async def _generate_agent_persona_from_base(agent: BasePersona):
+async def _generate_agent_persona_from_base(agent: AgentBasePersona):
     class PersonaDescriptionResponse(BaseModel):
         persona: str
 
@@ -260,7 +137,7 @@ async def _generate_agent_persona_from_base(agent: BasePersona):
         prompt=prompt_data,
     )
 
-    return Persona(
+    return AgentPersona(
         **agent.model_dump(),
         description=(
             f"{response.persona} DO NOT mention how autism affects your communication."
@@ -308,7 +185,7 @@ async def determine_conversation_topic(
     return response.topic
 
 
-async def generate_agent_persona_from_topic(name: str, topic: str) -> Persona:
+async def generate_agent_persona_from_topic(name: str, topic: str) -> AgentPersona:
     system_prompt = (
         f"Generate a persona for {name}, a notable figure in the field of {topic}. "
         "The persona should be engaging and interesting to someone who is interested "
@@ -320,7 +197,7 @@ async def generate_agent_persona_from_topic(name: str, topic: str) -> Persona:
     )
 
     return await llm.generate(
-        schema=Persona,
+        schema=AgentPersona,
         model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=topic,
