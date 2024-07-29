@@ -1,7 +1,9 @@
+import contextlib
 import datetime
 import os
 
 from bson import ObjectId
+from google.api_core.exceptions import AlreadyExists
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
@@ -17,9 +19,7 @@ _INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 DEFER_PREGENERATION = bool(_SELF_URI and _GCP_PROJECT and _GCP_LOCATION and _GCP_QUEUE)
 
 
-async def create_pregenerate_task(
-    user_id: ObjectId, stage: ConversationStage
-) -> None:
+async def create_pregenerate_task(user_id: ObjectId, stage: ConversationStage) -> None:
     client = tasks_v2.CloudTasksAsyncClient()
 
     name = client.task_path(
@@ -42,6 +42,7 @@ async def create_pregenerate_task(
         schedule_time=timestamp_pb2.Timestamp().FromDatetime(datetime.datetime.now()),
     )
 
-    task = await client.create_task(
-        parent=client.queue_path(_GCP_PROJECT, _GCP_LOCATION, _GCP_QUEUE), task=task
-    )
+    with contextlib.suppress(AlreadyExists):
+        task = await client.create_task(
+            parent=client.queue_path(_GCP_PROJECT, _GCP_LOCATION, _GCP_QUEUE), task=task
+        )

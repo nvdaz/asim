@@ -85,9 +85,9 @@ def _next_stage(stage: ConversationStage) -> ConversationStage:
 def _should_unlock_next_stage(
     current_stage: ConversationStage,
     sent_message_counts: dict[str, int],
-) -> ConversationStage:
+) -> ConversationStage | None:
     if not sent_message_counts.get(str(current_stage), 0) >= 8:
-        return current_stage
+        return None
 
     return _next_stage(current_stage)
 
@@ -297,9 +297,11 @@ async def progress_conversation(
             conversation.info, sent_message_counts
         )
 
-        if unlocked_stage != user.max_unlocked_stage:
+        if unlocked_stage is not None:
             await unlock_stage(user, unlocked_stage)
             await _enqueue_pregenerate_conversations(user)
+        else:
+            unlocked_stage = user.max_unlocked_stage
 
         checks = [(check, context.get_state(check)) for check in response.checks]
 
