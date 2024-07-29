@@ -8,9 +8,9 @@ from google.protobuf import timestamp_pb2
 from api.schemas.conversation import ConversationStage, PregenerateOptions
 
 _SELF_URI = os.getenv("SELF_URI", "")
-_GCP_PROJECT = os.getenv("GCP_PROJECT", "")
-_GCP_LOCATION = os.getenv("GCP_LOCATION", "")
-_GCP_QUEUE = os.getenv("GCP_QUEUE", "")
+_GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "")
+_GCP_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "")
+_GCP_QUEUE = os.getenv("GOOGLE_CLOUD_QUEUE", "")
 
 _INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 
@@ -23,7 +23,7 @@ async def create_pregenerate_task(
     client = tasks_v2.CloudTasksAsyncClient()
 
     name = client.task_path(
-        _GCP_PROJECT, _GCP_LOCATION, _GCP_QUEUE, f"{str(user_id)}:{str(stage)}"
+        _GCP_PROJECT, _GCP_LOCATION, _GCP_QUEUE, f"{str(user_id)}_{str(stage)}"
     )
 
     options = PregenerateOptions(user_id=user_id, stage=stage)
