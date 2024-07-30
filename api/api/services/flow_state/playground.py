@@ -1,3 +1,4 @@
+from .ambiguous_language import AMBIGUOUS_MAPPINGS
 from .base import (
     NORMAL_AP_MAPPINGS,
     NORMAL_NP_MAPPINGS,
@@ -8,7 +9,6 @@ from .base import (
     NpFlowStateRef,
 )
 from .blunt_language import BLUNT_MAPPINGS
-from .figurative_language import FIGURATIVE_MAPPINGS
 
 PLAYGROUND_NP_MAPPINGS: list[FlowStateMapping] = [
     NpFlowStateMapping(
@@ -29,7 +29,7 @@ PLAYGROUND_CONTEXT = ConversationContext(
     flow_states=[
         NORMAL_NP_MAPPINGS,
         NORMAL_AP_MAPPINGS,
-        FIGURATIVE_MAPPINGS,
+        AMBIGUOUS_MAPPINGS,
         BLUNT_MAPPINGS,
         PLAYGROUND_NP_MAPPINGS,
     ]

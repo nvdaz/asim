@@ -98,14 +98,28 @@ ConversationLogEntry = Annotated[
     Field(discriminator="type"),
 ]
 
+LEVEL_MIN = 1
+LEVEL_MAX = 2
+PART_MIN = 1
+PART_MAX = 5
+
 
 class LevelConversationStage(BaseModel):
     type: Literal["level"] = "level"
-    level: Annotated[int, Field(ge=1, le=2)]
-    part: Annotated[int, Field(ge=1, le=5)]
+    level: Annotated[int, Field(ge=LEVEL_MIN, le=LEVEL_MAX)]
+    part: Annotated[int, Field(ge=PART_MIN, le=PART_MAX)]
 
     def __str__(self) -> str:
         return f"level-{self.level}p{self.part}"
+
+
+ALL_LEVEL_STAGES = [
+    f"level-{level}p{part}"
+    for level in range(LEVEL_MIN, LEVEL_MAX + 1)
+    for part in range(PART_MIN, PART_MAX + 1)
+]
+
+print(ALL_LEVEL_STAGES)
 
 
 class PlaygroundConversationStage(BaseModel):
@@ -113,6 +127,9 @@ class PlaygroundConversationStage(BaseModel):
 
     def __str__(self) -> str:
         return "playground"
+
+
+ALL_PLAYGROUND_STAGES = ["playground"]
 
 
 ConversationStage = Annotated[
@@ -137,7 +154,11 @@ def validate_conversation_stage_str(stage: str) -> str:
     return stage
 
 
-ConversationStageStr = Annotated[str, AfterValidator(validate_conversation_stage_str)]
+ConversationStageStr = Annotated[
+    str,
+    AfterValidator(validate_conversation_stage_str),
+    Field(json_schema_extra={"enum": ALL_LEVEL_STAGES + ALL_PLAYGROUND_STAGES}),  # type: ignore
+]
 
 
 class BaseConversationScenario(BaseModel):
@@ -152,6 +173,9 @@ class LevelConversationScenario(BaseConversationScenario):
 
 class PlaygroundConversationScenario(BaseConversationScenario):
     topic: str | None = None
+
+
+ConversationScenario = LevelConversationScenario | PlaygroundConversationScenario
 
 
 class LevelConversationInfo(LevelConversationStage):
@@ -228,7 +252,8 @@ ConversationState = Annotated[
 
 class Conversation(BaseModel):
     id: PyObjectId
-    info: ConversationInfo
+    stage: str
+    scenario: ConversationScenario
     agent: str
     state: ConversationState | None
     elements: list[ConversationElement]
@@ -254,7 +279,8 @@ class Conversation(BaseModel):
 
         return Conversation(
             id=data.id,
-            info=data.info,
+            stage=str(data.info),
+            scenario=data.info.scenario,
             agent=data.agent.name,
             state=state,
             elements=data.elements,
@@ -271,14 +297,14 @@ class ConversationDescriptorData(BaseModel):
 
 class ConversationDescriptor(BaseModel):
     id: PyObjectId
-    info: ConversationInfo
+    scenario: ConversationScenario
     agent: str
 
     @staticmethod
     def from_data(data: ConversationDescriptorData) -> "ConversationDescriptor":
         return ConversationDescriptor(
             id=data.id,
-            info=data.info,
+            scenario=data.info.scenario,
             agent=data.agent.name,
         )
 
@@ -287,19 +313,19 @@ class NpMessageStep(BaseModel):
     type: Literal["np"] = "np"
     options: list[str]
     allow_custom: bool
-    max_unlocked_stage: ConversationStage
+    max_unlocked_stage: ConversationStageStr
 
 
 class ApMessageStep(BaseModel):
     type: Literal["ap"] = "ap"
     content: str
-    max_unlocked_stage: ConversationStage
+    max_unlocked_stage: ConversationStageStr
 
 
 class FeedbackStep(BaseModel):
     type: Literal["feedback"] = "feedback"
     content: Feedback
-    max_unlocked_stage: ConversationStage
+    max_unlocked_stage: ConversationStageStr
 
 
 ConversationStep = Annotated[

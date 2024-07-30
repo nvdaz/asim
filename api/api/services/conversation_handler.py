@@ -46,6 +46,7 @@ from .conversation_generation import (
     generate_level_conversation_scenario,
 )
 from .feedback_generation import check_messages, generate_feedback
+from .flow_state.ambiguous_language import AMBIGUOUS_LANGUAGE_LEVEL_CONTEXT
 from .flow_state.base import (
     ApFlowState,
     ConversationContext,
@@ -55,17 +56,16 @@ from .flow_state.base import (
     UserFlowOption,
 )
 from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL_CONTEXT
-from .flow_state.figurative_language import FIGURATIVE_LANGUAGE_LEVEL_CONTEXT
 from .flow_state.playground import PLAYGROUND_CONTEXT
 from .message_generation import generate_message
-
-LEVEL_CONTEXTS = [FIGURATIVE_LANGUAGE_LEVEL_CONTEXT, BLUNT_LANGUAGE_LEVEL_CONTEXT]
 
 
 def _get_stage_context(stage: ConversationStage) -> ConversationContext:
     match stage:
-        case LevelConversationStage(level=level):
-            return LEVEL_CONTEXTS[level - 1]
+        case LevelConversationStage(level=1):
+            return AMBIGUOUS_LANGUAGE_LEVEL_CONTEXT
+        case LevelConversationStage(level=2):
+            return BLUNT_LANGUAGE_LEVEL_CONTEXT
         case PlaygroundConversationStage():
             return PLAYGROUND_CONTEXT
         case _:
@@ -384,7 +384,7 @@ async def progress_conversation(
             result = NpMessageStep(
                 options=[o.response for o in options],
                 allow_custom=state_data.allow_custom,
-                max_unlocked_stage=unlocked_stage,
+                max_unlocked_stage=str(unlocked_stage),
             )
         elif isinstance(state_data, ApFlowState):
             opt = random.choice(state_data.options)
@@ -411,7 +411,9 @@ async def progress_conversation(
 
             conversation.state = StateActiveData(id=opt.next)
 
-            result = ApMessageStep(content=response, max_unlocked_stage=unlocked_stage)
+            result = ApMessageStep(
+                content=response, max_unlocked_stage=str(unlocked_stage)
+            )
         else:
             raise RuntimeError(f"Invalid state: {state_data}")
     elif isinstance(conversation.state, StateFeedbackData):
@@ -451,7 +453,7 @@ async def progress_conversation(
             )
         )
 
-        result = FeedbackStep(content=response, max_unlocked_stage=unlocked_stage)
+        result = FeedbackStep(content=response, max_unlocked_stage=str(unlocked_stage))
     else:
         raise RuntimeError(f"Invalid state: {conversation.state}")
 

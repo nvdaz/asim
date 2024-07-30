@@ -17,8 +17,8 @@ from .base import NpFlowState as _NpFlowState
 from .base import NpFlowStateRef as _NpFlowStateRef
 
 NpFlowStateId = Literal["normal"]
-ApFlowStateId = Literal["normal", "figurative_misunderstood"]
-FeedbackFlowStateId = Literal["figurative"]
+ApFlowStateId = Literal["normal", "ambiguous_misunderstood"]
+FeedbackFlowStateId = Literal["ambiguous"]
 
 NpFlowState = _NpFlowState[NpFlowStateId]
 ApFlowState = _ApFlowState[ApFlowStateId]
@@ -29,7 +29,7 @@ ApFlowStateRef = _ApFlowStateRef[ApFlowStateId]
 FeedbackFlowStateRef = _FeedbackFlowStateRef[FeedbackFlowStateId]
 
 
-FIGURATIVE_MAPPINGS: list[FlowStateMapping] = [
+AMBIGUOUS_MAPPINGS: list[FlowStateMapping] = [
     NpFlowStateMapping(
         id=NpFlowStateRef(id="normal"),
         value=NpFlowState(
@@ -42,32 +42,31 @@ FIGURATIVE_MAPPINGS: list[FlowStateMapping] = [
                         "non-literal way. Example: 'Let's hit the books.'"
                     ),
                     next=ApFlowStateRef(id="normal"),
-                    checks=[FeedbackFlowStateRef(id="figurative")],
+                    checks=[FeedbackFlowStateRef(id="ambiguous")],
                 ),
                 UserFlowOption(
                     prompt=(
                         "Your next message is mostly literal, but includes a hint of "
-                        "figurative language. The message is mostly straightforward, "
-                        "but there is also a figurative element that could be "
-                        "misinterpreted. Example: 'It's so hot, it feels like 1000 "
-                        "degrees outside.'"
+                        "ambiguous language. The message is mostly straightforward, "
+                        "but there is also a ambiguous element that could be "
+                        "misinterpreted."
                     ),
                     next=ApFlowStateRef(id="normal"),
-                    checks=[FeedbackFlowStateRef(id="figurative")],
+                    checks=[FeedbackFlowStateRef(id="ambiguous")],
                 ),
             ],
         ),
     ),
     FeedbackFlowStateMapping(
-        id=FeedbackFlowStateRef(id="figurative"),
+        id=FeedbackFlowStateRef(id="ambiguous"),
         value=FeedbackFlowState(
             check=(
-                "The user does not use figurative language in their message, i.e., "
+                "The user does not use ambiguous language in their message, i.e., "
                 "they use language that is meant to be interpreted in a non-literal "
                 "way."
             ),
             prompt=(
-                "The latest message needs improvement as it contains figurative "
+                "The latest message needs improvement as it contains ambiguous "
                 "language, which can be misinterpreted by autistic individuals. "
                 "Provide feedback on how their message could have been clearer and "
                 "more direct."
@@ -77,6 +76,6 @@ FIGURATIVE_MAPPINGS: list[FlowStateMapping] = [
 ]
 
 
-FIGURATIVE_LANGUAGE_LEVEL_CONTEXT = ConversationContext(
-    flow_states=[NORMAL_NP_MAPPINGS, NORMAL_AP_MAPPINGS, FIGURATIVE_MAPPINGS],
+AMBIGUOUS_LANGUAGE_LEVEL_CONTEXT = ConversationContext(
+    flow_states=[NORMAL_NP_MAPPINGS, NORMAL_AP_MAPPINGS, AMBIGUOUS_MAPPINGS],
 )
