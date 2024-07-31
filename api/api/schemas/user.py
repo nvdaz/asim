@@ -4,7 +4,11 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic.fields import Field
 
-from api.schemas.conversation import ConversationStage, LevelConversationStage
+from api.schemas.conversation import (
+    ConversationStage,
+    ConversationStageStr,
+    LevelConversationStage,
+)
 
 from .objectid import PyObjectId
 from .persona import UserPersona
@@ -29,7 +33,7 @@ class User(BaseModel):
     id: PyObjectId
     init: bool
     name: str | None
-    max_unlocked_stage: ConversationStage
+    max_unlocked_stage: ConversationStageStr
 
 
 def user_from_data(data: UserData) -> User:
@@ -37,5 +41,5 @@ def user_from_data(data: UserData) -> User:
         id=data.id,
         init=data.init,
         name=data.name,
-        max_unlocked_stage=data.max_unlocked_stage,
+        max_unlocked_stage=str(data.max_unlocked_stage),
     )
