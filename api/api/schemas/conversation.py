@@ -23,7 +23,8 @@ class FailedCheck(BaseModel):
 class Feedback(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=600)]
-    follow_up: str | None = None
+    misunderstand: str
+    follow_up: str
 
 
 class UserMessage(BaseModel):

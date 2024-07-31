@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, StringConstraints, TypeAdapter
@@ -36,7 +37,8 @@ def _extract_messages_for_feedback(conversation: ConversationData):
 class FeedbackWithPromptResponse(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=600)]
-    instructions: str
+    misunderstand: str
+    clarification: str
 
 
 async def generate_feedback(
@@ -62,7 +64,11 @@ async def generate_feedback(
                     "be confusing for autistic individuals, and Chris interpreted it "
                     "literally. To avoid misunderstandings, use more direct language."
                 ),
-                instructions=(
+                misunderstand=(
+                    "You interpret the similie 'I feel like a million bucks today' "
+                    "literally and think that the user won the lottery."
+                ),
+                clarification=(
                     "Your next message should apologize for using figurative language "
                     "and clarify that you didn't actually win the lottery but are "
                     "feeling really good today. Be direct and avoid figurative "
@@ -85,7 +91,11 @@ async def generate_feedback(
                     "them to get hurt instead of wishing them good luck. To avoid "
                     "misunderstandings, use clear, direct language."
                 ),
-                instructions=(
+                misunderstand=(
+                    "You interpret the idiom 'break a leg' literally and think that "
+                    "the user wants you to get hurt before your performance."
+                ),
+                clarification=(
                     "Your next message should apologize for using an idiom and clarify "
                     "that you didn't actually want Taylor to get hurt but were wishing "
                     "them good luck. Be direct and avoid figurative language."
@@ -103,11 +113,12 @@ async def generate_feedback(
         + "\nUse second person pronouns to address the uesr directly. Respond with "
         "a JSON object with the key 'title' containing the title (less than 50 "
         "characters) of your feedback, the key 'body' containing the feedback (less "
-        "than 100 words), and the key 'instructions' explaining what the user "
-        "could do to clarify the situation. The 'instructions' should not be a "
-        "message, but a string that outlines what the user should do to clarify "
-        "the misunderstanding.The instructions should tell the user to apologize "
-        "for their mistake and clarify their message. Examples: \n"
+        "than 100 words), the key 'misunderstand' directing the autistic individual "
+        "to purposefully misunderstand the user's message, and the key 'clarification' "
+        "explaining what the user could do to clarify the situation. The "
+        "'clarification' should not be a message, but a string that outlines what the "
+        "user should do to clarify the misunderstanding. The clarfication should tell "
+        "the user to apologize for their mistake and clarify their message. Examples:\n"
         + "\n\n".join(
             [
                 f"{message_list_adapter.dump_json(messages).decode()}\n{fb.model_dump_json()}"
@@ -131,22 +142,40 @@ async def generate_feedback(
         if isinstance(elem, MessageElement)
     ]
 
-    follow_up = await generate_message(
-        user_sent=True,
-        user=user,
-        agent=agent,
-        messages=all_messages,
-        scenario=conversation.info.scenario,
-        instructions=(
-            "You are writing a follow-up to your previous message. "
-            f"{feedback_base.instructions}"
-        ),
+    async def generate_follow_up():
+        return await generate_message(
+            user_sent=True,
+            user=user,
+            agent=agent,
+            messages=all_messages,
+            scenario=conversation.info.scenario,
+            instructions=(
+                "You follow-up to clarify your previous message. "
+                f"{feedback_base.clarification}"
+            ),
+        )
+
+    async def generate_misunderstand():
+        return await generate_message(
+            user_sent=False,
+            user=user,
+            agent=agent,
+            messages=all_messages,
+            scenario=conversation.info.scenario,
+            instructions=(
+                f"You misunderstood the user's message. {feedback_base.misunderstand}"
+            ),
+        )
+
+    follow_up, misunderstand = await asyncio.gather(
+        generate_follow_up(), generate_misunderstand()
     )
 
     return Feedback(
         title=feedback_base.title,
         body=feedback_base.body,
         follow_up=follow_up,
+        misunderstanding=misunderstand
     )
 
 
