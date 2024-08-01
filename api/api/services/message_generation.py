@@ -5,6 +5,7 @@ from pydantic import AfterValidator, BaseModel
 from api.schemas.conversation import (
     BaseConversationScenario,
     Message,
+    PlaygroundConversationScenario,
     message_list_adapter,
 )
 from api.schemas.persona import AgentPersona, UserPersona
@@ -45,6 +46,15 @@ async def generate_message(
             [
                 user.description if user_sent else agent.description,
                 scenario_perspective if scenario_perspective else None,
+                user.writing_style,
+                (
+                    f"Tailor your message to the user's culture: {user.culture}"
+                    if (
+                        isinstance(scenario, PlaygroundConversationScenario)
+                        and not user_sent
+                    )
+                    else None
+                ),
                 (
                     f"INSTRUCTIONS FOR YOUR MESSAGE: {instructions}"
                     if instructions

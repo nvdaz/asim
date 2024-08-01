@@ -169,6 +169,53 @@ async def _extract_interests(messages: list[QaMessage]) -> list[str]:
     return interests
 
 
+async def _extract_culture(messages: list[QaMessage]) -> str:
+    class CultureResponse(BaseModel):
+        culture: str
+
+    system_prompt = (
+        "As a culture analyst, your task is to identify the user's cultural background "
+        "based on the messages they sent to a chatbot. Analyze the user's language, "
+        "references, and topics of conversation to make an educated guess about their "
+        "cultural background. Respond with a JSON object containing the key 'culture' "
+        "and a description of the user's culture as the value."
+    )
+    prompt_data = "\n".join([message.message for message in messages])
+    response = await llm.generate(
+        schema=CultureResponse,
+        model=llm.Model.GPT_4,
+        system=system_prompt,
+        prompt=prompt_data,
+    )
+
+    return response.culture
+
+
+async def _extract_writing_style(messages: list[QaMessage]) -> str:
+    class WritingStyleResponse(BaseModel):
+        writing_style: str
+
+    system_prompt = (
+        "As a writing style analyst, your task is to identify the user's writing style "
+        "based on the messages they sent to a chatbot. Analyze the user's sentence "
+        "structure, vocabulary, and tone to determine their writing style. Respond "
+        "with a JSON object containing the key 'writing_style' and a description of "
+        "the user's writing style as the value. Consider the user's tone, vocabulary, "
+        "capitalization, punctuation, and message length preferences. Begin with "
+        "'Your writing style is...'"
+    )
+
+    prompt_data = "\n".join([message.message for message in messages])
+    response = await llm.generate(
+        schema=WritingStyleResponse,
+        model=llm.Model.GPT_4,
+        system=system_prompt,
+        prompt=prompt_data,
+    )
+
+    return response.writing_style
+
+
 async def _generate_user_persona(user_base: UserBasePersona):
     class PersonaResponse(BaseModel):
         persona: str
@@ -194,14 +241,19 @@ async def _generate_user_persona(user_base: UserBasePersona):
 
 
 async def _generate_user_info_base(messages: list[QaMessage]):
-    interests, demographics = await asyncio.gather(
-        _extract_interests(messages), _extract_demographics(messages)
+    interests, demographics, culture, writing_style = await asyncio.gather(
+        _extract_interests(messages),
+        _extract_demographics(messages),
+        _extract_culture(messages),
+        _extract_writing_style(messages),
     )
 
     user_base = UserBasePersona(
         age=demographics.age,
         occupation=demographics.occupation,
         interests=interests,
+        culture=culture,
+        writing_style=writing_style,
     )
 
     return user_base

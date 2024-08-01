@@ -10,6 +10,8 @@ class UserBasePersona(BaseModel):
     age: str
     occupation: str
     interests: list[str]
+    culture: str
+    writing_style: str
 
 
 class UserPersona(UserBasePersona):

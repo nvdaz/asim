@@ -23,7 +23,7 @@ class ModelVendor(str, Enum):
     def concurrency_limit(self) -> int:
         match self:
             case ModelVendor.OPENAI:
-                return 4
+                return 3
             case ModelVendor.ANTHROPIC:
                 return 32
 
@@ -50,7 +50,9 @@ _GENERATE_SEMAPHORES = {
 async def _generate_unchecked(
     model: Model, prompt: str, system: str, temperature: float | None = None
 ):
-    async with _GENERATE_SEMAPHORES[model.vendor()], ws.connect(_LLM_URI) as conn:
+    async with _GENERATE_SEMAPHORES[model.vendor()], asyncio.timeout(120), ws.connect(
+        _LLM_URI
+    ) as conn:
         action = {
             "action": "runModel",
             "model": model.value,
