@@ -1,22 +1,22 @@
-import { useState, useCallback, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import CircularProgress from "@mui/material/CircularProgress";
+import CelebrationIcon from "@mui/icons-material/Celebration";
+import CloseIcon from "@mui/icons-material/Close";
+import LockIcon from "@mui/icons-material/Lock";
 import Alert from "@mui/material/Alert";
+import CircularProgress from "@mui/material/CircularProgress";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
-import CloseIcon from "@mui/icons-material/Close";
-import CelebrationIcon from "@mui/icons-material/Celebration";
-import LockIcon from "@mui/icons-material/Lock";
+import { useCallback, useEffect, useState } from "react";
 import Confetti from "react-confetti";
+import { redirect, useParams } from "react-router-dom";
 
 import Header from "../components/header/index.js";
 import InputAndMessages from "../components/InputAndMessages/index.js";
-import { Post, Get } from "../utils/request";
+import { Get, Post } from "../utils/request";
 
 import styles from "./page.module.css";
 
 const Lesson = () => {
-  const { conversationIDFromParam } = useParams();
+  const { lesson: currentLevel, conversationIDFromParam } = useParams();
   const [headerHeight, setHeaderHeight] = useState(null);
   const [data, setData] = useState(null);
   const [conversationList, setConversationList] = useState(null);
@@ -24,15 +24,14 @@ const Lesson = () => {
   const [loading, setLoading] = useState(true);
   const [showConfetti, setShowConfetti] = useState([false, undefined]);
   const [alertMessage, setAlertMessage] = useState("");
-  const currentLevel = window.location.href.split("/")[4] - 1;
   const max_unlocked_stage = localStorage.getItem("max_unlocked_stage");
 
   useEffect(() => {
-    if (max_unlocked_stage !== `level-${currentLevel}`) {
-      setTimeout(() => {
-        window.location.href = `/`;
-      }, 2000);
-    }
+    // if (max_unlocked_stage !== `level-${currentLevel}`) {
+    //   setTimeout(() => {
+    //     window.location.href = `/`;
+    //   }, 2000);
+    // }
   }, [max_unlocked_stage, currentLevel]);
 
   const fetchNextSteps = async (conversationID, condition) => {
@@ -57,6 +56,11 @@ const Lesson = () => {
         options: userOptions.data.options,
         ap_message: next.data.content,
       });
+
+      setNextConversation({
+        options: userOptions.data.options,
+        ap_message: next.data.content,
+      });
     } else {
       console.log("fetchNextSteps 2", next.data);
       setNextConversation(next.data);
@@ -64,29 +68,29 @@ const Lesson = () => {
   };
 
   const fetchNewConversation = useCallback(async () => {
-    const initConversation = await Post("conversations/", {
-      type: "level",
-      level: currentLevel,
-    });
+    const initConversation = await Post(
+      `conversations?stage=level-${currentLevel}`
+    );
     if (!initConversation.ok) {
       setAlertMessage("Error occurred fetching data");
       return;
     }
 
+    console.log("redirecting");
+    redirect(`/lesson/${currentLevel}/${initConversation.data.id}`);
+
+    setData(initConversation.data);
+
     await fetchNextSteps(
       initConversation.data.id,
-      !initConversation.data.info.scenario.is_user_initiated
+      !initConversation.data.scenario.is_user_initiated
     );
   }, [currentLevel]);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (typeof currentLevel !== "number") {
-        setAlertMessage("Invalid url parameter");
-      }
-
       const listConversations = await Get(
-        `conversations/?type=level&level=${currentLevel}`
+        `conversations/?stage=level-${currentLevel}`
       );
       if (!listConversations.ok) {
         setAlertMessage("Error occurred fetching data");
@@ -113,7 +117,7 @@ const Lesson = () => {
         setData({
           id: conversationID,
           subject_name: historyData.agent,
-          scenario: historyData.info.scenario,
+          scenario: historyData.scenario,
           messages: historyData.elements,
         });
 
@@ -227,14 +231,16 @@ const Lesson = () => {
         )}
       </div>
     );
-
-  }
+  };
 
   return (
     <div className={styles.wrapper}>
-      {max_unlocked_stage !== `level-${currentLevel}` ? (
+      {false && max_unlocked_stage !== `level-${currentLevel}` ? (
         <div className={styles.unavailableWrapper}>
-          <div className={styles.unavailableTitle}>Lesson 2 Locked<LockIcon/></div>
+          <div className={styles.unavailableTitle}>
+            Lesson 2 Locked
+            <LockIcon />
+          </div>
           <div>Send 8 messages in Lesson 1 to unlock</div>
           <div>Going back to main page...</div>
           <div>
