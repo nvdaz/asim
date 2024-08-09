@@ -47,12 +47,11 @@ async def update(conversation: ConversationData):
 
 async def query(user_id: ObjectId, stage: ConversationStage):
     match stage:
-        case LevelConversationStage(level=level, part=part):
+        case LevelConversationStage(level=level):
             query = {
                 "user_id": user_id,
                 "info.type": "level",
                 "info.level": level,
-                "info.part": part,
             }
         case PlaygroundConversationStage():
             query = {"user_id": user_id, "info.type": "playground"}
@@ -67,12 +66,11 @@ async def query_one(
     user_id: ObjectId, stage: ConversationStage
 ) -> ConversationData | None:
     match stage:
-        case LevelConversationStage(level=level, part=part):
+        case LevelConversationStage(level=level):
             query = {
                 "user_id": user_id,
                 "info.type": "level",
                 "info.level": level,
-                "info.part": part,
             }
         case PlaygroundConversationStage():
             query = {"user_id": user_id, "info.type": "playground"}

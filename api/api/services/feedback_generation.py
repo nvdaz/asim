@@ -1,20 +1,18 @@
 import asyncio
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, StringConstraints, TypeAdapter
+from pydantic import BaseModel, StringConstraints
 
 from api.schemas.conversation import (
     ConversationData,
-    FailedCheck,
     Feedback,
     MessageElement,
     UserMessage,
-    message_list_adapter,
+    dump_message_list,
 )
-from api.schemas.persona import AgentPersona, UserPersona
+from api.schemas.persona import UserPersona
 
 from . import llm
-from .flow_state.base import FeedbackFlowState, FeedbackFlowStateRef
 from .message_generation import generate_message
 
 
@@ -34,45 +32,31 @@ def _extract_messages_for_feedback(conversation: ConversationData):
     return messages[start:]
 
 
-class FeedbackWithPromptResponse(BaseModel):
+class BaseFeedback(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=600)]
-    misunderstand: str
-    clarification: str
 
 
-async def generate_feedback(
+async def generate_feedback_base(
     user: UserPersona,
     conversation: ConversationData,
-    state: list[FeedbackFlowState],
-) -> Feedback:
+    prompt: str,
+) -> BaseFeedback:
     agent = conversation.agent
     messages = _extract_messages_for_feedback(conversation)
 
     examples = [
         (
             [
-                UserMessage(
-                    message="I feel like a million bucks today!",
-                ),
+                UserMessage(message="What is software made of?"),
             ],
-            FeedbackWithPromptResponse(
-                title="Avoid Similies",
+            BaseFeedback(
+                title="Keep Questions Clear",
                 body=(
-                    "Your message relied on Chris understanding the simile 'I feel "
-                    "like a million bucks today.' However, figurative language can "
-                    "be confusing for autistic individuals, and Chris interpreted it "
-                    "literally. To avoid misunderstandings, use more direct language."
-                ),
-                misunderstand=(
-                    "You interpret the similie 'I feel like a million bucks today' "
-                    "literally and think that the user won the lottery."
-                ),
-                clarification=(
-                    "Your next message should apologize for using figurative language "
-                    "and clarify that you didn't actually win the lottery but are "
-                    "feeling really good today. Be direct and avoid figurative "
-                    "language."
+                    "The question you asked was not clear and specific. It was vague "
+                    "and open-ended, which can be confusing for autistic individuals. "
+                    "To avoid misunderstandings, ask questions that are "
+                    "straightforward and have a clear subject matter."
                 ),
             ),
         ),
@@ -82,7 +66,7 @@ async def generate_feedback(
                     message="Break a leg in your performance today!",
                 ),
             ],
-            FeedbackWithPromptResponse(
+            BaseFeedback(
                 title="Avoid Idioms",
                 body=(
                     "Using idioms like 'break a leg' can sometimes be confusing for "
@@ -91,160 +75,64 @@ async def generate_feedback(
                     "them to get hurt instead of wishing them good luck. To avoid "
                     "misunderstandings, use clear, direct language."
                 ),
-                misunderstand=(
-                    "You interpret the idiom 'break a leg' literally and think that "
-                    "the user wants you to get hurt before your performance."
-                ),
-                clarification=(
-                    "Your next message should apologize for using an idiom and clarify "
-                    "that you didn't actually want Taylor to get hurt but were wishing "
-                    "them good luck. Be direct and avoid figurative language."
-                ),
             ),
         ),
     ]
 
+    examples_str = "\n\n".join(
+        [
+            f"{dump_message_list(messages, 'User', 'Agent')}\n{fb.model_dump_json()}"
+            for messages, fb in examples
+        ]
+    )
+
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
         f"ongoing conversation between the user and {agent.name}, who is an "
-        f"autistic individual. The conversation is happening over text. Address the "
-        "following points in your feedback:\n"
-        + "\n".join(f"{fb.prompt}" for fb in state)
-        + "\nUse second person pronouns to address the uesr directly. Respond with "
+        f"autistic individual. The conversation is happening over text. {prompt}"
+        "\nUse second person pronouns to address the uesr directly. Respond with "
         "a JSON object with the key 'title' containing the title (less than 50 "
         "characters) of your feedback, the key 'body' containing the feedback (less "
-        "than 100 words), the key 'misunderstand' directing the autistic individual "
-        "to purposefully misunderstand the user's message, and the key 'clarification' "
-        "explaining what the user could do to clarify the situation. The "
-        "'clarification' should not be a message, but a string that outlines what the "
-        "user should do to clarify the misunderstanding. The clarfication should tell "
-        "the user to apologize for their mistake and clarify their message. Examples:\n"
-        + "\n\n".join(
-            [
-                f"{message_list_adapter.dump_json(messages).decode()}\n{fb.model_dump_json()}"
-                for messages, fb in examples
-            ]
-        )
+        "than 100 words). DO NOT tell the user to send a specific message."
+        f"Examples:\n{examples_str}"
     )
 
-    prompt_data = message_list_adapter.dump_json(messages).decode()
+    prompt_data = dump_message_list(messages, user.name, agent.name)
 
-    feedback_base = await llm.generate(
-        schema=FeedbackWithPromptResponse,
-        model=llm.Model.CLAUDE_3_SONNET,
+    return await llm.generate(
+        schema=BaseFeedback,
+        model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
     )
 
+
+async def generate_feedback(
+    user: UserPersona,
+    conversation: ConversationData,
+    prompt: str,
+    instructions: str,
+) -> Feedback:
     all_messages = [
         elem.content
         for elem in conversation.elements
         if isinstance(elem, MessageElement)
     ]
 
-    async def generate_follow_up():
-        return await generate_message(
+    base, follow_up = await asyncio.gather(
+        generate_feedback_base(user, conversation, prompt),
+        generate_message(
             user_sent=True,
             user=user,
-            agent=agent,
+            agent=conversation.agent,
             messages=all_messages,
             scenario=conversation.info.scenario,
-            instructions=(
-                "You follow-up to clarify your previous message. "
-                f"{feedback_base.clarification}"
-            ),
-        )
-
-    async def generate_misunderstand():
-        return await generate_message(
-            user_sent=False,
-            user=user,
-            agent=agent,
-            messages=all_messages,
-            scenario=conversation.info.scenario,
-            instructions=(
-                f"You misunderstood the user's message. {feedback_base.misunderstand}"
-            ),
-        )
-
-    follow_up, misunderstand = await asyncio.gather(
-        generate_follow_up(), generate_misunderstand()
+            instructions=(instructions),
+        ),
     )
 
     return Feedback(
-        title=feedback_base.title,
-        body=feedback_base.body,
+        title=base.title,
+        body=base.body,
         follow_up=follow_up,
-        misunderstanding=misunderstand
     )
-
-
-async def check_messages(
-    user: UserPersona,
-    agent: AgentPersona,
-    conversation: ConversationData,
-    checks: list[tuple[FeedbackFlowStateRef, FeedbackFlowState]],
-) -> list[FailedCheck]:
-    if not checks:
-        return []
-
-    check_names: set[str] = set(check.id for check, _ in checks)
-
-    def validate_failed_check_name(failed_check: str) -> str:
-        if failed_check not in check_names:
-            raise ValueError(f"Invalid check ID: {failed_check}")
-
-        return failed_check
-
-    class FailedCheckNamed(BaseModel):
-        id: Annotated[str, AfterValidator(validate_failed_check_name)]
-        offender: str
-        reason: str
-
-    class Analysis(BaseModel):
-        failed_checks: list[FailedCheckNamed]
-
-    class Check(BaseModel):
-        id: str
-        check: str
-
-    check_list_adapter = TypeAdapter(list[Check])
-
-    checks_to_do = [Check(id=ref.id, check=check.check) for ref, check in checks]
-
-    user_name = f"{user.name} (the user)" if user.name else "the user"
-
-    system = (
-        "You are a social skills coach. Your task is to analyze the following "
-        f"conversation between {user_name}, and {agent.name}, who is an autistic "
-        f"individual, and determine whether the latest message sent by {user_name} "
-        "passes the provided checks. Here is list of checks that you should perform:\n"
-        f"{check_list_adapter.dump_json(checks_to_do).decode()}"
-        + "\nA check should fail if the user's message does not meets the criteria "
-        "described in the check. Provide a JSON object with the key 'failed_checks' "
-        "with a list of objects with the keys 'id' containing the semantic ID of the "
-        f"check that failed, 'reason' containing the reason why the check failed, and "
-        f"'offender' containing '{user_name}. If no checks fail, provide an empty "
-        "list. DO NOT perform any checks that are not listed above."
-    )
-
-    messages = _extract_messages_for_feedback(conversation)
-    prompt_data = message_list_adapter.dump_json(messages).decode()
-
-    result = await llm.generate(
-        schema=Analysis,
-        model=llm.Model.CLAUDE_3_SONNET,
-        system=system,
-        prompt=prompt_data,
-    )
-
-    failed_checks = [
-        FailedCheck(
-            source=FeedbackFlowStateRef(id=check.id),
-            reason=check.reason,
-        )
-        for check in result.failed_checks
-        if check.offender == user_name
-    ]
-
-    return failed_checks

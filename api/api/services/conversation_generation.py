@@ -4,14 +4,15 @@ from typing import Annotated
 from bson import ObjectId
 from pydantic import AfterValidator, BaseModel
 
-from api.data.level_scenarios import get_base_level_scenario
 from api.db.conversations import get_previous_info
+from api.levels.all import get_base_level_scenario
+from api.levels.seed import LevelConversationScenarioSeed
 from api.schemas.conversation import (
     ConversationElement,
     LevelConversationScenario,
     LevelConversationStage,
     MessageElement,
-    message_list_adapter,
+    dump_message_list,
 )
 from api.schemas.persona import AgentBasePersona, AgentPersona, UserPersona
 
@@ -19,35 +20,36 @@ from . import llm
 
 
 async def adapt_scenario_to_user(
-    scenario: LevelConversationScenario, user: UserPersona, agent_name: str
+    scenario: LevelConversationScenarioSeed, user: UserPersona, agent_name: str
 ) -> LevelConversationScenario:
     system_prompt = (
         "As a scenario adapter, your task is to adapt the provided scenario to be "
         "tailored to the user's profile. Add details to the scenario that would make "
-        "it more relatable and engaging for the user. Respond with a JSON object "
+        "it more relatable and engaging for the user. Mention how the user and the "
+        "agent met. Respond with a JSON object "
         "containing the keys 'user_perspective', 'agent_perspective', 'user_goal', "
         "and 'is_user_initiated'. The 'user_perspective' key should be a string "
         "describing the user's perspective in the scenario (use second person pronouns "
         "to refer to the user), the 'agent_perspective' key should be a string "
-        f"describing {agent_name}'s perspective (use second person pronouns to refer "
-        f"to {agent_name}), the 'user_goal' key should be a string describing the "
+        f"instructing {agent_name} (use SECOND PERSON PRONOUNS to refer to "
+        f"{agent_name}), the 'user_goal' key should be a string describing the "
         "user's objective in the scenario (begin with an action verb, e.g., "
         "'Convince', 'Explain', 'Find out' and use second person pronouns to refer to "
         "the user), and the 'is_user_initiated' key should be a boolean that is true "
         "if the first message would be sent by the user and false if it would be sent "
         f"by {agent_name}. Do not generate scenarios that involve significant external "
         "elements, such as finding a bug in a software program (it is not possible to "
-        "send the code)."
+        "send the code). Generate SPECIFIC scenarios. DO NOT use uncertain language or "
+        "offer choices."
     )
 
-    class AdaptScenarioPrompt(BaseModel):
-        user: UserPersona
-        agent_name: str
-        scenario: LevelConversationScenario
-
-    prompt_data = AdaptScenarioPrompt(
-        user=user, agent_name=agent_name, scenario=scenario
-    ).model_dump_json()
+    prompt_data = (
+        f"The user is {user.name} and is {user.age} years old. The user's "
+        f"occupation is {user.occupation} and their interests include "
+        f"{', '.join(random.sample(user.interests, 2))}. The agent is {agent_name}."
+        "Here is the scenario to adapt:\n"
+        f"{scenario.model_dump_json()}"
+    )
 
     return await llm.generate(
         schema=LevelConversationScenario,
@@ -60,12 +62,14 @@ async def adapt_scenario_to_user(
 async def generate_level_conversation_scenario(
     user: UserPersona, agent_name: str, stage: LevelConversationStage
 ) -> LevelConversationScenario:
-    base_scenario = get_base_level_scenario(stage)
+    scenario_seed = get_base_level_scenario(stage)
 
-    adapted_scenario = await adapt_scenario_to_user(base_scenario, user, agent_name)
+    if scenario_seed.adapt:
+        scenario = await adapt_scenario_to_user(scenario_seed, user, agent_name)
+    else:
+        scenario = LevelConversationScenario(**scenario_seed.model_dump())
 
-    return adapted_scenario
-
+    return scenario
 
 
 async def generate_conversation_topic(user_id: ObjectId, interests: list[str]) -> str:
@@ -159,6 +163,8 @@ class GenerateConversationTopicResult(BaseModel):
 
 async def determine_conversation_topic(
     elements: list[ConversationElement],
+    user: UserPersona,
+    agent: AgentPersona,
 ) -> str | None:
     system_prompt = (
         "Determine the topic of the conversation happening between the two individuals "
@@ -173,7 +179,7 @@ async def determine_conversation_topic(
         element.content for element in elements if isinstance(element, MessageElement)
     ]
 
-    prompt_data = str(message_list_adapter.dump_json(messages))
+    prompt_data = dump_message_list(messages, user.name, agent.name)
 
     response = await llm.generate(
         schema=GenerateConversationTopicResult,

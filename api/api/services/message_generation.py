@@ -6,7 +6,7 @@ from api.schemas.conversation import (
     BaseConversationScenario,
     Message,
     PlaygroundConversationScenario,
-    message_list_adapter,
+    dump_message_list,
 )
 from api.schemas.persona import AgentPersona, UserPersona
 
@@ -45,7 +45,7 @@ async def generate_message(
             None,
             [
                 user.description if user_sent else agent.description,
-                scenario_perspective if scenario_perspective else None,
+                scenario_perspective,
                 user.writing_style,
                 (
                     f"Tailor your message to the user's culture: {user.culture}"
@@ -55,16 +55,11 @@ async def generate_message(
                     )
                     else None
                 ),
-                (
-                    f"INSTRUCTIONS FOR YOUR MESSAGE: {instructions}"
-                    if instructions
-                    else None
-                ),
             ],
         )
     )
 
-    max_len = 60 if user_sent else 120
+    max_len = 40 if user_sent else 60
 
     system_prompt = (
         f"{prelude}\nYou ({sender_name}) are chatting over text with {recipient_name}. "
@@ -75,14 +70,19 @@ async def generate_message(
         "YOU ARE NOT AN AI. Respond with a JSON object containing the key 'message' "
         f"with your message as the value and the key 'sender' with '{sender_name}' as "
         "the value. Respond ONLY with your next message. Do not include previous "
-        "messages in your response. STAY ON TOPIC and DO NOT mention your "
-        "communication styles. DO NOT reference external information."
+        "messages in your response. STAY ON TOPIC. DO NOT mention that "
+        "you are autistic. DO NOT reference external information."
     )
 
     prompt_data = (
-        "[CONVERSATION START]"
-        if len(messages) == 0
-        else message_list_adapter.dump_json(messages[-8:]).decode()
+        (
+            "[CONVERSATION START]"
+            if len(messages) == 0
+            else dump_message_list(messages[-6:], user.name, agent.name)
+        )
+        + f"\n[{sender_name}]"
+        + (f"\nINSTRUCTIONS FOR YOUR MESSAGE: {instructions}" if instructions else "")
+        + f"\nRespond as {sender_name}.\n"
     )
 
     response = await llm.generate(
@@ -90,6 +90,7 @@ async def generate_message(
         model=llm.Model.CLAUDE_3_SONNET,
         system=system_prompt,
         prompt=prompt_data,
+        temperature=0.8,
     )
 
     return response.message

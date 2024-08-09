@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from enum import Enum
-from typing import TypeVar
+from typing import TypeVar, overload
 
 import numpy as np
 import websockets as ws
@@ -78,20 +78,47 @@ async def _generate_unchecked(
                 )
                 raise RuntimeError("Could not invoke LLM generate: ISE")
 
+        print("-----------------")
+        print(system)
+        print(prompt)
+        print("---")
+        print(response_dict)
+        print("-----------------")
+
         return response_dict["result"]
 
 
 SchemaType = TypeVar("SchemaType", bound=BaseModel)
 
 
-@retry(wait=wait_random_exponential(), stop=stop_after_attempt(3))
+@overload
+async def generate(
+    schema: None,
+    model: Model,
+    prompt: str,
+    system: str,
+    temperature: float | None = None,
+) -> str: ...
+
+
+@overload
 async def generate(
     schema: type[SchemaType] | TypeAdapter[SchemaType],
     model: Model,
     prompt: str,
     system: str,
     temperature: float | None = None,
-) -> SchemaType:
+) -> SchemaType: ...
+
+
+@retry(wait=wait_random_exponential(), stop=stop_after_attempt(3))
+async def generate(
+    schema: type[SchemaType] | TypeAdapter[SchemaType] | None,
+    model: Model,
+    prompt: str,
+    system: str,
+    temperature: float | None = None,
+) -> SchemaType | str:
     response = None
     try:
         response = await _generate_unchecked(model, prompt, system, temperature)
@@ -99,11 +126,14 @@ async def generate(
 
         # strip control characters from data
         data = re.sub(r"[\x00-\x1f\x7f]", "", data)
-        return (
-            schema.validate_json(data)
-            if isinstance(schema, TypeAdapter)
-            else schema.model_validate_json(data)
-        )
+
+        if schema is None:
+            return data
+        if isinstance(schema, TypeAdapter):
+            return schema.validate_json(data)
+        else:
+            return schema.model_validate_json(data)
+
     except Exception as e:
         logging.warning(f"Generate Unexpected error: {e}. {response}")
 

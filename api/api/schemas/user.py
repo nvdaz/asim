@@ -17,7 +17,6 @@ from .persona import UserPersona
 class BaseUserData(BaseModel):
     init: bool = False
     qa_id: UUID
-    name: str | None = None
     persona: UserPersona
     sent_message_counts: dict[str, int] = {}
     max_unlocked_stage: ConversationStage = LevelConversationStage(level=1, part=1)
@@ -40,6 +39,6 @@ def user_from_data(data: UserData) -> User:
     return User(
         id=data.id,
         init=data.init,
-        name=data.name,
+        name=data.persona.name,
         max_unlocked_stage=str(data.max_unlocked_stage),
     )

@@ -73,7 +73,7 @@ async def init_user(user_id: ObjectId, name: str) -> UserData:
     if user.init:
         raise AlreadyInitialized()
 
-    user.name = name
+    user.persona.name = name
     user.init = True
 
     return await users.update(user_id, user)

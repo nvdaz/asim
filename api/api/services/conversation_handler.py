@@ -5,11 +5,18 @@ import faker
 from bson import ObjectId
 
 from api.db import conversations, users
+from api.levels.all import get_level_states
+from api.levels.states import (
+    AgentState,
+    FeedbackState,
+    UserState,
+)
 from api.schemas.conversation import (
     AgentMessage,
     ApMessageLogEntry,
     ApMessageStep,
     BaseConversation,
+    CompletedStep,
     Conversation,
     ConversationDescriptor,
     ConversationStage,
@@ -28,68 +35,30 @@ from api.schemas.conversation import (
     PlaygroundConversationScenario,
     PlaygroundConversationStage,
     SelectOption,
-    SelectOptionCustom,
     SelectOptionIndex,
     SelectOptionNone,
     StateActiveData,
     StateAwaitingUserChoiceData,
-    StateFeedbackData,
+    StateCompletedData,
     UserMessage,
 )
 from api.schemas.user import UserData
 
 from . import conversation_pregen
 from .conversation_generation import (
-    determine_conversation_topic,
     generate_agent_persona,
-    generate_agent_persona_from_topic,
     generate_level_conversation_scenario,
 )
-from .feedback_generation import check_messages, generate_feedback
-from .flow_state.ambiguous_language import AMBIGUOUS_LANGUAGE_LEVEL_CONTEXT
-from .flow_state.base import (
-    ApFlowState,
-    ConversationContext,
-    NormalApFlowStateRef,
-    NormalNpFlowStateRef,
-    NpFlowState,
-    UserFlowOption,
-)
-from .flow_state.blunt_language import BLUNT_LANGUAGE_LEVEL_CONTEXT
-from .flow_state.playground import PLAYGROUND_CONTEXT
+from .feedback_generation import generate_feedback
 from .message_generation import generate_message
-
-
-def _get_stage_context(stage: ConversationStage) -> ConversationContext:
-    match stage:
-        case LevelConversationStage(level=1):
-            return AMBIGUOUS_LANGUAGE_LEVEL_CONTEXT
-        case LevelConversationStage(level=2):
-            return BLUNT_LANGUAGE_LEVEL_CONTEXT
-        case PlaygroundConversationStage():
-            return PLAYGROUND_CONTEXT
-        case _:
-            raise ValueError("Invalid stage")
 
 
 def _next_stage(stage: ConversationStage) -> ConversationStage:
     match stage:
-        case LevelConversationStage(level=level, part=part) if part < 5:
-            return LevelConversationStage(level=level, part=part + 1)
-        case LevelConversationStage(level=level, part=part) if level < 2 and part == 5:
-            return LevelConversationStage(level=level + 1, part=1)
+        case LevelConversationStage(level=level) if level < 2:
+            return LevelConversationStage(level=level + 1)
         case _:
             return PlaygroundConversationStage()
-
-
-def _should_unlock_next_stage(
-    current_stage: ConversationStage,
-    sent_message_counts: dict[str, int],
-) -> ConversationStage | None:
-    if not sent_message_counts.get(str(current_stage), 0) >= 8:
-        return None
-
-    return _next_stage(current_stage)
 
 
 def _is_unlocked_stage(
@@ -99,10 +68,10 @@ def _is_unlocked_stage(
         case (PlaygroundConversationStage(), _):
             return True
         case (
-            LevelConversationStage(level=max_level, part=max_part),
-            LevelConversationStage(level=level, part=part),
+            LevelConversationStage(level=max_level),
+            LevelConversationStage(level=level),
         ):
-            return level < max_level or (level == max_level and part <= max_part)
+            return level <= max_level
         case _:
             return False
 
@@ -133,27 +102,23 @@ async def _create_conversation_internal(
     user: UserData,
     stage: ConversationStage,
 ) -> Conversation:
+    assert isinstance(stage, LevelConversationStage)
     agent_name = fake.first_name()
+    states = get_level_states(stage)
 
     match stage:
-        case LevelConversationStage(level=level, part=part):
+        case LevelConversationStage(level=level):
             scenario = await generate_level_conversation_scenario(
                 user.persona, agent_name, stage
             )
 
-            info = LevelConversationInfo(level=level, part=part, scenario=scenario)
+            info = LevelConversationInfo(level=level, scenario=scenario)
 
             agent = await generate_agent_persona(
                 scenario.agent_perspective,
                 agent_name,
             )
-            state = StateActiveData(
-                id=(
-                    NormalNpFlowStateRef
-                    if scenario.is_user_initiated
-                    else NormalApFlowStateRef
-                )
-            )
+            state = StateActiveData(data=states.init())
 
         case PlaygroundConversationStage():
             scenario = PlaygroundConversationScenario(
@@ -182,7 +147,7 @@ async def _create_conversation_internal(
                 scenario.agent_perspective,
                 agent_name,
             )
-            state = StateActiveData(id=NormalNpFlowStateRef)
+            state = StateActiveData(data=states.init())
 
     data = BaseConversation(
         user_id=user.id,
@@ -228,7 +193,9 @@ async def progress_conversation(
     if not conversation:
         raise RuntimeError("Conversation not found")
 
-    context = _get_stage_context(conversation.info)
+    assert isinstance(conversation.info, LevelConversationInfo)
+    states = get_level_states(conversation.info)
+
     unlocked_stage = user.max_unlocked_stage
 
     if isinstance(conversation.state, StateAwaitingUserChoiceData):
@@ -237,12 +204,6 @@ async def progress_conversation(
                 conversation.state.options
             ):
                 response = conversation.state.options[index]
-            case SelectOptionCustom(message=message) if conversation.state.allow_custom:
-                response = MessageOption(
-                    response=message,
-                    checks=context.get_feedback_refs(),
-                    next=NormalApFlowStateRef,
-                )
             case _:
                 raise InvalidSelection()
 
@@ -256,65 +217,7 @@ async def progress_conversation(
             MessageElement(content=UserMessage(message=response.response))
         )
 
-        if (
-            isinstance(conversation.info, PlaygroundConversationInfo)
-            and conversation.info.scenario.topic is None
-        ):
-            topic = await determine_conversation_topic(conversation.elements)
-            conversation.info.scenario.topic = topic
-
-            if topic is not None:
-                conversation.agent = await generate_agent_persona_from_topic(
-                    conversation.agent.name, topic
-                )
-
-                conversation.info.scenario = PlaygroundConversationScenario(
-                    user_perspective=(
-                        f"You have the opportunity to explore {topic} by engaging in "
-                        "a conversation with an expert who you are meeting for the "
-                        "first time and are eager to share your thoughts and feelings. "
-                        "Ask questions about the topic, share your own experiences, "
-                        "and ask about the expert's background. Open up about your "
-                        "interests and engage in a meaningful conversation that "
-                        "connects with the expert on a personal level."
-                    ),
-                    agent_perspective=(
-                        "Connect with the user on a personal level by considering "
-                        "their perspective. Ask open-ended questions to learn more "
-                        "about them and actively listen to their responses. Share "
-                        "relevant personal experiences and insights as an expert in "
-                        f"{topic} to foster a meaningful and engaging conversation. "
-                        "Your goal is to create an emotionally captivating dialogue "
-                        "that resonates with the user."
-                    ),
-                )
-
-        sent_message_counts = await users.increment_message_count(
-            user.id, conversation.info
-        )
-
-        unlocked_stage = _should_unlock_next_stage(
-            conversation.info, sent_message_counts
-        )
-
-        if unlocked_stage is not None:
-            await unlock_stage(user, unlocked_stage)
-            await _enqueue_pregenerate_conversations(user)
-        else:
-            unlocked_stage = user.max_unlocked_stage
-
-        checks = [(check, context.get_state(check)) for check in response.checks]
-
-        failed_checks = await check_messages(
-            user.persona, conversation.agent, conversation, checks
-        )
-
-        if failed_checks:
-            conversation.state = StateFeedbackData(
-                failed_checks=failed_checks, next=response.next
-            )
-        else:
-            conversation.state = StateActiveData(id=response.next)
+        conversation.state = StateActiveData(data=response.next)
     else:
         if not isinstance(option, SelectOptionNone):
             raise InvalidSelection()
@@ -326,134 +229,135 @@ async def progress_conversation(
     ]
 
     if isinstance(conversation.state, StateActiveData):
-        state_data = context.get_state(conversation.state.id)
+        if conversation.state.data is None:
+            conversation.state = StateCompletedData()
 
-        if isinstance(state_data, NpFlowState):
-            state_options = (
-                random.sample(state_data.options, 3)
-                if len(state_data.options) > 3
-                else state_data.options
-            )
+            unlocked_stage = user.max_unlocked_stage
+            if str(conversation.info) == str(user.max_unlocked_stage):
+                unlocked_stage = _next_stage(user.max_unlocked_stage)
 
-            def generate_message_for_option(opt: UserFlowOption):
-                instructions = opt.prompt
-                if (
-                    isinstance(conversation.info, PlaygroundConversationInfo)
-                    and conversation.info.scenario.topic is None
-                ):
-                    selected_topic = random.choice(user.persona.interests)
-                    instructions = (
-                        f"Your chosen topic is {selected_topic}. {instructions}"
+                await unlock_stage(user, unlocked_stage)
+                await _enqueue_pregenerate_conversations(user)
+
+            result = CompletedStep(max_unlocked_stage=str(unlocked_stage))
+        else:
+            state_data = states.next(conversation.state.data)
+
+            if isinstance(state_data, UserState):
+                state_options = (
+                    random.sample(state_data.options, 3)
+                    if len(state_data.options) > 3
+                    else state_data.options
+                )
+
+                responses = await asyncio.gather(
+                    *[
+                        generate_message(
+                            user_sent=True,
+                            user=user.persona,
+                            agent=conversation.agent,
+                            messages=messages,
+                            scenario=conversation.info.scenario,
+                            instructions=opt.instructions,
+                        )
+                        for opt in state_options
+                    ]
+                )
+
+                options = [
+                    MessageOption(
+                        response=response,
+                        next=opt.next,
                     )
+                    for response, opt in zip(responses, state_options)
+                ]
 
-                return generate_message(
-                    user_sent=True,
+                random.shuffle(options)
+
+                conversation.events.append(
+                    NpMessageOptionsLogEntry(
+                        options=options,
+                    )
+                )
+
+                conversation.state = StateAwaitingUserChoiceData(
+                    options=options, allow_custom=False
+                )
+
+                result = NpMessageStep(
+                    options=[o.response for o in options],
+                    allow_custom=False,
+                    max_unlocked_stage=str(unlocked_stage),
+                )
+            elif isinstance(state_data, AgentState):
+                response = await generate_message(
+                    user_sent=False,
                     user=user.persona,
                     agent=conversation.agent,
                     messages=messages,
                     scenario=conversation.info.scenario,
-                    instructions=instructions,
+                    instructions=state_data.instructions,
                 )
 
-            responses = await asyncio.gather(
-                *[generate_message_for_option(opt) for opt in state_options]
-            )
-
-            options = [
-                MessageOption(
-                    response=response,
-                    checks=opt.checks,
-                    next=opt.next,
+                conversation.events.append(
+                    ApMessageLogEntry(
+                        message=response,
+                    )
                 )
-                for response, opt in zip(responses, state_options)
-            ]
 
-            random.shuffle(options)
-
-            conversation.events.append(
-                NpMessageOptionsLogEntry(
-                    state=conversation.state.id.id,
-                    options=options,
+                conversation.elements.append(
+                    MessageElement(content=AgentMessage(message=response))
                 )
-            )
 
-            conversation.state = StateAwaitingUserChoiceData(
-                options=options, allow_custom=state_data.allow_custom
-            )
+                conversation.state = StateActiveData(data=state_data.next)
 
-            result = NpMessageStep(
-                options=[o.response for o in options],
-                allow_custom=state_data.allow_custom,
-                max_unlocked_stage=str(unlocked_stage),
-            )
-        elif isinstance(state_data, ApFlowState):
-            opt = random.choice(state_data.options)
-
-            response = await generate_message(
-                user_sent=False,
-                user=user.persona,
-                agent=conversation.agent,
-                messages=messages,
-                scenario=conversation.info.scenario,
-                instructions=opt.prompt,
-            )
-
-            conversation.events.append(
-                ApMessageLogEntry(
-                    state=conversation.state.id.id,
-                    message=response,
+                result = ApMessageStep(
+                    content=response, max_unlocked_stage=str(unlocked_stage)
                 )
-            )
-
-            conversation.elements.append(
-                MessageElement(content=AgentMessage(message=response))
-            )
-
-            conversation.state = StateActiveData(id=opt.next)
-
-            result = ApMessageStep(
-                content=response, max_unlocked_stage=str(unlocked_stage)
-            )
-        else:
-            raise RuntimeError(f"Invalid state: {state_data}")
-    elif isinstance(conversation.state, StateFeedbackData):
-        state_data = [
-            context.get_state(check.source)
-            for check in conversation.state.failed_checks
-        ]
-
-        response = await generate_feedback(user.persona, conversation, state_data)
-
-        conversation.events.append(
-            FeedbackLogEntry(
-                failed_checks=conversation.state.failed_checks,
-                content=response,
-            )
-        )
-
-        if response.follow_up is not None:
-            options = [
-                MessageOption(
-                    response=response.follow_up,
-                    checks=[],
-                    next=conversation.state.next,
+            elif isinstance(state_data, FeedbackState):
+                response = await generate_feedback(
+                    user.persona,
+                    conversation,
+                    state_data.prompt,
+                    instructions=state_data.instructions,
                 )
-            ]
 
-            conversation.state = StateAwaitingUserChoiceData(
-                options=options,
-                allow_custom=isinstance(conversation.info, PlaygroundConversationInfo),
-            )
-        else:
-            conversation.state = StateActiveData(id=conversation.state.next)
+                conversation.events.append(
+                    FeedbackLogEntry(
+                        content=response,
+                    )
+                )
 
-        conversation.elements.append(
-            FeedbackElement(
-                content=response,
-            )
-        )
+                if response.follow_up is not None:
+                    options = [
+                        MessageOption(
+                            response=response.follow_up,
+                            next=state_data.next,
+                        )
+                    ]
 
-        result = FeedbackStep(content=response, max_unlocked_stage=str(unlocked_stage))
+                    conversation.state = StateAwaitingUserChoiceData(
+                        options=options,
+                        allow_custom=isinstance(
+                            conversation.info, PlaygroundConversationInfo
+                        ),
+                    )
+                else:
+                    conversation.state = StateActiveData(data=state_data.next)
+
+                conversation.elements.append(
+                    FeedbackElement(
+                        content=response,
+                    )
+                )
+
+                result = FeedbackStep(
+                    content=response, max_unlocked_stage=str(unlocked_stage)
+                )
+            else:
+                raise RuntimeError(f"Invalid state: {state_data}")
+    elif isinstance(conversation.state, StateCompletedData):
+        result = CompletedStep(max_unlocked_stage=str(unlocked_stage))
     else:
         raise RuntimeError(f"Invalid state: {conversation.state}")
 
@@ -493,7 +397,7 @@ async def _enqueue_pregenerate_conversation_ifne(
             await pregenerate_conversation(user.id, stage)
 
 
-PREGENERATION_COUNT = 3 if conversation_pregen.DEFER_PREGENERATION else 1
+PREGENERATION_COUNT = 3 if conversation_pregen.DEFER_PREGENERATION else 0
 
 
 async def _enqueue_pregenerate_conversations(user: UserData):
@@ -509,6 +413,5 @@ async def _enqueue_pregenerate_conversations(user: UserData):
 
 
 async def pregenerate_initial_conversations(user: UserData):
-    await pregenerate_conversation(user.id, LevelConversationStage(level=1, part=1))
-    await _enqueue_pregenerate_conversations(user)
+    await pregenerate_conversation(user.id, LevelConversationStage(level=1))
     await _enqueue_pregenerate_conversations(user)

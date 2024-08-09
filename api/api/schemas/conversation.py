@@ -1,29 +1,26 @@
-from typing import Annotated, Literal, Sequence
+from typing import Annotated, Generic, Literal, Sequence, TypeVar
 
 from pydantic import (
     AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
+    SerializeAsAny,
     StringConstraints,
     TypeAdapter,
 )
 
-from api.services.flow_state.base import FeedbackFlowStateRef, FlowStateRef
+from api.levels.states import BaseData
 
 from .objectid import PyObjectId
 from .persona import AgentPersona, PersonaName
 
-
-class FailedCheck(BaseModel):
-    source: FeedbackFlowStateRef
-    reason: str
+StateData = TypeVar("StateData", bound=BaseData)
 
 
 class Feedback(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=600)]
-    misunderstand: str
     follow_up: str
 
 
@@ -59,18 +56,24 @@ ConversationElement = Annotated[
 ]
 
 
-message_list_adapter = TypeAdapter(Sequence[Message])
+def dump_message_list(
+    messages: Sequence[Message], user: str | None, agent: str | None
+) -> str:
+    return "\n".join(
+        [
+            f"{(user or 'User') if message.user_sent else agent}: {message.message}"
+            for message in messages
+        ]
+    )
 
 
-class MessageOption(BaseModel):
+class MessageOption(BaseModel, Generic[StateData]):
     response: str
-    next: FlowStateRef
-    checks: list[FeedbackFlowStateRef]
+    next: SerializeAsAny[StateData] | None
 
 
 class NpMessageOptionsLogEntry(BaseModel):
     type: Literal["np_options"] = "np_options"
-    state: str
     options: list[MessageOption]
 
 
@@ -81,13 +84,11 @@ class NpMessageSelectedLogEntry(BaseModel):
 
 class ApMessageLogEntry(BaseModel):
     type: Literal["ap"] = "ap"
-    state: str
     message: str
 
 
 class FeedbackLogEntry(BaseModel):
     type: Literal["feedback"] = "feedback"
-    failed_checks: list[FailedCheck]
     content: Feedback
 
 
@@ -100,27 +101,18 @@ ConversationLogEntry = Annotated[
 ]
 
 LEVEL_MIN = 1
-LEVEL_MAX = 2
-PART_MIN = 1
-PART_MAX = 5
+LEVEL_MAX = 3
 
 
 class LevelConversationStage(BaseModel):
     type: Literal["level"] = "level"
     level: Annotated[int, Field(ge=LEVEL_MIN, le=LEVEL_MAX)]
-    part: Annotated[int, Field(ge=PART_MIN, le=PART_MAX)]
 
     def __str__(self) -> str:
-        return f"level-{self.level}p{self.part}"
+        return f"level-{self.level}"
 
 
-ALL_LEVEL_STAGES = [
-    f"level-{level}p{part}"
-    for level in range(LEVEL_MIN, LEVEL_MAX + 1)
-    for part in range(PART_MIN, PART_MAX + 1)
-]
-
-print(ALL_LEVEL_STAGES)
+ALL_LEVEL_STAGES = [f"level-{level}" for level in range(LEVEL_MIN, LEVEL_MAX + 1)]
 
 
 class PlaygroundConversationStage(BaseModel):
@@ -143,8 +135,8 @@ def conversation_stage_from_str(stage: str) -> ConversationStage:
     if stage == "playground":
         return PlaygroundConversationStage()
     elif stage.startswith("level-"):
-        level, part = stage.split("-")[1].split("p")
-        return LevelConversationStage(level=int(level), part=int(part))
+        level = stage.split("-")[1]
+        return LevelConversationStage(level=int(level))
     else:
         raise ValueError(f"Invalid conversation stage: {stage}")
 
@@ -201,25 +193,22 @@ class StateAwaitingUserChoiceData(BaseModel):
     allow_custom: bool
 
 
-class StateFeedbackData(BaseModel):
-    type: Literal["feedback"] = "feedback"
-    failed_checks: list[FailedCheck]
-    next: FlowStateRef
-
-
-class StateActiveData(BaseModel):
+class StateActiveData(BaseModel, Generic[StateData]):
     type: Literal["active"] = "active"
-    id: FlowStateRef
+    data: SerializeAsAny[StateData] | None
+
+
+class StateCompletedData(BaseModel):
+    type: Literal["completed"] = "completed"
 
 
 ConversationStateData = Annotated[
-    StateAwaitingUserChoiceData | StateFeedbackData | StateActiveData,
+    StateAwaitingUserChoiceData | StateActiveData | StateCompletedData,
     Field(discriminator="type"),
 ]
 
 
 class BaseConversation(BaseModel):
-    init: Literal[True] = True
     user_id: PyObjectId
     info: ConversationInfo
     agent: AgentPersona
@@ -242,7 +231,7 @@ class StateAwaitingUserChoice(BaseModel):
 
 class StateActive(BaseModel):
     waiting: Literal[False] = False
-    type: Literal["np", "ap", "feedback"]
+    type: Literal["np", "ap", "feedback", "completed"]
 
 
 ConversationState = Annotated[
@@ -261,22 +250,21 @@ class Conversation(BaseModel):
 
     @staticmethod
     def from_data(data: ConversationData) -> "Conversation":
-        state = None
-        if isinstance(data, ConversationData):
-            match data.state:
-                case StateAwaitingUserChoiceData(
-                    options=options, allow_custom=allow_custom
-                ):
-                    state = StateAwaitingUserChoice(
-                        options=[o.response for o in options],
-                        allow_custom=allow_custom,
-                    )
-                case StateActiveData(id=id):
-                    state = StateActive(type=id.type)
-                case StateFeedbackData():
-                    state = StateActive(type="feedback")
-                case _:
-                    raise ValueError(f"Unknown state type: {data.state}")
+        match data.state:
+            case StateAwaitingUserChoiceData(
+                options=options, allow_custom=allow_custom
+            ):
+                state = StateAwaitingUserChoice(
+                    options=[o.response for o in options],
+                    allow_custom=allow_custom,
+                )
+            case StateActiveData():
+                state = StateActive(type="np")
+                # TODO: this isn't always np
+            case StateCompletedData():
+                state = StateActive(type="completed")
+            case _:
+                raise ValueError(f"Unknown state type: {data.state}")
 
         return Conversation(
             id=data.id,
@@ -329,8 +317,13 @@ class FeedbackStep(BaseModel):
     max_unlocked_stage: ConversationStageStr
 
 
+class CompletedStep(BaseModel):
+    type: Literal["complete"] = "complete"
+    max_unlocked_stage: ConversationStageStr
+
+
 ConversationStep = Annotated[
-    NpMessageStep | ApMessageStep | FeedbackStep,
+    NpMessageStep | ApMessageStep | FeedbackStep | CompletedStep,
     Field(discriminator="type"),
 ]
 
