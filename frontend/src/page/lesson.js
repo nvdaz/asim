@@ -93,7 +93,12 @@ const Lesson = () => {
         `conversations/?stage=level-${currentLevel}`
       );
       if (!listConversations.ok) {
-        setAlertMessage("Error occurred fetching data");
+        if (listConversations.data.detail === 'invalid token') {
+          setAlertMessage("Please use sign up link");
+        }
+        else {
+          setAlertMessage("Error occurred fetching data");
+        }
         return;
       }
 

@@ -25,11 +25,8 @@ const Landing = () => {
   const isMobile = useMediaQuery("(max-width:600px)");
   const allowedLessons = localStorage.getItem("max_unlocked_stage");
   const [open, setOpen] = useState(false);
+  const [open2, setOpen2] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
-
-  const handleTooltipClose = () => {
-    setOpen(false);
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -132,13 +129,13 @@ const Landing = () => {
 
   const lessonsSection = () => {
     return (
-      <div className={styles.columnRight}>
+      <div>
         <div
           className={styles.columnRightBtnWrapper}
           style={{ marginRight: "100px" }}
         >
           Lesson 1
-          <div style={{ marginBottom: "10px" }}>Figurative Language</div>
+          <div style={{ marginBottom: "10px" }}>Ambiguous Languages</div>
           <Button
             sx={{
               backgroundColor: "#FFB930",
@@ -170,12 +167,12 @@ const Landing = () => {
           style={{ marginLeft: "100px" }}
         >
           Lesson 2<div style={{ marginBottom: "10px" }}>Blunt Messages</div>
-          <ClickAwayListener onClickAway={handleTooltipClose}>
+          <ClickAwayListener onClickAway={() => setOpen(false)}>
             <Tooltip
               PopperProps={{
                 disablePortal: true,
               }}
-              onClose={handleTooltipClose}
+              onClose={() => setOpen(false)}
               open={open}
               disableFocusListener
               disableHoverListener
@@ -230,6 +227,80 @@ const Landing = () => {
             </Tooltip>
           </ClickAwayListener>
         </div>
+        <div
+          className={styles.columnRightBtnWrapper}
+          style={{ marginRight: "100px" }}
+        >
+          Lesson 3
+          <div style={{ marginBottom: "10px" }}>---</div>
+          <ClickAwayListener
+            onClickAway={() => {
+              setOpen2(false);
+              console.log("--");
+            }}
+          >
+            <Tooltip
+              PopperProps={{
+                disablePortal: true,
+              }}
+              onClose={() => {
+                setOpen2(false);
+                console.log("--");
+              }}
+              open={open2}
+              disableFocusListener
+              disableHoverListener
+              disableTouchListener
+              title="Send 8 messages in Level 2 to unlock!"
+              arrow
+            >
+              <Button
+                sx={{
+                  backgroundColor:
+                    allowedLessons === "level-2" ||
+                    allowedLessons === "playground"
+                      ? "#FFB930"
+                      : "#797979",
+                  textTransform: "none",
+                  borderRadius: "50%",
+                  padding: 0,
+                  "&:hover": {
+                    backgroundColor:
+                      allowedLessons === "level-2" ||
+                      allowedLessons === "playground"
+                        ? "#FF9430"
+                        : "##A3A3A3",
+                  },
+                  "& .MuiTouchRipple-child": {
+                    backgroundColor:
+                      allowedLessons === "level-2" ||
+                      allowedLessons === "playground"
+                        ? "#FFCC69"
+                        : "#637BC4",
+                  },
+                }}
+              >
+                <div
+                  className={styles.lessonsBtn}
+                  onClick={() => {
+                    if (
+                      allowedLessons === "level-2" ||
+                      allowedLessons === "playground"
+                    ) {
+                      setTimeout(() => {
+                        window.location.href = "/lesson/3";
+                      }, "250");
+                    } else {
+                      setOpen2(true);
+                    }
+                  }}
+                >
+                  {allowedLessons === "level-2" && "Start"}
+                </div>
+              </Button>
+            </Tooltip>
+          </ClickAwayListener>
+        </div>
       </div>
     );
   };
@@ -276,7 +347,7 @@ const Landing = () => {
           PopperProps={{
             disablePortal: true,
           }}
-          onClose={handleTooltipClose}
+          onClose={() => setPlaygroundOpen(false)}
           open={playgroundOpen}
           disableFocusListener
           disableHoverListener
@@ -292,8 +363,8 @@ const Landing = () => {
 
   const landingPage = () => {
     return isMobile ? (
-      <div style={{ width: "100%", margin: "16px" }}>
-        {lessonsSection()}
+      <div style={{ height: "100%", width: "100%", margin: "16px" }}>
+        <div className={styles.columnRightMobile}>{lessonsSection()}</div>
         <div className={styles.mobileBtnWrapper}>
           {btn("Learn")}
           {playgroundBtn()}
@@ -307,7 +378,7 @@ const Landing = () => {
             {playgroundBtn()}
           </div>
         </div>
-        {lessonsSection()}
+        <div className={styles.columnRight}>{lessonsSection()}</div>
       </div>
     );
   };

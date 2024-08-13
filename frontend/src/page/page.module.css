@@ -38,7 +38,15 @@
     flex-direction: column;
     align-items: center;
     gap: 40px;
-    margin-bottom: 120px;
+    padding: 60px 0 100px 0;
+    overflow: auto;
+    max-height: calc(100% - 160px);
+}
+
+.columnRightMobile {
+    padding: 60px 0 100px 0;
+    max-height: calc(100% - 160px - 110px);
+    overflow: auto;
 }
 
 .columnRightBtnWrapper {
@@ -98,11 +106,14 @@
     position: absolute;
     justify-content: center;
     bottom: 0;
+    left: 0;
     display: flex;
     flex-direction: row;
     width: 100%;
-    margin-bottom: 40px;
     gap: 3rem;
+    border-top: 1px solid #ccc;
+    height: 110px;
+    align-items: center;
 }
 
 .initLesson {
