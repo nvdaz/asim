@@ -10,17 +10,29 @@ from pydantic import (
     TypeAdapter,
 )
 
-from api.levels.states import BaseData
-
 from .objectid import PyObjectId
 from .persona import AgentPersona, PersonaName
+
+StateId = TypeVar("StateId")
+
+
+class BaseData(BaseModel, Generic[StateId]):
+    state: StateId
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+
 
 StateData = TypeVar("StateData", bound=BaseData)
 
 
-class Feedback(BaseModel):
+class BaseFeedback(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
     body: Annotated[str, StringConstraints(max_length=600)]
+
+
+class Feedback(BaseFeedback):
     follow_up: str
 
 
@@ -59,6 +71,8 @@ ConversationElement = Annotated[
 def dump_message_list(
     messages: Sequence[Message], user: str | None, agent: str | None
 ) -> str:
+    if not messages:
+        return "[CONVERSATION START]"
     return "\n".join(
         [
             f"{(user or 'User') if message.user_sent else agent}: {message.message}"

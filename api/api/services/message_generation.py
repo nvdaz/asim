@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Sequence
 
 from pydantic import AfterValidator, BaseModel
 
@@ -13,6 +13,15 @@ from api.schemas.persona import AgentPersona, UserPersona
 from . import llm
 
 
+def _format_example(
+    example: tuple[str, str] | str,
+) -> str:
+    if isinstance(example, tuple):
+        return f"'{example[0]}' -> '{example[1]}'"
+    else:
+        return f"'{example}'"
+
+
 async def generate_message(
     user_sent: bool,
     user: UserPersona,
@@ -20,6 +29,7 @@ async def generate_message(
     messages: list[Message],
     scenario: BaseConversationScenario,
     instructions: str | None = None,
+    examples: Sequence[tuple[str, str] | str] | None = None,
 ) -> str:
     user_name = f"{user.name} (the user)" if user.name else "the user"
 
@@ -46,7 +56,6 @@ async def generate_message(
             [
                 user.description if user_sent else agent.description,
                 scenario_perspective,
-                user.writing_style,
                 (
                     f"Tailor your message to the user's culture: {user.culture}"
                     if (
@@ -74,15 +83,29 @@ async def generate_message(
         "information."
     )
 
+    examples_str = (
+        "\nIMPORTANT: I MUST MODEL MY RESPONSES AFTER THESE EXAMPLES.\n"
+        "<example_responses>\n"
+        + "\n".join([_format_example(example) for example in examples]).format(
+            user=user.name, agent=agent.name
+        )
+        + "\n</example_responses>\n"
+        if examples
+        else None
+    )
+
     prompt_data = (
         (
             "[CONVERSATION START]"
             if len(messages) == 0
-            else dump_message_list(messages[-6:], user.name, agent.name)
+            else dump_message_list(messages[-12:], user.name, agent.name)
         )
-        + f"\n[{sender_name}]"
-        + (f"\nINSTRUCTIONS FOR YOUR MESSAGE: {instructions}" if instructions else "")
-        + f"\nRespond as {sender_name}.\n"
+        + f"\n{sender_name}:"
+        + "\n<instructions>"
+        + (f"\n{instructions}\n{examples_str or ''}\n" if instructions else "")
+        + f"\nI am {sender_name}.\n</instructions>"
+        + f"\nRESPOND AS {sender_name.upper()}. IMPORTANT: FOLLOW THE INSTRUCTIONS "
+        "CAREFULLY TO ENSURE YOUR MESSAGE IS APPROPRIATE."
     )
 
     response = await llm.generate(

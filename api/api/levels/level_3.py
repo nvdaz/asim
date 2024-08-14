@@ -34,9 +34,9 @@ class _IntroStates(States[_IntroData]):
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="Begin the conversation and mention that you "
-                            "noticed a mess and need to inform the other person about "
-                            "it.",
+                            instructions="I will start the conversation and mention "
+                            "that I noticed a mess and need to inform the other person "
+                            "about it.",
                             next=None,
                         ),
                     ]
@@ -61,10 +61,11 @@ class _FrustratedStates(States[_FrustratedData]):
         match data.state:
             case "agent_frustrated":
                 return AgentState(
-                    instructions="You are upset about the situation and express your "
-                    "frustration bluntly. Your message should be direct and "
-                    "urgent, potentially leading the other person to feel you are "
-                    "upset with them.",
+                    instructions="I will express my frustration about the situation "
+                    "bluntly. I am frustrated about the mess and need to inform the "
+                    "other person about it. My message will be direct and urgent, "
+                    "potentially leading the other person to feel I am upset with "
+                    "them.",
                     next=None,
                 )
 
@@ -95,18 +96,23 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="You just received a frustrated message and "
-                            "respond with a dismissive message since you believe the "
-                            "other person is being rude to you.",
+                            instructions="I will be dismissive in my response to the "
+                            "other person's frustration because I believe they are "
+                            "being rude to me.",
+                            examples=[
+                                # TODO:
+                            ],
                             next=_UserReactConfrontationalData(
                                 state="agent_react_dismissive"
                             ),
                         ),
                         UserOption(
-                            instructions="You just received a frustrated message and "
-                            "are confused why the other person is upset with you. You "
-                            "ask why they are upset with you since it's not your fault "
-                            "in an accusatory tone.",
+                            instructions="I will be confrontational in my response to "
+                            "the other person's frustration because I believe they are "
+                            "being aggressive towards me for no reason.",
+                            examples=[
+                                # TODO:
+                            ],
                             next=_UserReactConfrontationalData(
                                 state="agent_react_confrontational"
                             ),
@@ -115,15 +121,21 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                 )
             case "agent_react_dismissive":
                 return AgentState(
-                    instructions="You are upset with the situation and feel the other "
-                    "person is being dismissive. You respond with a blunt message.",
+                    instructions="I will express my frustration about the situation "
+                    "bluntly. I feel the other person is being dismissive towards me.",
+                    examples=[
+                        # TODO:
+                    ],
                     next=_UserReactConfrontationalData(state="feedback_dismissive"),
                 )
             case "agent_react_confrontational":
                 return AgentState(
-                    instructions="You are upset with the situation and feel the other "
-                    "person is being confrontational towards you. You respond with a "
-                    "blunt message.",
+                    instructions="I will express my frustration about the situation "
+                    "bluntly. I feel the other person is being confrontational towards "
+                    "me.",
+                    examples=[
+                        # TODO:
+                    ],
                     next=_UserReactConfrontationalData(
                         state="feedback_confrontational"
                     ),
@@ -134,7 +146,10 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                     "to be more empathetic and understanding in their response. "
                     "Provide feedback on how the user could have been more "
                     "understanding and empathetic in their response.",
-                    instructions="Apologize for being dismissive.",
+                    instructions="I will apologize for being dismissive.",
+                    examples=[
+                        # TODO:
+                    ],
                     next=None,
                 )
             case "feedback_confrontational":
@@ -144,7 +159,10 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                     "neutral language instead. Provide feedback on how the user "
                     "could have been more empathetic and understanding in their "
                     "response.",
-                    instructions="Apologize for being confrontational.",
+                    instructions="I will apologize for being confrontational.",
+                    examples=[
+                        # TODO:
+                    ],
                     next=None,
                 )
 
@@ -171,9 +189,11 @@ class _UserReactInterpretSarcasmStates(States[_UserReactInterpretSarcasmData]):
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="You just received a blunt message that you "
-                            "interpret as sarcastic, thinking the other person is "
-                            "being rude.",
+                            instructions="I will interpret the other person's message "
+                            "as sarcastic and respond accordingly. I believe the other "
+                            "person is being rude to me because they are being "
+                            "sarcastic.",
+                            examples=[],
                             next=_UserReactInterpretSarcasmData(
                                 state="agent_react_sarcastic"
                             ),
@@ -182,8 +202,10 @@ class _UserReactInterpretSarcasmStates(States[_UserReactInterpretSarcasmData]):
                 )
             case "agent_react_sarcastic":
                 return AgentState(
-                    instructions="You are upset with the situation and feel the other "
-                    "person does not understand that you are not being sarcastic.",
+                    instructions="I will express my frustration about the situation "
+                    "bluntly. THe other person does not understand that I am being "
+                    "serious.",
+                    examples=[],
                     next=_UserReactInterpretSarcasmData(state="feedback_sarcastic"),
                 )
             case "feedback_sarcastic":
@@ -192,7 +214,11 @@ class _UserReactInterpretSarcasmStates(States[_UserReactInterpretSarcasmData]):
                     "dismissed. The user needs to be more empathetic and understanding "
                     "in their response. Provide feedback on how the user could have "
                     "responded more appropriately.",
-                    instructions="Apologize for incorrectly interpreting the message.",
+                    instructions="I will apologize for incorrectly interpreting the "
+                    "message as sarcastic when it was not intended that way.",
+                    examples=[
+                        # TODO:
+                    ],
                     next=None,
                 )
 
@@ -215,8 +241,9 @@ class _UserReactEmpatheticStates(States[_UserReactEmpatheticData]):
         return UserState(
             options=[
                 UserOption(
-                    instructions="Respond to the message you received. You realize the "
-                    "frustration is not directed at you.",
+                    instructions="I will respond neutrally to the other person's "
+                    "frustration. I will acknowledge their frustration and respond "
+                    "empathetically.",
                     next=None,
                 ),
             ]

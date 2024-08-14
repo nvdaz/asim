@@ -9,17 +9,15 @@ from typing import (
     TypeVar,
 )
 
-from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
+from pydantic import BaseModel, Field, SerializeAsAny
+
+from api.schemas.conversation import (
+    BaseData,
+    BaseFeedback,
+    Message,
+)
 
 StateId = TypeVar("StateId")
-
-
-class BaseData(BaseModel, Generic[StateId]):
-    state: StateId
-
-    model_config = ConfigDict(
-        extra="allow",
-    )
 
 
 Data = TypeVar("Data", bound=BaseData)
@@ -27,6 +25,7 @@ Data = TypeVar("Data", bound=BaseData)
 
 class UserOption(BaseModel, Generic[Data]):
     instructions: str
+    examples: list[tuple[str, str] | str] | None = None
     next: Data | None
 
 
@@ -38,6 +37,7 @@ class UserState(BaseModel, Generic[Data]):
 class AgentState(BaseModel, Generic[Data]):
     type: Literal["agent"] = "agent"
     instructions: str
+    examples: list[tuple[str, str] | str] | None = None
     next: Data | None
 
 
@@ -45,6 +45,7 @@ class FeedbackState(BaseModel, Generic[Data]):
     type: Literal["feedback"] = "feedback"
     prompt: str
     instructions: str
+    examples: list[tuple[list[Message], BaseFeedback]]
     next: Data | None
 
 
@@ -63,20 +64,25 @@ def wrap_state_next(
                 options=[
                     UserOption(
                         instructions=option.instructions,
+                        examples=option.examples,
                         next=wrap(option.next),
                     )
                     for option in opts
                 ]
             )
-        case AgentState(instructions=instructions, next=next):
+        case AgentState(instructions=instructions, examples=examples, next=next):
             return AgentState(
                 instructions=instructions,
+                examples=examples,
                 next=wrap(next),
             )
-        case FeedbackState(prompt=prompt, instructions=instructions, next=next):
+        case FeedbackState(
+            prompt=prompt, instructions=instructions, examples=examples, next=next
+        ):
             return FeedbackState(
                 prompt=prompt,
                 instructions=instructions,
+                examples=examples,
                 next=wrap(next),
             )
         case _:
@@ -301,6 +307,7 @@ class WithCtxStates(Generic[Data], States[Data]):
                 options=[
                     UserOption(
                         instructions=f"{option.instructions} {self.user_ctx}",
+                        examples=option.examples,
                         next=option.next,
                     )
                     for option in state.options
@@ -309,7 +316,68 @@ class WithCtxStates(Generic[Data], States[Data]):
         elif isinstance(state, AgentState) and self.agent_ctx:
             return AgentState(
                 instructions=f"{state.instructions} {self.agent_ctx}",
+                examples=state.examples,
                 next=state.next,
             )
         else:
             return state
+
+
+_UserNaturalProgressionId = Literal["user_natural"]
+
+
+class _UserNaturalData(BaseData[_UserNaturalProgressionId]): ...
+
+
+class UserNaturalStates(States[_UserNaturalData]):
+    @property
+    def data_type(self):
+        return _UserNaturalData
+
+    def init(self) -> _UserNaturalData:
+        return _UserNaturalData(state="user_natural")
+
+    def next(self, data) -> State:
+        return UserState(
+            options=[
+                UserOption(
+                    instructions="I will continue the conversation naturally. "
+                    "I will be clear and direct in my responses and respond "
+                    "positively.",
+                    next=None,
+                ),
+                UserOption(
+                    instructions="I will continue the conversation naturally. "
+                    "I will be clear and direct in my responses and respond "
+                    "enthusiastically.",
+                    next=None,
+                ),
+                UserOption(
+                    instructions="I will continue the conversation naturally. "
+                    "I will be clear and direct in my responses and respond "
+                    "moderately.",
+                    next=None,
+                ),
+            ]
+        )
+
+
+_AgentNaturalProgressionId = Literal["agent_natural"]
+
+
+class _AgentNaturalData(BaseData[_AgentNaturalProgressionId]): ...
+
+
+class AgentNaturalStates(States[_AgentNaturalData]):
+    @property
+    def data_type(self):
+        return _AgentNaturalData
+
+    def init(self) -> _AgentNaturalData:
+        return _AgentNaturalData(state="agent_natural")
+
+    def next(self, data) -> State:
+        return AgentState(
+            instructions="I will continue the conversation naturally.",
+            next=None,
+        )

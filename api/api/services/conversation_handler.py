@@ -87,10 +87,10 @@ async def create_conversation(
     if not _is_unlocked_stage(stage, user.max_unlocked_stage):
         raise StageNotUnlocked()
 
-    if isinstance(stage, LevelConversationStage):
-        conversation = await conversations.query_one(user.id, stage)
-        if conversation is not None:
-            return Conversation.from_data(conversation)
+    # if isinstance(stage, LevelConversationStage):
+    #     conversation = await conversations.query_one(user.id, stage)
+    #     if conversation is not None:
+    #         return Conversation.from_data(conversation)
 
     return await _create_conversation_internal(user, stage)
 
@@ -259,6 +259,7 @@ async def progress_conversation(
                             messages=messages,
                             scenario=conversation.info.scenario,
                             instructions=opt.instructions,
+                            examples=opt.examples,
                         )
                         for opt in state_options
                     ]
@@ -297,6 +298,7 @@ async def progress_conversation(
                     messages=messages,
                     scenario=conversation.info.scenario,
                     instructions=state_data.instructions,
+                    examples=state_data.examples,
                 )
 
                 conversation.events.append(
@@ -320,6 +322,7 @@ async def progress_conversation(
                     conversation,
                     state_data.prompt,
                     instructions=state_data.instructions,
+                    examples=state_data.examples,
                 )
 
                 conversation.events.append(

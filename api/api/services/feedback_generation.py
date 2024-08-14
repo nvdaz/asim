@@ -1,13 +1,11 @@
 import asyncio
-from typing import Annotated
-
-from pydantic import BaseModel, StringConstraints
 
 from api.schemas.conversation import (
+    BaseFeedback,
     ConversationData,
     Feedback,
+    Message,
     MessageElement,
-    UserMessage,
     dump_message_list,
 )
 from api.schemas.persona import UserPersona
@@ -32,56 +30,22 @@ def _extract_messages_for_feedback(conversation: ConversationData):
     return messages[start:]
 
 
-class BaseFeedback(BaseModel):
-    title: Annotated[str, StringConstraints(max_length=50)]
-    body: Annotated[str, StringConstraints(max_length=600)]
-
-
 async def generate_feedback_base(
     user: UserPersona,
     conversation: ConversationData,
     prompt: str,
+    examples: list[tuple[list[Message], BaseFeedback]],
 ) -> BaseFeedback:
     agent = conversation.agent
     messages = _extract_messages_for_feedback(conversation)
 
-    examples = [
-        (
-            [
-                UserMessage(message="What is software made of?"),
-            ],
-            BaseFeedback(
-                title="Keep Questions Clear",
-                body=(
-                    "The question you asked was not clear and specific. It was vague "
-                    "and open-ended, which can be confusing for some individuals. "
-                    "To avoid misunderstandings, ask questions that are "
-                    "straightforward and have a clear subject matter."
-                ),
-            ),
-        ),
-        (
-            [
-                UserMessage(
-                    message="Break a leg in your performance today!",
-                ),
-            ],
-            BaseFeedback(
-                title="Avoid Idioms",
-                body=(
-                    "Using idioms like 'break a leg' can sometimes be confusing for "
-                    "some individuals, as they may interpret the phrase literally. "
-                    "Taylor interpreted your message literally and thought you wanted "
-                    "them to get hurt instead of wishing them good luck. To avoid "
-                    "misunderstandings, use clear, direct language."
-                ),
-            ),
-        ),
-    ]
-
     examples_str = "\n\n".join(
         [
-            f"{dump_message_list(messages, 'User', 'Agent')}\n{fb.model_dump_json()}"
+            dump_message_list(messages, user.name, agent.name)
+            + "\n"
+            + BaseFeedback(
+                title=fb.title, body=fb.body.format(agent=agent.name)
+            ).model_dump_json()
             for messages, fb in examples
         ]
     )
@@ -94,10 +58,11 @@ async def generate_feedback_base(
         "title (less than 50 characters) of your feedback, the key 'body' containing "
         "the feedback (less than 100 words). DO NOT tell the user to send a specific "
         "message."
-        f"Examples:\n{examples_str}"
     )
 
-    prompt_data = dump_message_list(messages, user.name, agent.name)
+    prompt_data = (
+        examples_str + "\n\n\n" + dump_message_list(messages, user.name, agent.name)
+    )
 
     return await llm.generate(
         schema=BaseFeedback,
@@ -112,6 +77,7 @@ async def generate_feedback(
     conversation: ConversationData,
     prompt: str,
     instructions: str,
+    examples: list[tuple[list[Message], BaseFeedback]],
 ) -> Feedback:
     all_messages = [
         elem.content
@@ -120,14 +86,14 @@ async def generate_feedback(
     ]
 
     base, follow_up = await asyncio.gather(
-        generate_feedback_base(user, conversation, prompt),
+        generate_feedback_base(user, conversation, prompt, examples=examples),
         generate_message(
             user_sent=True,
             user=user,
             agent=conversation.agent,
             messages=all_messages,
             scenario=conversation.info.scenario,
-            instructions=(instructions),
+            instructions=instructions,
         ),
     )
 

@@ -122,7 +122,11 @@ async def generate(
     response = None
     try:
         response = await _generate_unchecked(model, prompt, system, temperature)
-        data = response[response.index("{") : response.rindex("}") + 1]
+        data = (
+            response[response.index("{") : response.rindex("}") + 1]
+            if schema
+            else response
+        )
 
         # strip control characters from data
         data = re.sub(r"[\x00-\x1f\x7f]", "", data)
