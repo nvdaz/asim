@@ -135,7 +135,7 @@ const Landing = () => {
           style={{ marginRight: "100px" }}
         >
           Lesson 1
-          <div style={{ marginBottom: "10px" }}>Ambiguous Languages</div>
+          <div style={{ marginBottom: "10px" }}>Ambiguous Questions</div>
           <Button
             sx={{
               backgroundColor: "#FFB930",
@@ -166,7 +166,7 @@ const Landing = () => {
           className={styles.columnRightBtnWrapper}
           style={{ marginLeft: "100px" }}
         >
-          Lesson 2<div style={{ marginBottom: "10px" }}>Blunt Messages</div>
+          Lesson 2<div style={{ marginBottom: "10px" }}>Ambiguous Answers</div>
           <ClickAwayListener onClickAway={() => setOpen(false)}>
             <Tooltip
               PopperProps={{
@@ -232,7 +232,7 @@ const Landing = () => {
           style={{ marginRight: "100px" }}
         >
           Lesson 3
-          <div style={{ marginBottom: "10px" }}>---</div>
+          <div style={{ marginBottom: "10px" }}>Frustrating Situation</div>
           <ClickAwayListener
             onClickAway={() => {
               setOpen2(false);
