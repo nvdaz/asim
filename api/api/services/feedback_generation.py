@@ -54,7 +54,7 @@ async def generate_feedback_base(
                 title="Keep Questions Clear",
                 body=(
                     "The question you asked was not clear and specific. It was vague "
-                    "and open-ended, which can be confusing for autistic individuals. "
+                    "and open-ended, which can be confusing for some individuals. "
                     "To avoid misunderstandings, ask questions that are "
                     "straightforward and have a clear subject matter."
                 ),
@@ -70,7 +70,7 @@ async def generate_feedback_base(
                 title="Avoid Idioms",
                 body=(
                     "Using idioms like 'break a leg' can sometimes be confusing for "
-                    "autistic individuals, as they may interpret the phrase literally. "
+                    "some individuals, as they may interpret the phrase literally. "
                     "Taylor interpreted your message literally and thought you wanted "
                     "them to get hurt instead of wishing them good luck. To avoid "
                     "misunderstandings, use clear, direct language."
@@ -88,12 +88,12 @@ async def generate_feedback_base(
 
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between the user and {agent.name}, who is an "
-        f"autistic individual. The conversation is happening over text. {prompt}"
-        "\nUse second person pronouns to address the uesr directly. Respond with "
-        "a JSON object with the key 'title' containing the title (less than 50 "
-        "characters) of your feedback, the key 'body' containing the feedback (less "
-        "than 100 words). DO NOT tell the user to send a specific message."
+        f"ongoing conversation between the user and {agent.name}. The conversation is "
+        f"happening over text. {prompt}\nUse second person pronouns to address the "
+        "user directly. Respond with a JSON object with the key 'title' containing the "
+        "title (less than 50 characters) of your feedback, the key 'body' containing "
+        "the feedback (less than 100 words). DO NOT tell the user to send a specific "
+        "message."
         f"Examples:\n{examples_str}"
     )
 

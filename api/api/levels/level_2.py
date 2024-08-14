@@ -194,7 +194,7 @@ class _FigurativeStates(States[_FigurativeData]):
             case "feedback_figurative":
                 return FeedbackState(
                     prompt="The latest message needs improvement as it contains "
-                    "figurative language, which can be misinterpreted by autistic "
+                    "figurative language, which can be misinterpreted by some "
                     "individuals. Provide feedback on how their message could have "
                     "been clearer and more direct. Explain how the figurative "
                     "language could be confusing.",
@@ -245,7 +245,7 @@ class _SarcasticStates(States[_SarcasticData]):
             case "feedback_sarcastic":
                 return FeedbackState(
                     prompt="The latest message needs improvement as it uses "
-                    "sarcasm, which can be misinterpreted by autistic individuals. "
+                    "sarcasm, which can be misinterpreted by some individuals. "
                     "Provide feedback on how their message could have been clearer "
                     "and more direct. Explain how the sarcasm could be confusing.",
                     instructions="Clarify the sarcastic language you used.",

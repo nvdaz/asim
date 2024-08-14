@@ -97,12 +97,12 @@ async def _generate_agent_base(scenario, name):
         name: Annotated[str, AfterValidator(validate_name)]
 
     system_prompt = (
-        f"Generate a persona for {name}, an autistic individual in the provided "
-        "scenario (referred to as 'you'). Fill in the persona details based on the "
-        "information provided in the scenario. Generate any missing information to "
-        "create a realistic and relatable character. Respond with a JSON object "
-        "containing the keys 'name' (string), 'age' (age range), 'occupation', and "
-        "'interests' (list of strings)."
+        f"Generate a persona for {name}, an individual in the provided scenario "
+        "(referred to as 'you'). Fill in the persona details based on the information "
+        "provided in the scenario. Generate any missing information to create a "
+        "realistic and relatable character. Respond with a JSON object containing the "
+        "keys 'name' (string), 'age' (age range), 'occupation', and 'interests' (list "
+        "of strings)."
     )
 
     response = await llm.generate(
@@ -122,14 +122,10 @@ async def _generate_agent_persona_from_base(agent: AgentBasePersona):
     system_prompt = (
         "As a persona generator, your task is to generate a system prompt that will "
         "be used to make ChatGPT embody a persona based on the provided information. "
-        "The persona is an autistic individual who struggles to communicate "
-        "effectively with others. The persona should exhibit the vocal styles "
-        "of an autistic person and should be ignorant of the needs of neurotypical "
-        "individuals due to a lack of experience with them. The persona should be a "
-        "realistic and relatable character who is messaging over text with another "
-        "person. Respond with a JSON object containing the key 'persona' and the "
-        "system prompt as the value. The prompt should start with 'You are "
-        f"{agent.name}...'."
+        "The persona should be a realistic and relatable character who is messaging "
+        "over text with another person. Respond with a JSON object containing the key "
+        "'persona' and the system prompt as the value. The prompt should start with "
+        f"'You are {agent.name}...'."
     )
 
     prompt_data = agent.model_dump_json()
@@ -143,9 +139,7 @@ async def _generate_agent_persona_from_base(agent: AgentBasePersona):
 
     return AgentPersona(
         **agent.model_dump(),
-        description=(
-            f"{response.persona} DO NOT mention how autism affects your communication."
-        ),
+        description=response.persona,
     )
 
 

@@ -70,8 +70,8 @@ async def generate_message(
         "YOU ARE NOT AN AI. Respond with a JSON object containing the key 'message' "
         f"with your message as the value and the key 'sender' with '{sender_name}' as "
         "the value. Respond ONLY with your next message. Do not include previous "
-        "messages in your response. STAY ON TOPIC. DO NOT mention that "
-        "you are autistic. DO NOT reference external information."
+        "messages in your response. STAY ON TOPIC. DO NOT reference external "
+        "information."
     )
 
     prompt_data = (

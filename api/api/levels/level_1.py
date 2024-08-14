@@ -196,7 +196,7 @@ class _IndirectQuestionStates(States[_IndirectQuestionStateId]):
             case "feedback":
                 return FeedbackState(
                     prompt="The user used an indirect suggestion instead of a "
-                    "direct question, causing the autistic person to respond with "
+                    "direct question, causing the other person to respond with "
                     "an acknowledgment or agreement instead of providing the "
                     "requested information. The user should ask direct questions "
                     "when they want a direct response. Explain how the question "
