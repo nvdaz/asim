@@ -158,7 +158,7 @@ const Landing = () => {
                 }, "250")
               }
             >
-              {allowedLessons === "level-0" && "Start"}
+              {allowedLessons === "level-1" && "Start"}
             </div>
           </Button>
         </div>
@@ -178,80 +178,6 @@ const Landing = () => {
               disableHoverListener
               disableTouchListener
               title="Send 8 messages in Level 1 to unlock!"
-              arrow
-            >
-              <Button
-                sx={{
-                  backgroundColor:
-                    allowedLessons === "level-1" ||
-                    allowedLessons === "playground"
-                      ? "#FFB930"
-                      : "#797979",
-                  textTransform: "none",
-                  borderRadius: "50%",
-                  padding: 0,
-                  "&:hover": {
-                    backgroundColor:
-                      allowedLessons === "level-1" ||
-                      allowedLessons === "playground"
-                        ? "#FF9430"
-                        : "##A3A3A3",
-                  },
-                  "& .MuiTouchRipple-child": {
-                    backgroundColor:
-                      allowedLessons === "level-1" ||
-                      allowedLessons === "playground"
-                        ? "#FFCC69"
-                        : "#637BC4",
-                  },
-                }}
-              >
-                <div
-                  className={styles.lessonsBtn}
-                  onClick={() => {
-                    if (
-                      allowedLessons === "level-1" ||
-                      allowedLessons === "playground"
-                    ) {
-                      setTimeout(() => {
-                        window.location.href = "/lesson/2";
-                      }, "250");
-                    } else {
-                      setOpen(true);
-                    }
-                  }}
-                >
-                  {allowedLessons === "level-1" && "Start"}
-                </div>
-              </Button>
-            </Tooltip>
-          </ClickAwayListener>
-        </div>
-        <div
-          className={styles.columnRightBtnWrapper}
-          style={{ marginRight: "100px" }}
-        >
-          Lesson 3
-          <div style={{ marginBottom: "10px" }}>Frustrating Situation</div>
-          <ClickAwayListener
-            onClickAway={() => {
-              setOpen2(false);
-              console.log("--");
-            }}
-          >
-            <Tooltip
-              PopperProps={{
-                disablePortal: true,
-              }}
-              onClose={() => {
-                setOpen2(false);
-                console.log("--");
-              }}
-              open={open2}
-              disableFocusListener
-              disableHoverListener
-              disableTouchListener
-              title="Send 8 messages in Level 2 to unlock!"
               arrow
             >
               <Button
@@ -288,6 +214,80 @@ const Landing = () => {
                       allowedLessons === "playground"
                     ) {
                       setTimeout(() => {
+                        window.location.href = "/lesson/2";
+                      }, "250");
+                    } else {
+                      setOpen(true);
+                    }
+                  }}
+                >
+                  {allowedLessons === "level-2" && "Start"}
+                </div>
+              </Button>
+            </Tooltip>
+          </ClickAwayListener>
+        </div>
+        <div
+          className={styles.columnRightBtnWrapper}
+          style={{ marginRight: "100px" }}
+        >
+          Lesson 3
+          <div style={{ marginBottom: "10px" }}>Frustrating Situation</div>
+          <ClickAwayListener
+            onClickAway={() => {
+              setOpen2(false);
+              console.log("--");
+            }}
+          >
+            <Tooltip
+              PopperProps={{
+                disablePortal: true,
+              }}
+              onClose={() => {
+                setOpen2(false);
+                console.log("--");
+              }}
+              open={open2}
+              disableFocusListener
+              disableHoverListener
+              disableTouchListener
+              title="Send 8 messages in Level 2 to unlock!"
+              arrow
+            >
+              <Button
+                sx={{
+                  backgroundColor:
+                    allowedLessons === "level-3" ||
+                    allowedLessons === "playground"
+                      ? "#FFB930"
+                      : "#797979",
+                  textTransform: "none",
+                  borderRadius: "50%",
+                  padding: 0,
+                  "&:hover": {
+                    backgroundColor:
+                      allowedLessons === "level-3" ||
+                      allowedLessons === "playground"
+                        ? "#FF9430"
+                        : "##A3A3A3",
+                  },
+                  "& .MuiTouchRipple-child": {
+                    backgroundColor:
+                      allowedLessons === "level-3" ||
+                      allowedLessons === "playground"
+                        ? "#FFCC69"
+                        : "#637BC4",
+                  },
+                }}
+              >
+                <div
+                  className={styles.lessonsBtn}
+                  onClick={() => {
+                    if (
+                      allowedLessons === "level-3" ||
+                      allowedLessons === "playground"
+                    ) {
+                      setTimeout(() => {
                         window.location.href = "/lesson/3";
                       }, "250");
                     } else {
@@ -295,7 +295,7 @@ const Landing = () => {
                     }
                   }}
                 >
-                  {allowedLessons === "level-2" && "Start"}
+                  {allowedLessons === "level-3" && "Start"}
                 </div>
               </Button>
             </Tooltip>
