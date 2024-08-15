@@ -153,7 +153,7 @@ export default function Header({
                                 fontSize="small"
                                 onClick={() => {
                                   if (window.location.href.includes("lesson")) {
-                                    window.location.href = `/lesson/${currentLevel + 1}/${c.id}`;
+                                    window.location.href = `/lesson/${currentLevel}/${c.id}`;
                                   } else {
                                     window.location.href = `/playground/${c.id}`;
                                   }
@@ -180,7 +180,7 @@ export default function Header({
                       setGettingNewConversation(true);
                       await fetchNewConversation();
                       if (window.location.href.includes("lesson")) {
-                        window.location.href = `/lesson/${currentLevel + 1}`;
+                        window.location.href = `/lesson/${currentLevel}`;
                       } else {
                         window.location.href = `/playground`;
                       }
