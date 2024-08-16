@@ -115,7 +115,7 @@ async def _generate_agent_base(scenario, name):
     return response
 
 
-async def _generate_agent_persona_from_base(agent: AgentBasePersona):
+async def _generate_agent_persona_from_base(agent: AgentBasePersona, culture: str):
     class PersonaDescriptionResponse(BaseModel):
         persona: str
 
@@ -128,7 +128,11 @@ async def _generate_agent_persona_from_base(agent: AgentBasePersona):
         f"'You are {agent.name}...'."
     )
 
-    prompt_data = agent.model_dump_json()
+    prompt_data = (
+        f"You are {agent.name}, a {agent.age} {agent.occupation} with interests in "
+        f"{', '.join(agent.interests)}. The persona should be engaging and relatable "
+        f"for the following culture: {culture}."
+    )
 
     response = await llm.generate(
         schema=PersonaDescriptionResponse,
@@ -143,10 +147,10 @@ async def _generate_agent_persona_from_base(agent: AgentBasePersona):
     )
 
 
-async def generate_agent_persona(scenario, agent_name):
+async def generate_agent_persona(scenario, agent_name, user_culture):
     agent_info = await _generate_agent_base(scenario, agent_name)
 
-    agent_persona = await _generate_agent_persona_from_base(agent_info)
+    agent_persona = await _generate_agent_persona_from_base(agent_info, user_culture)
 
     return agent_persona
 

@@ -1,5 +1,4 @@
-import asyncio
-
+from api.levels.states import MessageInstructions
 from api.schemas.conversation import (
     BaseFeedback,
     ConversationData,
@@ -52,12 +51,15 @@ async def generate_feedback_base(
 
     system_prompt = (
         "You are a social skills coach. Your task is to provide feedback on the "
-        f"ongoing conversation between the user and {agent.name}. The conversation is "
-        f"happening over text. {prompt}\nUse second person pronouns to address the "
-        "user directly. Respond with a JSON object with the key 'title' containing the "
-        "title (less than 50 characters) of your feedback, the key 'body' containing "
-        "the feedback (less than 100 words). DO NOT tell the user to send a specific "
-        "message."
+        f"ongoing conversation between the user and {agent.name}, who is an autistic "
+        f"individual. The conversation is happening over text. {prompt}\nUse second "
+        "person pronouns to address the user directly. Respond with a JSON object with "
+        "the key 'title' containing the title (less than 50 characters, starting with "
+        "an interesting emoji) of your feedback, the key 'body' containing the "
+        "feedback (less than 100 words). DO NOT tell the user to send a specific "
+        f"message. Even though {agent.name} is autistic, DO NOT mention autism in your "
+        "feedback. We want to focus on making communication more empathetic, not "
+        "anything else."
     )
 
     prompt_data = (
@@ -76,7 +78,7 @@ async def generate_feedback(
     user: UserPersona,
     conversation: ConversationData,
     prompt: str,
-    instructions: str,
+    instructions: MessageInstructions,
     examples: list[tuple[list[Message], BaseFeedback]],
 ) -> Feedback:
     all_messages = [
@@ -85,16 +87,16 @@ async def generate_feedback(
         if isinstance(elem, MessageElement)
     ]
 
-    base, follow_up = await asyncio.gather(
-        generate_feedback_base(user, conversation, prompt, examples=examples),
-        generate_message(
-            user_sent=True,
-            user=user,
-            agent=conversation.agent,
-            messages=all_messages,
-            scenario=conversation.info.scenario,
-            instructions=instructions,
-        ),
+    base = await generate_feedback_base(user, conversation, prompt, examples=examples)
+
+    follow_up = await generate_message(
+        user_sent=True,
+        user=user,
+        agent=conversation.agent,
+        messages=all_messages,
+        scenario=conversation.info.scenario,
+        instructions=instructions,
+        feedback=base.body,
     )
 
     return Feedback(

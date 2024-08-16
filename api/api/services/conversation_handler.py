@@ -117,6 +117,7 @@ async def _create_conversation_internal(
             agent = await generate_agent_persona(
                 scenario.agent_perspective,
                 agent_name,
+                user.persona.culture,
             )
             state = StateActiveData(data=states.init())
 
@@ -146,6 +147,7 @@ async def _create_conversation_internal(
             agent = await generate_agent_persona(
                 scenario.agent_perspective,
                 agent_name,
+                user.persona.culture,
             )
             state = StateActiveData(data=states.init())
 
@@ -259,7 +261,6 @@ async def progress_conversation(
                             messages=messages,
                             scenario=conversation.info.scenario,
                             instructions=opt.instructions,
-                            examples=opt.examples,
                         )
                         for opt in state_options
                     ]
@@ -298,7 +299,6 @@ async def progress_conversation(
                     messages=messages,
                     scenario=conversation.info.scenario,
                     instructions=state_data.instructions,
-                    examples=state_data.examples,
                 )
 
                 conversation.events.append(
@@ -321,7 +321,7 @@ async def progress_conversation(
                     user.persona,
                     conversation,
                     state_data.prompt,
-                    instructions=state_data.instructions,
+                    instructions=state_data.follow_up,
                     examples=state_data.examples,
                 )
 

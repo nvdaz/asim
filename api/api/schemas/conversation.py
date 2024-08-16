@@ -33,7 +33,7 @@ class BaseFeedback(BaseModel):
 
 
 class Feedback(BaseFeedback):
-    follow_up: str
+    follow_up: str | None
 
 
 class UserMessage(BaseModel):

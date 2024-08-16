@@ -1,11 +1,11 @@
-from typing import Annotated, Sequence
+from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel
 
+from api.levels.states import MessageInstructions
 from api.schemas.conversation import (
     BaseConversationScenario,
     Message,
-    PlaygroundConversationScenario,
     dump_message_list,
 )
 from api.schemas.persona import AgentPersona, UserPersona
@@ -14,12 +14,29 @@ from . import llm
 
 
 def _format_example(
-    example: tuple[str, str] | str,
+    example: tuple[str, ...] | str,
 ) -> str:
     if isinstance(example, tuple):
-        return f"'{example[0]}' -> '{example[1]}'"
+        return " -> ".join([f"'{msg}'" for msg in example])
     else:
         return f"'{example}'"
+
+
+def _format_instructions(instructions: MessageInstructions | None) -> str:
+    if not instructions:
+        return ""
+
+    examples_str = (
+        (
+            "<example_responses>\n"
+            + "\n".join([_format_example(example) for example in instructions.examples])
+            + "\n</example_responses>\n"
+        )
+        if instructions.examples
+        else ""
+    )
+
+    return f"\n{instructions.description}\n{examples_str}\n"
 
 
 async def generate_message(
@@ -28,8 +45,8 @@ async def generate_message(
     agent: AgentPersona,
     messages: list[Message],
     scenario: BaseConversationScenario,
-    instructions: str | None = None,
-    examples: Sequence[tuple[str, str] | str] | None = None,
+    instructions: MessageInstructions | None = None,
+    feedback: str | None = None,
 ) -> str:
     user_name = f"{user.name} (the user)" if user.name else "the user"
 
@@ -57,18 +74,16 @@ async def generate_message(
                 user.description if user_sent else agent.description,
                 scenario_perspective,
                 (
-                    f"Tailor your message to the user's culture: {user.culture}"
-                    if (
-                        isinstance(scenario, PlaygroundConversationScenario)
-                        and not user_sent
-                    )
-                    else None
-                ),
+                    "Your culture is: "
+                    if user_sent
+                    else "Tailor your message to the user's culture: "
+                )
+                + user.culture,
             ],
         )
     )
 
-    max_len = 40 if user_sent else 60
+    max_len = 30 if user_sent else 40
 
     system_prompt = (
         f"{prelude}\nYou ({sender_name}) are chatting over text with {recipient_name}. "
@@ -83,34 +98,33 @@ async def generate_message(
         "information."
     )
 
-    examples_str = (
-        "\nIMPORTANT: I MUST MODEL MY RESPONSES AFTER THESE EXAMPLES.\n"
-        "<example_responses>\n"
-        + "\n".join([_format_example(example) for example in examples]).format(
-            user=user.name, agent=agent.name
-        )
-        + "\n</example_responses>\n"
-        if examples
-        else None
-    )
-
     prompt_data = (
         (
             "[CONVERSATION START]"
             if len(messages) == 0
-            else dump_message_list(messages[-12:], user.name, agent.name)
+            else dump_message_list(messages[-8:], user.name, agent.name)
         )
         + f"\n{sender_name}:"
         + "\n<instructions>"
-        + (f"\n{instructions}\n{examples_str or ''}\n" if instructions else "")
-        + f"\nI am {sender_name}.\n</instructions>"
+        + _format_instructions(instructions).format(user=user.name, agent=agent.name)
+        + (
+            (
+                "I must address this feedback in writing my next message:\n"
+                + "<feedback>\n"
+                + feedback
+                + "\n</feedback>\n"
+            )
+            if feedback
+            else ""
+        )
+        + f"I am {sender_name}.\n</instructions>"
         + f"\nRESPOND AS {sender_name.upper()}. IMPORTANT: FOLLOW THE INSTRUCTIONS "
         "CAREFULLY TO ENSURE YOUR MESSAGE IS APPROPRIATE."
     )
 
     response = await llm.generate(
         schema=MessageWithRole,
-        model=llm.Model.CLAUDE_3_SONNET,
+        model=instructions.model if instructions else llm.Model.CLAUDE_3_SONNET,
         system=system_prompt,
         prompt=prompt_data,
         temperature=0.8,

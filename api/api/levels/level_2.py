@@ -9,6 +9,7 @@ from .states import (
     BaseData,
     ChainStates,
     FeedbackState,
+    MessageInstructions,
     RepeatStates,
     State,
     States,
@@ -16,6 +17,7 @@ from .states import (
     UserNaturalStates,
     UserOption,
     UserState,
+    WithCtxStates,
 )
 
 _IntroStateId = Literal["agent_greet", "user_greet"]
@@ -36,19 +38,23 @@ class _IntroStates(States[_IntroData]):
         match data.state:
             case "agent_greet":
                 return AgentState(
-                    instructions="I will start the conversation and mention that I "
-                    "have heard the other person has worked with a client that I "
-                    "would like to discuss. I will ask if this is true.",
+                    instructions=MessageInstructions(
+                        description="I will start the conversation and mention that I "
+                        "have heard the other person has worked with a client that I "
+                        "would like to discuss. I will ask if this is true."
+                    ),
                     next=_IntroData(state="user_greet"),
                 )
             case "user_greet":
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="I will greet the person and confirm that I "
-                            "have indeed worked with the client they mentioned. I will "
-                            "tell them that I am happy to answer any questions they "
-                            "have about the client.",
+                            instructions=MessageInstructions(
+                                description="I will greet the person and confirm that "
+                                "I have indeed worked with the client they mentioned. "
+                                "I will tell them that I am happy to answer any "
+                                "questions they have about the client."
+                            ),
                             next=None,
                         )
                     ]
@@ -73,9 +79,12 @@ class _AskStates(States[_AskData]):
         match data.state:
             case "agent_ask":
                 return AgentState(
-                    instructions="I will ask a question about the client. I will focus "
-                    "on asking questions about the client that are general and open-"
-                    "ended, avoiding trivial details like dates, times, or locations.",
+                    instructions=MessageInstructions(
+                        description="I will ask a question about the client. I will "
+                        "focus on asking questions about the client that are general "
+                        "and open-ended, avoiding trivial details like dates, times, "
+                        "or locations.",
+                    ),
                     next=None,
                 )
 
@@ -100,52 +109,78 @@ class _VagueAnswerStates(States[_VagueAnswerData]):
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="I will provide a vague answer that can be "
-                            "interpreted in multiple ways. I know the answer exactly "
-                            "and everything is already finalized, but I will be vague "
-                            "without mentioning it.",
-                            examples=[
-                                (
+                            instructions=MessageInstructions(
+                                description="I will provide a vague answer that can be "
+                                "interpreted in multiple ways. I know the answer "
+                                "exactly and everything is already finalized, but I "
+                                "will be vague without mentioning it.",
+                                examples=[
                                     (
-                                        "Do you think there will be challenges "
-                                        "with the proposal? If so, what expertise is "
-                                        "needed to overcome them?"
+                                        (
+                                            "What should I wear to the event? Will it "
+                                            "be formal?"
+                                        ),
+                                        ("Something nice would work."),
                                     ),
                                     (
-                                        "There are some parts that could be "
-                                        "challenging, but if you have the right "
-                                        "skills, you can overcome them."
-                                    ),
-                                ),
-                                (
-                                    ("Who will be speaking at the event?"),
-                                    ("We have some great speakers lined up."),
-                                ),
-                                (
-                                    (
-                                        "What are the main topics that will be "
-                                        "covered at the conference?"
+                                        ("Who will be speaking at the event?"),
+                                        ("We have some great speakers lined up."),
                                     ),
                                     (
-                                        "We will be discussing a variety of "
-                                        "relevant subjects. There will be something "
-                                        "for everyone."
+                                        (
+                                            "What are the main topics that will be "
+                                            "covered at the conference?"
+                                        ),
+                                        (
+                                            "We will be discussing a variety of "
+                                            "relevant subjects. There will be "
+                                            "something for everyone."
+                                        ),
                                     ),
-                                ),
-                            ],
+                                ],
+                            ),
                             next=_VagueAnswerData(state="agent_react_vague"),
                         ),
                     ]
                 )
             case "agent_react_vague":
                 return AgentState(
-                    instructions="I will react to the vague answer by expressing "
-                    "confusion and frustration. I will fumble with my words and "
-                    "describe how the vague answer is making it difficult for me to "
-                    "understand the response.",
-                    examples=[
-                        # TODO: ...
-                    ],
+                    instructions=MessageInstructions(
+                        description="I will react to the vague answer by expressing "
+                        "confusion and frustration. I will fumble with my words and "
+                        "describe how the vague answer is making it difficult for me "
+                        "to understand the response.",
+                        examples=[
+                            (
+                                ("You should wear something nice to the event."),
+                                (
+                                    "I understand that I should wear something nice, "
+                                    "but can you be more specific about the dress "
+                                    "code? Should I wear something formal or business "
+                                    "casual?"
+                                ),
+                            ),
+                            (
+                                ("We have some great speakers lined up."),
+                                (
+                                    "I appreciate that you have great speakers lined "
+                                    "up, but can you tell me who specifically will be "
+                                    "speaking at the event?"
+                                ),
+                            ),
+                            (
+                                (
+                                    "We will be discussing a variety of relevant "
+                                    "subjects. There will be something for everyone."
+                                ),
+                                (
+                                    "I'm glad to hear that there will be a variety of "
+                                    "subjects, but can you provide more details on the "
+                                    "main topics that will be covered?"
+                                ),
+                            ),
+                        ],
+                    ),
                     next=_VagueAnswerData(state="feedback_vague"),
                 )
             case "feedback_vague":
@@ -158,8 +193,55 @@ class _VagueAnswerStates(States[_VagueAnswerData]):
                         "clearer and more specific to help others understand the "
                         "response better. Explain why the answer was vague."
                     ),
-                    instructions="I will clarify what I meant with the vague answer I "
-                    "previously provided.",
+                    follow_up=MessageInstructions(
+                        description="I will clarify what I meant with the vague answer "
+                        "I previously provided.",
+                        examples=[
+                            (
+                                ("You should wear something nice to the event."),
+                                (
+                                    "I understand that I should wear something nice, "
+                                    "but can you be more specific about the dress "
+                                    "code? Should I wear something formal or business "
+                                    "casual?"
+                                ),
+                                (
+                                    "I meant that the dress code is business casual. "
+                                    "You can wear something comfortable yet "
+                                    "professional."
+                                ),
+                            ),
+                            (
+                                ("We have some great speakers lined up."),
+                                (
+                                    "I appreciate that you have great speakers lined "
+                                    "up, but can you tell me who specifically will be "
+                                    "speaking at the event?"
+                                ),
+                                (
+                                    "We will have the CEO of the company, a renowned "
+                                    "industry expert, and a distinguished academic "
+                                    "speaking at the event."
+                                ),
+                            ),
+                            (
+                                (
+                                    "We will be discussing a variety of relevant "
+                                    "subjects. There will be something for everyone."
+                                ),
+                                (
+                                    "I'm glad to hear that there will be a variety of "
+                                    "subjects, but can you provide more details on the "
+                                    "main topics that will be covered?"
+                                ),
+                                (
+                                    "We will cover topics such as AI, blockchain, "
+                                    "machine learning, and cybersecurity at the "
+                                    "conference."
+                                ),
+                            ),
+                        ],
+                    ),
                     examples=[
                         (
                             [
@@ -250,97 +332,119 @@ class _FigurativeStates(States[_FigurativeData]):
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="I will answer the question using figurative "
-                            "language that is not meant to be taken literally. My "
-                            "answer will be creative and imaginative, using language "
-                            "that is not straightforward.",
-                            examples=[
-                                (
-                                    ("How do you feel about the new project?"),
+                            instructions=MessageInstructions(
+                                description="I will answer the question using "
+                                "figurative language that is not meant to be taken "
+                                "literally. My answer will be creative and "
+                                "imaginative, using language that is not "
+                                "straightforward.",
+                                examples=[
                                     (
-                                        "I think the new project is a breath of fresh "
-                                        "air. A blank canvas waiting to be painted."
+                                        ("How do you feel about the new project?"),
+                                        (
+                                            "I think the new project is a breath of "
+                                            "fresh air. A blank canvas waiting to be "
+                                            "painted."
+                                        ),
                                     ),
-                                ),
-                                (
-                                    ("What do you think about the team's progress?"),
                                     (
-                                        "The team is progressing like a well-oiled "
-                                        "machine. We're firing on all cylinders."
+                                        (
+                                            "What do you think about the team's "
+                                            "progress?"
+                                        ),
+                                        (
+                                            "The team is progressing like a well-oiled "
+                                            "machine. We're firing on all cylinders."
+                                        ),
                                     ),
-                                ),
-                                (
-                                    ("How would you describe the client's approach?"),
                                     (
-                                        "The client's approach is like a "
-                                        "rollercoaster. It's full of ups and downs, "
-                                        "but it's always exciting."
+                                        (
+                                            "How would you describe the client's "
+                                            "approach?"
+                                        ),
+                                        (
+                                            "The client's approach is like a "
+                                            "rollercoaster. It's full of ups and "
+                                            "downs, "
+                                            "but it's always exciting."
+                                        ),
                                     ),
-                                ),
-                            ],
+                                ],
+                            ),
                             next=_FigurativeData(state="agent_react_figurative"),
                         ),
                         UserOption(
-                            instructions="I will answer the question using a touch of "
-                            "figurative language. My answer will be mostly literal "
-                            "but will include a hint of figurative language to make it "
-                            "more interesting.",
-                            examples=[
-                                (
-                                    ("How do you feel about the new project?"),
+                            instructions=MessageInstructions(
+                                description="I will answer the question using a touch "
+                                "of figurative language. My answer will be mostly "
+                                "literal but will include a hint of figurative "
+                                "language to make it more interesting.",
+                                examples=[
                                     (
-                                        "I'm excited to start anew. I can't wait to "
-                                        "dive in and see where it takes us."
+                                        ("How do you feel about the new project?"),
+                                        (
+                                            "I'm excited to start anew. I can't wait "
+                                            "to dive in and see where it takes us."
+                                        ),
                                     ),
-                                ),
-                                (
-                                    ("What do you think about the team's progress?"),
                                     (
-                                        "The team is making great strides. We're "
-                                        "moving forward at a steady pace."
+                                        (
+                                            "What do you think about the team's "
+                                            "progress?"
+                                        ),
+                                        (
+                                            "The team is making great strides. We're "
+                                            "moving forward at a steady pace."
+                                        ),
                                     ),
-                                ),
-                                (
-                                    ("How would you describe the client's approach?"),
                                     (
-                                        "The client's approach is unique. They tend to "
-                                        "think outside the box and enjoy taking risks."
+                                        (
+                                            "How would you describe the client's "
+                                            "approach?"
+                                        ),
+                                        (
+                                            "The client's approach is unique. They "
+                                            "tend to think outside the box and enjoy "
+                                            "taking risks."
+                                        ),
                                     ),
-                                ),
-                            ],
+                                ],
+                            ),
                             next=_FigurativeData(state="agent_react_figurative"),
                         ),
                     ]
                 )
             case "agent_react_figurative":
                 return AgentState(
-                    instructions="I will misinterpret the figurative language used in "
-                    "the answer and respond in a literal and direct manner. I fail to "
-                    "understand the figurative nature of the language and respond as "
-                    "if the answer was meant to be taken literally.",
-                    examples=[
-                        (
-                            ("Let's hit the ground running with this project."),
+                    instructions=MessageInstructions(
+                        description="I will misinterpret the figurative language used "
+                        "in the answer and respond in a literal and direct manner. I "
+                        "fail to understand the figurative nature of the language and "
+                        "respond as if the answer was meant to be taken literally.",
+                        examples=[
                             (
-                                "What does running have to do with the project? "
-                                "We need to focus on the tasks at hand."
+                                ("Let's hit the ground running with this project."),
+                                (
+                                    "What does running have to do with the project? "
+                                    "We need to focus on the tasks at hand."
+                                ),
                             ),
-                        ),
-                        (
-                            ("The team is on fire with their progress."),
                             (
-                                "Why is the team on fire? We need to ensure everyone "
-                                "is safe and following proper procedures."
+                                ("The team is on fire with their progress."),
+                                (
+                                    "Why is the team on fire? We need to ensure "
+                                    "everyone is safe and following proper procedures."
+                                ),
                             ),
-                        ),
-                        (
-                            ("The client's approach is a breath of fresh air."),
                             (
-                                "Why would the client's approach be like fresh air? "
-                                "We need to focus on the project's goals."
+                                ("The client's approach is a breath of fresh air."),
+                                (
+                                    "Why would the client's approach be like fresh "
+                                    "air? We need to focus on the project's goals."
+                                ),
                             ),
-                        ),
-                    ],
+                        ],
+                    ),
                     next=_FigurativeData(state="feedback_figurative"),
                 )
 
@@ -351,10 +455,120 @@ class _FigurativeStates(States[_FigurativeData]):
                     "individuals. Provide feedback on how their message could have "
                     "been clearer and more direct. Explain how the figurative "
                     "language could be confusing.",
-                    instructions="I will clarify the figurative language I used in my "
-                    "previous answer.",
+                    follow_up=MessageInstructions(
+                        description="I will clarify the figurative language I used in "
+                        "my previous answer.",
+                        examples=[
+                            (
+                                ("Let's hit the ground running with this project."),
+                                (
+                                    "What does running have to do with the project? "
+                                    "We need to focus on the tasks at hand."
+                                ),
+                                (
+                                    "Sorry, I meant that we should start the project "
+                                    "quickly and make good progress."
+                                ),
+                            ),
+                            (
+                                ("The team is on fire with their progress."),
+                                (
+                                    "Why is the team on fire? We need to ensure "
+                                    "everyone is safe and following proper procedures."
+                                ),
+                                (
+                                    "Sorry, I should have been clearer. I meant that "
+                                    "the team has been making great progress and "
+                                    "working hard."
+                                ),
+                            ),
+                            (
+                                ("The client's approach is a breath of fresh air."),
+                                (
+                                    "Why would the client's approach be like fresh "
+                                    "air? We need to focus on the project's goals."
+                                ),
+                                (
+                                    "Sorry, I meant that the client's approach is "
+                                    "refreshing and innovative."
+                                ),
+                            ),
+                        ],
+                    ),
                     examples=[
-                        # TODO: ...
+                        (
+                            [
+                                AgentMessage(
+                                    message="What do you think about the team's "
+                                    "progress?"
+                                ),
+                                UserMessage(
+                                    message="The team is making great strides. We're "
+                                    "moving forward at a steady pace."
+                                ),
+                                AgentMessage(
+                                    message="Why do you think the team is moving "
+                                    "forward at a steady pace? We're not running a "
+                                    "race; we're building a project."
+                                ),
+                            ],
+                            BaseFeedback(
+                                title="🎭 Avoid Figurative Language",
+                                body="You used a metaphor to describe the team's "
+                                "progress as 'moving forward at a steady pace.' "
+                                "{agent} misunderstood the metaphor and thought you "
+                                "were talking about actual movement. Try to avoid "
+                                "figurative language to prevent confusion.",
+                            ),
+                        ),
+                        (
+                            [
+                                AgentMessage(
+                                    message="How would you describe the client's "
+                                    "approach?"
+                                ),
+                                UserMessage(
+                                    message="The client's approach is unique. They "
+                                    "tend to think outside the box and enjoy taking "
+                                    "risks."
+                                ),
+                                AgentMessage(
+                                    message="What box are they thinking outside of? "
+                                    "Do they have a thinking box in their office?"
+                                ),
+                            ],
+                            BaseFeedback(
+                                title="🎭 Avoid Confusing Idioms",
+                                body="You used the idiom 'think outside the box' to "
+                                "describe the client's approach. {agent} misunderstood "
+                                "the idiom and thought you were talking about an "
+                                "actual box. Try to avoid idioms to prevent confusion.",
+                            ),
+                        ),
+                        (
+                            [
+                                AgentMessage(
+                                    message="What do you think about the new project?"
+                                ),
+                                UserMessage(
+                                    message="I think the new project is like a blank "
+                                    "canvas waiting to be painted."
+                                ),
+                                AgentMessage(
+                                    message="Why would the project be like a blank "
+                                    "canvas waiting to be painted? We are marketing "
+                                    "gurus, not artists."
+                                ),
+                            ],
+                            BaseFeedback(
+                                title="🌀 Avoid Confusing Similies",
+                                body="You used a simile to describe the new project as "
+                                "'a blank canvas waiting to be painted.' {agent} "
+                                "misunderstood the simile and thought you were talking "
+                                "about an actual canvas to be painted. Try to avoid "
+                                "similes to prevent confusion.",
+                            ),
+                        ),
                     ],
                     next=None,
                 )
@@ -382,77 +596,86 @@ class _SarcasticStates(States[_SarcasticData]):
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="I will answer the question using sarcasm or "
-                            "irony to be humorous. I will use language that is the "
-                            "opposite of what I mean to be funny. This is important "
-                            "because the other person loves sarcasm and has a great "
-                            "sense of humor.",
-                            examples=[
-                                (
-                                    ("Any advice on how to handle the client?"),
+                            instructions=MessageInstructions(
+                                description="I will answer the question using sarcasm "
+                                "or irony to be humorous. I will use language that is "
+                                "the opposite of what I mean to be funny. This is "
+                                "important because {agent} loves sarcasm and has a "
+                                "great sense of humor.",
+                                examples=[
                                     (
-                                        "Oh, they love it when you show up late. "
-                                        "It shows them you're in control."
+                                        ("Any advice on how to handle the client?"),
+                                        (
+                                            "Oh, they love it when you show up late. "
+                                            "It shows them you're in control."
+                                        ),
                                     ),
-                                ),
-                                (
-                                    ("How can we improve the team's communication?"),
                                     (
-                                        "Just keep doing what you're doing. It's "
-                                        "working wonders."
+                                        (
+                                            "How can we improve the team's "
+                                            "communication?"
+                                        ),
+                                        (
+                                            "Just keep doing what you're doing. It's "
+                                            "working wonders."
+                                        ),
                                     ),
-                                ),
-                                (
-                                    ("Do you think we should change our approach?"),
                                     (
-                                        "Oh, definitely. Change is always a good "
-                                        "thing. It's not like the current approach is "
-                                        "working or anything."
+                                        ("Do you think we should change our approach?"),
+                                        (
+                                            "Oh, definitely. Change is always a good "
+                                            "thing. It's not like the current approach "
+                                            "is working or anything."
+                                        ),
                                     ),
-                                ),
-                            ],
+                                ],
+                            ),
                             next=_SarcasticData(state="agent_react_sarcastic"),
                         ),
                     ]
                 )
             case "agent_react_sarcastic":
                 return AgentState(
-                    instructions="I will interpret the message literally, ignoring any "
-                    "sarcasm used. I will only address the literal meaning of the "
-                    "message without considering that it might be sarcastic. I will "
-                    "respond as if the message was meant to be taken seriously, not "
-                    "mentioning that I know the user is being sarcastic.",
-                    examples=[
-                        (
-                            ("The bosses love it when you show up late."),
+                    instructions=MessageInstructions(
+                        description="I will interpret the message literally, ignoring "
+                        "any sarcasm used. I will only address the literal meaning of "
+                        "the message without considering that it might be sarcastic. I "
+                        "will respond as if the message was meant to be taken "
+                        "seriously, not mentioning that I know the user is being "
+                        "sarcastic.",
+                        examples=[
                             (
-                                "That's strange. Why would they love that? It's "
-                                "unprofessional and disrespectful."
-                            ),
-                        ),
-                        (
-                            (
-                                "Just keep doing what you're doing. It's working "
-                                "wonders."
+                                ("The bosses love it when you show up late."),
+                                (
+                                    "That's strange. Why would they love that? It's "
+                                    "unprofessional and disrespectful."
+                                ),
                             ),
                             (
-                                "I'm glad to hear that. I'll make sure to continue "
-                                "with the current approach."
+                                (
+                                    "Just keep doing what you're doing. It's working "
+                                    "wonders."
+                                ),
+                                (
+                                    "But it isn't working wonders. I was hoping for "
+                                    "some constructive feedback on how to improve our "
+                                    "team communication."
+                                ),
                             ),
-                        ),
-                        (
                             (
-                                "Artificial intelligence is just a fad. We are still "
-                                "looking for any practical applications. It's not like "
-                                "it's the future or anything."
+                                (
+                                    "Artificial intelligence is just a fad. We are "
+                                    "still looking for any practical applications. "
+                                    "It's not like it's the future or anything."
+                                ),
+                                (
+                                    "I disagree. AI is the future and has many "
+                                    "practical applications. I was thinking of using "
+                                    "it for the next project."
+                                ),
                             ),
-                            (
-                                "I disagree. AI is the future and has many practical "
-                                "applications. I was thinking of using it for the next "
-                                "project."
-                            ),
-                        ),
-                    ],
+                        ],
+                    ),
                     next=_SarcasticData(state="feedback_sarcastic"),
                 )
             case "feedback_sarcastic":
@@ -461,10 +684,133 @@ class _SarcasticStates(States[_SarcasticData]):
                     "sarcasm, which can be misinterpreted by some individuals. "
                     "Provide feedback on how their message could have been clearer "
                     "and more direct. Explain how the sarcasm could be confusing.",
-                    instructions="I will clarify the sarcastic language I used in my "
-                    "previous answer.",
+                    follow_up=MessageInstructions(
+                        description="I will clarify the sarcastic language I used in "
+                        "my previous answer.",
+                        examples=[
+                            (
+                                ("The bosses love it when you show up late."),
+                                (
+                                    "That's strange. Why would they love that? It's "
+                                    "unprofessional and disrespectful."
+                                ),
+                                (
+                                    "I was being sarcastic. The bosses don't actually "
+                                    "love it when you show up late. Punctuality is "
+                                    "very important."
+                                ),
+                            ),
+                            (
+                                (
+                                    "Just keep doing what you're doing. It's working "
+                                    "wonders."
+                                ),
+                                (
+                                    "But it isn't working wonders. I was hoping for "
+                                    "some constructive feedback on how to improve our "
+                                    "team communication."
+                                ),
+                                (
+                                    "Sorry, I was being sarcastic. I meant that we "
+                                    "should consider changing our approach to improve "
+                                    "team communication. The current approach has not "
+                                    "been effective."
+                                ),
+                            ),
+                            (
+                                (
+                                    "Artificial intelligence is just a fad. We are "
+                                    "still looking for any practical applications. "
+                                    "It's not like it's the future or anything."
+                                ),
+                                (
+                                    "I disagree. AI is the future and has many "
+                                    "practical applications. I was thinking of using "
+                                    "it for the next project."
+                                ),
+                                (
+                                    "I was being sarcastic. AI is a rapidly growing "
+                                    "field with numerous practical applications. It's "
+                                    "definitely the future."
+                                ),
+                            ),
+                        ],
+                    ),
                     examples=[
-                        # TODO: ...
+                        (
+                            [
+                                AgentMessage(
+                                    message="Any advice on how to handle the client?"
+                                ),
+                                UserMessage(
+                                    message="The bosses love it when you show up late."
+                                ),
+                                AgentMessage(
+                                    message="That's strange. Why would they love that? "
+                                    "It's unprofessional and disrespectful."
+                                ),
+                            ],
+                            BaseFeedback(
+                                title="🃏 Avoid Sarcasm",
+                                body="Your response was sarcastic as you mentioned "
+                                "that the bosses love it when you show up late, which "
+                                "is the opposite of the truth. {agent} thought you "
+                                "were being serious and responded accordingly. Try to "
+                                "avoid sarcasm to prevent confusion.",
+                            ),
+                        ),
+                        (
+                            [
+                                AgentMessage(
+                                    message="How can we improve the team's "
+                                    "communication?"
+                                ),
+                                UserMessage(
+                                    message="Just keep doing what you're doing. It's "
+                                    "working wonders."
+                                ),
+                                AgentMessage(
+                                    message="But it isn't working wonders. I was "
+                                    "hoping for some constructive feedback on how to "
+                                    "improve our team communication."
+                                ),
+                            ],
+                            BaseFeedback(
+                                title="🃏 Avoid Sarcasm",
+                                body="You used sarcasm in your response by saying that "
+                                "the current approach is working wonders, when in "
+                                "reality, it isn't. {agent} thought you were being "
+                                "serious and was confused by your response. Try to "
+                                "avoid sarcasm to prevent misunderstandings.",
+                            ),
+                        ),
+                        (
+                            [
+                                AgentMessage(
+                                    message="Do you think we should integrate AI into "
+                                    "our workflow?"
+                                ),
+                                UserMessage(
+                                    message="Artificial intelligence is just a fad. We "
+                                    "are still looking for any practical applications. "
+                                    "It's not like it's the future or anything."
+                                ),
+                                AgentMessage(
+                                    message="I disagree. AI is the future and has many "
+                                    "practical applications. I was thinking of using "
+                                    "it for the next project."
+                                ),
+                            ],
+                            BaseFeedback(
+                                title="🃏 Avoid Sarcasm",
+                                body="You used sarcasm in your response by suggesting "
+                                "that AI is just a fad and not the future, which is "
+                                "the opposite of what you believe. {agent} thought "
+                                "you were being serious and was confused by your "
+                                "response. Try to avoid sarcasm to prevent "
+                                "misunderstandings.",
+                            ),
+                        ),
                     ],
                     next=None,
                 )
@@ -490,9 +836,11 @@ class _DirectAnswerStates(States[_DirectAnswerData]):
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="I will provide a clear answer. My response "
-                            "will be straightforward and address the question "
-                            "directly.",
+                            instructions=MessageInstructions(
+                                description="I will provide a clear answer. My "
+                                "response will be straightforward and address the "
+                                "question directly.",
+                            ),
                             next=None,
                         ),
                     ]
@@ -517,15 +865,21 @@ class _EndStates(States[_EndData]):
         match data.state:
             case "agent_goodbye":
                 return AgentState(
-                    instructions="I will say that I have no more questions about the "
-                    "client. I will thank the person for their time and say goodbye.",
+                    instructions=MessageInstructions(
+                        description="I will say that I have no more questions about "
+                        "the client. I will thank the person for their time and say "
+                        "goodbye."
+                    ),
                     next=_EndData(state="user_goodbye"),
                 )
             case "user_goodbye":
                 return UserState(
                     options=[
                         UserOption(
-                            instructions="I will say goodbye and end the conversation.",
+                            instructions=MessageInstructions(
+                                description="I will say goodbye and end the "
+                                "conversation."
+                            ),
                             next=None,
                         ),
                     ]
@@ -543,16 +897,25 @@ STATES = ChainStates(
     ),
     RepeatStates(
         ChainStates(
-            _AskStates(),
+            WithCtxStates(
+                _AskStates(),
+                agent_ctx="I want to learn more about the client and receive "
+                "more information.",
+            ),
             UnionStates(
                 _VagueAnswerStates(),
                 _FigurativeStates(),
                 _SarcasticStates(),
                 base=_DirectAnswerStates(),
             ),
-            ChainStates(
-                AgentNaturalStates(),
-                UserNaturalStates(),
+            WithCtxStates(
+                ChainStates(
+                    AgentNaturalStates(),
+                    UserNaturalStates(),
+                ),
+                agent_ctx="I will make a follow-up comment without asking a "
+                "new question. I want to learn more about the client and "
+                "receive more information. I WILL NOT END THE CONVERSATION.",
             ),
         ),
         5,
@@ -562,17 +925,15 @@ STATES = ChainStates(
 
 SCENARIO_SEED = LevelConversationScenarioSeed(
     user_perspective=(
-        "A colleague reaches out to you to discuss a client who you have "
-        "worked with before and asks for your advice [pick a name for the "
-        "client]."
+        "A colleague reaches out to you to discuss a specific client who you have "
+        "worked with before and asks for your advice [pick a name for the client]."
     ),
     agent_perspective=(
-        "You reach out to a colleague to discuss a client who they have "
-        "worked with before and ask for their advice."
+        "You reach out to a colleague to discuss a client who they have worked with "
+        "before and ask for their advice."
     ),
     user_goal=(
-        "Discuss the client with your colleague and provide them with "
-        "helpful advice."
+        "Discuss the client with your colleague and provide them with helpful advice."
     ),
     is_user_initiated=False,
     adapt=True,
