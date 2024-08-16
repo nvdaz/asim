@@ -69,7 +69,7 @@ const Lesson = () => {
 
   const fetchNewConversation = useCallback(async () => {
     const initConversation = await Post(
-      `conversations?stage=level-${currentLevel}`
+      `conversations/?stage=level-${currentLevel}`
     );
     if (!initConversation.ok) {
       setAlertMessage("Error occurred fetching data");
@@ -93,10 +93,9 @@ const Lesson = () => {
         `conversations/?stage=level-${currentLevel}`
       );
       if (!listConversations.ok) {
-        if (listConversations.data.detail === 'invalid token') {
+        if (listConversations.data.detail === "invalid token") {
           setAlertMessage("Please use sign up link");
-        }
-        else {
+        } else {
           setAlertMessage("Error occurred fetching data");
         }
         return;
