@@ -321,6 +321,7 @@ async function send(
         body: content.body,
         choice: content.follow_up,
         title: content.title,
+        explanation: content.explanation,
       },
     };
 

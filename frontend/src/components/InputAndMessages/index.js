@@ -28,6 +28,7 @@ const InputAndMessages = ({
           body: m.content.body,
           title: m.content.title,
           choice: m.content.follow_up,
+          explanation: m.content.explanation
         },
       };
     });

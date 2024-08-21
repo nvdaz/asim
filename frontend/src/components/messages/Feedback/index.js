@@ -3,6 +3,7 @@ import styles from "./feedback.module.css";
 const Feedback = ({
   body,
   title,
+  explanation,
   choice,
   handleContinue,
   oldHistory,
@@ -17,6 +18,8 @@ const Feedback = ({
         <div className={styles.follow_up}>
           <div style={{ marginBottom: "15px" }}>Instead, say:</div>
           <div className={styles.choice}>{choice}</div>
+          <div>{explanation}</div>
+          <hr />
           <div>Click on Send button to continue the conversation</div>
         </div>
       )}

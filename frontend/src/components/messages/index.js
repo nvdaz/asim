@@ -54,6 +54,7 @@ export default function Messages({
             title={message.content.title}
             body={message.content.body}
             choice={message.content.choice}
+            explanation={message.content.explanation}
             handleContinue={message?.continue?.handleClick}
             oldHistory={message?.continue?.oldHistory}
             selectionResultContent={message?.continue?.selectionResultContent}
