@@ -27,7 +27,7 @@ returned value. If the call is unsuccessful, it will return { ok, error }, where
 error will be the caught error or "Unknown error".
 
 The series of calls made after clicking the Send button is stored in 
-[src/components/InputSection/util/handleSend.js](./src/components/InputSection/util/handleSend).
+[src/components/InputSection/util/handleSend.js](./src/components/InputSection/util/handleSend.js).
 
 # Routing
 
