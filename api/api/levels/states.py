@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, SerializeAsAny
 
 from api.schemas.conversation import (
     BaseData,
-    BaseFeedback,
+    Feedback,
     Message,
 )
 from api.services import llm
@@ -49,8 +49,8 @@ class AgentState(BaseModel, Generic[Data]):
 class FeedbackState(BaseModel, Generic[Data]):
     type: Literal["feedback"] = "feedback"
     prompt: str
-    examples: list[tuple[list[Message], BaseFeedback]]
-    follow_up: MessageInstructions
+    follow_up: str
+    examples: list[tuple[list[Message], Feedback]]
     next: Data | None
 
 
@@ -269,7 +269,9 @@ class UnionStates(States[UnionStatesData]):
                 for option in state.options
             ]
 
-            options = base_options + random.sample(other_options, 3 - len(base_options))
+            options = base_options + random.sample(
+                other_options, min(len(other_options), 3 - len(base_options))
+            )
 
             return UserState(options=options)
         else:

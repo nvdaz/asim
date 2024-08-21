@@ -1,7 +1,6 @@
 from typing import Literal
 
-from api.schemas.conversation import AgentMessage, BaseFeedback, UserMessage
-from api.services import llm
+from api.schemas.conversation import AgentMessage, Feedback, UserMessage
 
 from .seed import LevelConversationScenarioSeed
 from .states import (
@@ -93,8 +92,8 @@ class _VagueQuestionStates(States[_VagueQuestionData]):
                             instructions=MessageInstructions(
                                 description="I will ask a vague question that is "
                                 "unclear and too open-ended. I will make sure my "
-                                "question has a subject matter, but the question is "
-                                "ambiguous and could be interpreted in multiple ways.",
+                                "question is ambiguous and could be interpreted in "
+                                "multiple ways.",
                                 examples=[
                                     (
                                         "What is software made of? [asking what "
@@ -163,7 +162,8 @@ class _VagueQuestionStates(States[_VagueQuestionData]):
                 return FeedbackState(
                     prompt="The latest question needs improvement as it is vague "
                     "or unclear. Questions should be clear and specific. Provide "
-                    "examples on how the question was ambiguous.",
+                    "examples on how the question was ambiguous. DO NOT provide "
+                    "specific examples of how to clarify the question yet.",
                     examples=[
                         (
                             [
@@ -174,13 +174,25 @@ class _VagueQuestionStates(States[_VagueQuestionData]):
                                     "that runs on a computer."
                                 ),
                             ],
-                            BaseFeedback(
-                                title="🔍 Keep Questions Clear",
-                                body="Your question was vague and open-ended, making "
-                                "it unclear what you were asking. {agent} was confused "
-                                "because software isn't made of physical materials "
-                                "plastic or metal. To ensure you get the information "
-                                "you want, ask clear questions.",
+                            Feedback(
+                                title="🔍 Clarify Questions",
+                                body='When you asked {agent}, "What is software made '
+                                'of?", they were not sure what you meant because the '
+                                "question was quite broad and could be interpreted in "
+                                "different ways. You could have been asking about the "
+                                "the programming languages or tools used to build "
+                                "software, the components that make up software, the "
+                                "software development process, or something else. "
+                                "{agent} was unable to respond effectively because "
+                                "your question was too vague. To avoid this confusion, "
+                                "clearly specify what you want to know.",
+                                follow_up="What programming languages are commonly "
+                                "used to build software?",
+                                explanation="This version of the question is more "
+                                "specific and clear. It directly asks about a specific "
+                                "aspect of software--the programming language--so "
+                                "{agent} will know exactly the information you're "
+                                "looking for.",
                             ),
                         ),
                         (
@@ -192,7 +204,7 @@ class _VagueQuestionStates(States[_VagueQuestionData]):
                                     message="AI is being used in a lot of ways."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="🔍 Be Specific",
                                 body="Your question was vague and open-ended, making "
                                 "it unclear what you were asking. {agent} was confused "
@@ -200,70 +212,47 @@ class _VagueQuestionStates(States[_VagueQuestionData]):
                                 "what you wanted to know. To ensure you get the "
                                 "information you want, ask clear and specific "
                                 "questions.",
+                                follow_up="What are some ways that reinforcement "
+                                "learning is being used to improve predictions for "
+                                "climate change?",
+                                explanation="This helps you ask questions that get you "
+                                "the answers you’re looking for by being clear about "
+                                "what you want to know.",
                             ),
                         ),
                         (
                             [
                                 UserMessage(
-                                    message="How should teams approach their strategy "
-                                    "in soccer?"
+                                    message="How should soccer teams approach their "
+                                    "strategy in soccer when facing tough opposition?"
                                 ),
                                 AgentMessage(
-                                    message="I'm not sure what you mean by that. "
-                                    "There are so many ways to approach strategy."
+                                    message="I'm not sure how to answer that. There "
+                                    "are many ways aspects to strategy."
                                 ),
                             ],
-                            BaseFeedback(
-                                title="🔍 Be Clear",
-                                body="You asked a question that was too open-ended, "
-                                "making it unclear what you were asking. There are "
-                                "many ways to approach strategy in soccer--tactics, "
-                                "team selection, training, etc. {agent} was confused "
-                                "because it was unclear what you wanted to know. Ask "
-                                "{agent} a clear and specific question to get the "
-                                "information you want.",
+                            Feedback(
+                                title="🔍 Clarify Your Question",
+                                body="You asked a question that was broad and lacked "
+                                "specificity, making it unclear what you were asking."
+                                "{agent} was unsure how to respond because it was not "
+                                "clear which aspect of soccer strategy you were "
+                                "interested in. You may have been asking about "
+                                "tactics, team selection, training, or something else. "
+                                "To get {agent} to provide the information you want, "
+                                "ask a clear and specific question.",
+                                follow_up="What formation do you think is most "
+                                "effective against a strong opponent?",
+                                explanation="This new question narrows down the topic "
+                                "of soccer strategy to focus on team formation, "
+                                "providing {agent} with a clear direction for their "
+                                "response.",
                             ),
                         ),
                     ],
-                    follow_up=MessageInstructions(
-                        description="I just asked a vague question that was unclear "
-                        "and caused confusion. I need to clarify the vague question so "
-                        "the other person can understand what I am asking.",
-                        examples=[
-                            (
-                                ("What is software made of?"),
-                                (
-                                    "I'm confused what you mean by that."
-                                    "Software isn't made of anything. It's a program "
-                                    "that runs on a computer."
-                                ),
-                                (
-                                    "What are the components that are typically used "
-                                    "to create desktop applications?"
-                                ),
-                            ),
-                            (
-                                ("How is AI being used for climate change?"),
-                                ("AI is being used in a lot of ways."),
-                                (
-                                    "What are some ways that reinforcement learning is "
-                                    "being used to improve predictions for climate "
-                                    "change?"
-                                ),
-                            ),
-                            (
-                                ("How should teams approach their strategy in soccer?"),
-                                (
-                                    "I'm not sure what you mean by that. "
-                                    "There are so many ways to approach strategy."
-                                ),
-                                (
-                                    "What are some common formations that teams often "
-                                    "use in soccer?"
-                                ),
-                            ),
-                        ],
-                    ),
+                    follow_up="I just asked a vague question that was unclear and "
+                    "caused confusion. I need to clarify the vague question, so the "
+                    "other person can understand what I am asking.",
                     next=None,
                 )
 
@@ -381,14 +370,13 @@ class _BinaryIndirectQuestionStates(States[_BinaryIndirectQuestionData]):
                 )
             case "feedback_binary_indirect":
                 return FeedbackState(
-                    prompt="The user used a yes-or-no question instead of a direct "
-                    "question, causing the other person to respond with a yes or no "
-                    "answer instead of providing the requested information. The user "
-                    "should ask direct questions when they want a direct response. "
-                    "Carefully explain how the question caused the other person to "
-                    "respond with a yes or no answer instead of providing the "
-                    "requested information. Specifically mention the part of the "
-                    "question that prompted the yes or no response.",
+                    prompt="The user used a yes-or-no question which could be "
+                    "interpreted as either a yes or no question or as a request for "
+                    "information. The other person responded with a yes or no answer, "
+                    "which may not have provided the information the user was looking "
+                    "for. The user should ask direct questions when they want a direct "
+                    "response. Carefully explain how the question could be interpreted "
+                    "either as a yes or no question or as a request for information.",
                     examples=[
                         (
                             [
@@ -400,127 +388,101 @@ class _BinaryIndirectQuestionStates(States[_BinaryIndirectQuestionData]):
                                     message="Yes, I do know if there are any."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="📝 Use Direct Questions",
-                                body="{agent} responded by affirming that they did "
-                                "know if there were any good books on carbon capture. "
-                                "Your original question was misinterpreted as a query "
-                                "about whether {agent} knew about the existence of "
-                                "such books because you used the phrase 'Do you know'. "
-                                "Taken literally, saying 'Yes, I do know' is a valid "
-                                "response to the question you asked. If you want "
-                                "{agent} to provide book recommendations, ask "
-                                "directly.",
+                                body="{agent} confirmed that they knew if there were "
+                                "any good books on carbon capture but did not provide "
+                                "any specific recommendations. You used the phrase "
+                                "'Do you know', which can be interpreted as either "
+                                "asking if {agent} is aware of the existence of such "
+                                "books or if they have any recommendations. The "
+                                "question was ambiguous, leading {agent} to only "
+                                "confirm their knowledge without providing any "
+                                "specific information. To encourage {agent} to share "
+                                "book recommendations, ask a direct question.",
+                                follow_up="What are some good books on carbon capture "
+                                "that you would recommend?",
+                                explanation="This version of the question directly "
+                                "asks {agent} to share their recommendations, making "
+                                "it clear that you want specific book suggestions and "
+                                "not just confirmation that they know of such books.",
                             ),
                         ),
                         (
                             [
                                 UserMessage(
                                     message="Would you be able to tell me more about "
-                                    "oil spills?"
+                                    "the environmental impact of oil spills on coral "
+                                    "reefs?"
                                 ),
                                 AgentMessage(
                                     message=(
-                                        "Yes, I can tell you more about oil spills. I "
-                                        "have studied them for 15 years, so I have a "
-                                        "lot of knowledge on the topic."
+                                        "Yes, I can tell you more about their impact "
+                                        "on the environment. I have studied them for "
+                                        "15 years, so I have a lot of knowledge on the "
+                                        "topic."
                                     ),
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="📝 Be Direct",
-                                body="Your question was interpreted as asking whether "
-                                "{agent} was capable of discussing oil spills, rather "
-                                "than requesting detailed information. As a result, "
-                                "{agent} confirmed their ability but didn't provide "
-                                "the specifics you were looking for. The phrase 'Would "
-                                "you be able to' was taken literally, leading to a "
-                                "generic response. To get detailed information, ask "
-                                "{agent} directly.",
+                                body="You asked {agent} if they would be able to tell "
+                                "you more about the environmental impact of oil "
+                                "spills on coral reefs. Because you used the phrase "
+                                "'Would you be able to', the question could be "
+                                "interpreted as asking if {agent} is capable of "
+                                "discussing oil spills or if they are willing to "
+                                "provide more information. {agent} confirmed their "
+                                "ability but didn't provide the specifics you were "
+                                "looking for. The phrase 'Would you be able to' was "
+                                "taken literally, leading to them only confirming "
+                                "their knowledge without providing specific details. "
+                                "If you want detailed information, ask {agent} "
+                                "directly.",
+                                follow_up="How do oil spills affect coral reefs?",
+                                explanation="This version of the question directly "
+                                "asks {agent} to share their knowledge, making it "
+                                "clear that you're seeking detailed information and "
+                                "not just confirmation of their ability to discuss "
+                                "the topic.",
                             ),
                         ),
                         (
                             [
                                 UserMessage(
                                     message="Would you mind telling me more about the "
-                                    "club's activities and community?"
+                                    "club's activities?"
                                 ),
                                 AgentMessage(
                                     message="Sure, I can tell you more about that."
                                 ),
                             ],
-                            BaseFeedback(
-                                title="📝 Ask Specific Questions",
-                                body="{agent} responded by confirming that they would "
-                                "not mind sharing more information about the club's "
-                                "activities and community. However, your question was "
-                                "interpreted as asking whether {agent} was willing to "
-                                "provide more information, rather than requesting "
-                                "specific details because you only asked if they would "
-                                "mind. To get the information you're looking for, ask "
-                                "{agent} directly.",
+                            Feedback(
+                                title="📝 Ask Direct Questions",
+                                body="You asked {agent} if they would mind telling you "
+                                "more about the club's activities. This question could "
+                                "be interpreted as asking if {agent} is willing to "
+                                "provide more information or if they are capable of "
+                                "doing so depending on how the phrase 'Would you mind' "
+                                "is interpreted. {agent} interpreted it literally, "
+                                "leading to them only confirming their willingness to "
+                                "share information without providing specific details. "
+                                "Try asking {agent} a direct question if you want "
+                                "specific information.",
+                                follow_up="What are some activities that new members "
+                                "can participate in to get involved with the club?",
+                                explanation="This version of the question directly "
+                                "asks {agent} to share information about the club's "
+                                "activities, making it clear that you're seeking "
+                                "specific details and not just confirmation that they "
+                                "are willing to provide information.",
                             ),
                         ),
                     ],
-                    follow_up=MessageInstructions(
-                        model=llm.Model.GPT_4,
-                        description="I will clarify the indirect question I asked "
-                        "which received a yes or no answer. I will ask a direct "
-                        "question to get the information I want. My direct question "
-                        "will not start with 'could'.",
-                        examples=[
-                            (
-                                (
-                                    "I'd love to learn more about green "
-                                    "innovations in artifical intelligence you "
-                                    "mentioned."
-                                ),
-                                ("Yeah, it's really interesting!"),
-                                (
-                                    "What kind of green innovations are you working "
-                                    "on in AI?"
-                                ),
-                            ),
-                            (
-                                (
-                                    "Do you know if there are any good "
-                                    "books on carbon capture?"
-                                ),
-                                ("Yes, I do know if there are any."),
-                                (
-                                    "What are some good books on carbon capture that "
-                                    "you would recommend?"
-                                ),
-                            ),
-                            (
-                                (
-                                    "I was wondering how you usually approach "
-                                    "problems like this."
-                                ),
-                                (
-                                    "I see. I understand why you would wonder "
-                                    "about that. It's a common question."
-                                ),
-                                ("How would you usually approach problems like this?"),
-                            ),
-                            (
-                                (
-                                    "Would it be possible for you to provide an "
-                                    "example overview of what a full meditation "
-                                    "session looks like from start to finish?"
-                                ),
-                                (
-                                    "It would be possible for me to provide that. I "
-                                    "can give you an overview of a meditation session."
-                                ),
-                                (
-                                    "Please provide an example overview of what a full "
-                                    "meditation session looks like from start to "
-                                    "finish."
-                                ),
-                            ),
-                        ],
-                    ),
+                    follow_up="I will clarify the indirect question I asked "
+                    "which received a yes or no answer. I will ask a direct "
+                    "question to get the information I want. My direct question "
+                    "will not start with 'could'.",
                     next=None,
                 )
 
@@ -647,12 +609,14 @@ class _SuggestiveIndirectQuestionStates(States[_SuggestiveIndirectQuestionData])
                 )
             case "feedback_suggestive_indirect":
                 return FeedbackState(
-                    prompt="The user used an indirect suggestion instead of a "
-                    "direct question, causing the other person to respond with "
-                    "an acknowledgment or agreement instead of providing the "
-                    "requested information. The user should ask direct questions "
-                    "when they want a direct response. Explain how the question "
-                    "was indirect.",
+                    prompt="The user used an indirect suggestion to imply they "
+                    "wanted more information. This indirect suggestion could be "
+                    "interpreted either literally as a statement of interest or "
+                    "as a request for more information. The other person responded "
+                    "with an acknowledgment or agreement instead of providing the "
+                    "requested information. If the user wants a direct response, "
+                    "they should ask direct questions. Carefully explain how the "
+                    "indirect suggestion was misunderstood.",
                     examples=[
                         (
                             [
@@ -665,17 +629,22 @@ class _SuggestiveIndirectQuestionStates(States[_SuggestiveIndirectQuestionData])
                                     message="Yeah, it's a really fascinating area!"
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="📝 Ask Questions Directly",
-                                body="Your message expressed interest in green "
-                                "innovations in AI. This can be interpreted as a "
-                                "request for more information. However, {agent} "
-                                "interpreted it as a general statement you made "
-                                "rather than a request for more information because "
-                                "you only stated that you would love to learn more "
-                                "and did not ask a direct question. To ensure "
-                                "{agent} understands that you're seeking details, try "
-                                "asking directly.",
+                                body="You expressed interest in green innovations in "
+                                "AI by saying you'd love to learn more. This could be "
+                                "interpreted as a statement of interest that doesn't "
+                                "require a response or as a request for more "
+                                "information. {agent} interpreted it as a statement "
+                                "of interest rather than a request for more "
+                                "information. If you want {agent} to provide more "
+                                "details, ask a direct question.",
+                                follow_up="What are some green innovations in AI that "
+                                "you find most exciting?",
+                                explanation="This version of the question directly "
+                                "asks {agent} to share their thoughts on green "
+                                "innovations in AI, making it clear that you want "
+                                "specific information about the topic.",
                             ),
                         ),
                         (
@@ -689,15 +658,24 @@ class _SuggestiveIndirectQuestionStates(States[_SuggestiveIndirectQuestionData])
                                     "about that. It's a common question."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="📝 Be Direct",
-                                body="Your message hinted that you were interested in "
-                                "knowing how {agent} usually approaches problems like "
-                                "this. However, {agent} interpreted it as a general "
-                                "statement of curiosity rather than a direct request "
-                                "for them to share their approach because you only "
-                                "stated that you were wondering about it. To elicit a "
-                                "direct response from {agent}, ask a direct question.",
+                                body="Your message stated that you were wondering "
+                                "how {agent} usually approaches problems like this, "
+                                "hinting that you wanted more information. However, "
+                                "{agent} interpreted it as a statement of curiosity "
+                                "rather than a direct request for them to share their "
+                                "approach because you only stated that you were "
+                                "wondering about it, not that you wanted them to "
+                                "share their approach. If you want a direct response, "
+                                "ask a direct question.",
+                                follow_up="How would you usually approach problems "
+                                "like this?",
+                                explanation="This version of the question directly "
+                                "asks {agent} to share their approach, making it clear "
+                                "that you want them to provide specific information "
+                                "about their problem-solving process, not just "
+                                "acknowledge your curiosity.",
                             ),
                         ),
                         (
@@ -710,62 +688,29 @@ class _SuggestiveIndirectQuestionStates(States[_SuggestiveIndirectQuestionData])
                                     message="Yes, I do have some thoughts on that."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="📝 Make Your Request Clear",
-                                body="Your message indicated that you'd like to hear "
-                                "{agent}'s thoughts on optimizing the process. "
-                                "However, {agent} interpreted this as a general remark "
-                                "rather than a request for them to share their "
-                                "thoughts because you only stated that it would be "
-                                "interesting without directly asking for their "
-                                "insights. To ensure {agent} understands that you want "
-                                "their input, ask a direct question.",
+                                body="Telling {agent} that it would be interesting to "
+                                "hear their thoughts on optimizing the process could "
+                                "either be interpreted as a statement of interest "
+                                "or as a request for them to share their insights. "
+                                "{agent} interpreted it as a statement of interest "
+                                "and responded positively without providing the "
+                                "information you were looking for. If you want {agent} "
+                                "to share their insights, ask a direct question.",
+                                follow_up="What are your thoughts on optimizing this "
+                                "process?",
+                                explanation="This version of the question directly "
+                                "asks {agent} to share their insights, making it clear "
+                                "that you're seeking specific information about how "
+                                "to optimize the process.",
                             ),
                         ),
                     ],
-                    follow_up=MessageInstructions(
-                        model=llm.Model.GPT_4,
-                        description="My indirect question was misunderstood by "
-                        "{agent}, who just responded with a yes or no anwer. I will "
-                        "clarify that I want more information by asking a direct "
-                        "question.",
-                        examples=[
-                            (
-                                (
-                                    "I'd love to learn more about green "
-                                    "innovations in artifical intelligence you "
-                                    "mentioned."
-                                ),
-                                ("Yeah, it's really interesting!"),
-                                (
-                                    "What kind of green innovations are you working "
-                                    "on in AI?"
-                                ),
-                            ),
-                            (
-                                (
-                                    "Do you know if there are any good "
-                                    "books on carbon capture?"
-                                ),
-                                ("Yes, I do know if there are any."),
-                                (
-                                    "What are some good books on carbon capture that "
-                                    "you would recommend?"
-                                ),
-                            ),
-                            (
-                                (
-                                    "I was wondering how you usually approach "
-                                    "problems like this."
-                                ),
-                                (
-                                    "I see. I understand why you would wonder "
-                                    "about that. It's a common question."
-                                ),
-                                ("How would you usually approach problems like this?"),
-                            ),
-                        ],
-                    ),
+                    follow_up="My indirect question was misunderstood by "
+                    "{agent}, who just responded with a yes or no anwer. I will "
+                    "clarify that I want more information by asking a direct "
+                    "question.",
                     next=None,
                 )
 

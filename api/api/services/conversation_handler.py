@@ -320,9 +320,7 @@ async def progress_conversation(
                 response = await generate_feedback(
                     user.persona,
                     conversation,
-                    state_data.prompt,
-                    instructions=state_data.follow_up,
-                    examples=state_data.examples,
+                    state_data,
                 )
 
                 conversation.events.append(

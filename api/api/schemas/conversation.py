@@ -29,11 +29,12 @@ StateData = TypeVar("StateData", bound=BaseData)
 
 class BaseFeedback(BaseModel):
     title: Annotated[str, StringConstraints(max_length=50)]
-    body: Annotated[str, StringConstraints(max_length=600)]
+    body: str
 
 
 class Feedback(BaseFeedback):
     follow_up: str | None
+    explanation: str | None
 
 
 class UserMessage(BaseModel):
