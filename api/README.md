@@ -68,6 +68,42 @@ There is also a final state (the `None` state) that is used to end the finite st
 
 This layer calls the LLM to generate responses based on the state of the internal state machine, the context of the converstaion, and the user's persona. The calls for message and feedback generation in particular are made in `services/message_generation.py` and `services/feedback_generation.py`, respectively. These should hopefully be straightforward to follow.
 
+## Levels
+
+Each level is associated with a state machine. These will incorporate specific target secnarios to guide the conversation.
+
+### Level 1: User wants to join a group activity
+
+The user is interested in joining a group activity. They will ask a series of questions about the activity before asking to join.
+
+Targeted Scenarios:
+
+- Vague Questions: a question where it's unclear what the user is asking.
+- Binary Indirect Questions: a yes/no question that is actually asking for more.
+- Suggestive Indirect Questions: a statement that implies a question.
+
+NOTE: Binary indirect questions might be more consistent if split into two: asking whether the agent knows something (e.g. "Do you know...") and asking if the agent is willing to do something (e.g. "Would you...").
+
+### Level 2: Agent asks user about a specific client
+
+The agent is interested in discussing a specific client with the user. The agent will ask the user a series of questions about the client.
+
+Targeted Scenarios:
+
+- Vague Answers: an answer where it's unclear what the user is saying.
+- Figurative Answers: a non-literal answer to a question (e.g. using metaphors)
+- Sarcastic Answers: a sarcastic answer to a question.
+
+### Level 3: User seeks out agent due to uncontrollable circumstances
+
+The user contacts the agent after encountering a situation that is out of their control. The user and agent will converse with the agent sending blunt messages.
+
+Targeted Scenarios:
+
+- Dismissive Blunt Response: the user believes the agent is frustrated with them (they are really frustrated with the situation), so they refuse to cooperate.
+- Confrontational Blunt Response: the user believes the agent is frustrated with them (they are really frustrated with the situation), so they confront the agent.
+- Sarcastic Interpretation: the user interprets a blunt message as sarcastic, when it's not.
+
 ## Development
 
 A type checker (i.e. Pylance) would be extremely helpful, especially when working with the state machine since the syntax is a bit complex and hard to read. The code has also been formatted with Ruff.
