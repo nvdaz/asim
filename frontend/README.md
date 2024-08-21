@@ -1,5 +1,8 @@
 # Installation & Development
 
+Create a .env file at the root of the frontend folder, and set the environment 
+variable REACT_APP_API_HOST.
+
 ``` sh
 npm install
 npm start
