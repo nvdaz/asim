@@ -16,7 +16,7 @@ import { Post } from "../utils/request";
 import styles from "./page.module.css";
 
 const Landing = () => {
-  const { uniqueString } = useParams();
+  const { magicLink } = useParams();
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(true);
   const [enteredName, setEnteredName] = useState("");
@@ -33,12 +33,12 @@ const Landing = () => {
       const token = localStorage.getItem("token");
 
       if (!token) {
-        if (!uniqueString) {
+        if (!magicLink) {
           setAlertMessage("Please use sign-up link");
           return;
         }
         const res2 = await Post("auth/exchange", {
-          magic_link: uniqueString,
+          magic_link: magicLink,
         });
         if (!res2.ok) {
           setAlertMessage("Error occurred");
@@ -64,7 +64,7 @@ const Landing = () => {
     };
 
     fetchData();
-  }, [uniqueString]);
+  }, [magicLink]);
 
   const handleMessageChange = (e) => {
     setEnteredName(e.target.value);

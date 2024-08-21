@@ -10,7 +10,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path={`/:uniqueString`} element={<Landing />} />
+        <Route path={`/:magicLink`} element={<Landing />} />
         <Route path={`/`} element={<Landing />} />
         <Route
           path="/lesson/:lesson/:conversationIDFromParam?"

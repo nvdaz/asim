@@ -1,1 +1,7 @@
-# Autism Simulation For Neurotypicals
+# Installation & Development
+
+``` sh
+cd frontend
+npm install
+npm start
+```
