@@ -95,7 +95,7 @@ async def generate_message(
         f"with your message as the value and the key 'sender' with '{sender_name}' as "
         "the value. Respond ONLY with your next message. Do not include previous "
         "messages in your response. STAY ON TOPIC. DO NOT reference external "
-        "information."
+        "information. Use casual, conversational language."
     )
 
     prompt_data = (
@@ -109,8 +109,10 @@ async def generate_message(
         + _format_instructions(instructions).format(user=user.name, agent=agent.name)
         + (
             (
-                "I must address this feedback in writing my next message:\n"
+                "I must address this feedback from an external social skills coach in "
+                "writing my next message:\n"
                 + "<feedback>\n"
+                + "SOCIAL SKILLS COACH: "
                 + feedback
                 + "\n</feedback>\n"
             )
