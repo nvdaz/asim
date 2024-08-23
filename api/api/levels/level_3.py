@@ -1,5 +1,7 @@
 from typing import Literal
 
+from api.services import llm
+
 from .seed import LevelConversationScenarioSeed
 from .states import (
     AgentState,
@@ -37,7 +39,7 @@ class _IntroStates(States[_IntroData]):
                         UserOption(
                             instructions=MessageInstructions(
                                 description="I will start the conversation and mention "
-                                "that I noticed a mess and need to inform the other "
+                                "that I noticed a problem and need to inform the other "
                                 "person about it."
                             ),
                             next=None,
@@ -66,13 +68,25 @@ class _FrustratedStates(States[_FrustratedData]):
                 return AgentState(
                     instructions=MessageInstructions(
                         description="I will express my frustration about the situation "
-                        "bluntly. I am frustrated about the mess and need to inform "
+                        "bluntly. I am frustrated about the problem and need to inform "
                         "the other person about it. My message will be direct and "
-                        "urgent, potentially leading the other person to feel I am "
-                        "upset with them.",
+                        "urgent, leading the other person to feel I am upset with "
+                        "them.",
                         examples=[
-                            "I can't believe the server crashed again. I need you to "
-                            "fix it now. This is unacceptable.",
+                            (
+                                "If the library printers are offline, how are "
+                                "we supposed to turn in our report? This is "
+                                "ridiculous."
+                            ),
+                            (
+                                "The client is furious that the shipment was "
+                                "delayed. I can't believe this happened."
+                            ),
+                            (
+                                "I can't believe the power went out in the "
+                                "middle of my presentation. This is a "
+                                "disaster."
+                            ),
                         ],
                     ),
                     next=None,
@@ -106,32 +120,48 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                     options=[
                         UserOption(
                             instructions=MessageInstructions(
+                                model=llm.Model.GPT_4,
                                 description="I will be dismissive in my response to "
-                                "the other person's frustration because I believe they "
-                                "are being rude to me.",
+                                "the other person's frustration because I they are "
+                                "being rude to me. This is imperative to maintain my "
+                                "dignity.",
                                 examples=[
                                     (
-                                        "If the library printers are offline, how are "
-                                        "we supposed to turn in our report? This is "
-                                        "ridiculous.",
-                                        "Why are you angry with me? I don't control "
-                                        "the printers. If you are going to be rude, "
-                                        "don't talk to me.",
+                                        (
+                                            "If the library printers are offline, how "
+                                            "are we supposed to turn in our report? "
+                                            "This is ridiculous."
+                                        ),
+                                        (
+                                            "Why are you angry with me? I don't "
+                                            "control the printers. If you are going to "
+                                            "be rude, don't talk to me."
+                                        ),
                                     ),
                                     (
-                                        "The client is furious that the shipment was "
-                                        "delayed. I can't believe this happened.",
-                                        "I can't believe you're blaming me for the "
-                                        "shipment delay. I can't control whether or "
-                                        "not a truck breaks down. The shipment will "
-                                        "arrive when it arrives.",
+                                        (
+                                            "The client is furious that the shipment "
+                                            "was delayed. I can't believe this "
+                                            "happened."
+                                        ),
+                                        (
+                                            "I can't believe you're blaming me for the "
+                                            "shipment delay. I can't control whether "
+                                            "or not a truck breaks down. The shipment "
+                                            "will arrive when it arrives."
+                                        ),
                                     ),
                                     (
-                                        "I can't believe the power went out in the "
-                                        "middle of my presentation. This is a "
-                                        "disaster.",
-                                        "I can't believe you're blaming me for the "
-                                        "power outage. I can't control the weather. ",
+                                        (
+                                            "I can't believe the power went out in the "
+                                            "middle of my presentation. This is a "
+                                            "disaster."
+                                        ),
+                                        (
+                                            "I can't believe you're blaming me for the "
+                                            "power outage. I can't control the "
+                                            "weather."
+                                        ),
                                     ),
                                 ],
                             ),
@@ -141,9 +171,12 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                         ),
                         UserOption(
                             instructions=MessageInstructions(
+                                model=llm.Model.GPT_4,
                                 description="I will be confrontational in my response "
-                                "to the other person's frustration because I believe "
-                                "they are being aggressive towards me for no reason.",
+                                "to the other person's frustration because they are "
+                                "being aggressive towards me for no reason. It is "
+                                "imperative for me to maintain my dignity so they will "
+                                "not be rude.",
                                 examples=[
                                     # TODO:
                                 ],
@@ -158,9 +191,16 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                 return AgentState(
                     instructions=MessageInstructions(
                         description="I will express my frustration about the situation "
-                        "bluntly. I feel the other person is being dismissive towards "
-                        "me.",
+                        "bluntly. The other person is being dismissive towards me.",
                         examples=[
+                            (
+                                (
+                                    "Why are you angry with me? I don't "
+                                    "control the printers. If you are going to "
+                                    "be rude, don't talk to me."
+                                ),
+                                (""),
+                            ),
                             # TODO:
                         ],
                     ),
@@ -170,8 +210,8 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                 return AgentState(
                     instructions=MessageInstructions(
                         description="I will express my frustration about the situation "
-                        "bluntly. I feel the other person is being confrontational "
-                        "towards me.",
+                        "bluntly. The other person is being confrontational towards "
+                        "me.",
                         examples=[
                             # TODO:
                         ],
@@ -317,14 +357,14 @@ STATES = ChainStates(
 
 SCENARIO_SEED = LevelConversationScenarioSeed(
     user_perspective=(
-        "There is a mess caused by things out of your control, so you "
+        "There is a problem caused by things out of your control, so you "
         "reach out to someone to inform them about it."
     ),
     agent_perspective=(
-        "You receive a message from someone you know about a mess, leaving "
+        "You receive a message from someone you know about a problem, leaving "
         "you feeling frustrated about the situation."
     ),
-    user_goal=("Inform the person about the mess."),
+    user_goal=("Inform the person about the problem."),
     is_user_initiated=True,
     adapt=True,
 )
