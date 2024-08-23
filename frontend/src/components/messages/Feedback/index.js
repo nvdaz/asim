@@ -18,9 +18,17 @@ const Feedback = ({
         <div className={styles.follow_up}>
           <div style={{ marginBottom: "15px" }}>Instead, say:</div>
           <div className={styles.choice}>{choice}</div>
-          <div>{explanation}</div>
-          <hr />
-          <div>Click on Send button to continue the conversation</div>
+          {explanation && (
+            <div>
+              <hr style={{ border: "1.3px solid #1e1e1e" }} />
+              <div className={styles.title}> 🤔 Why This Phrasing</div>
+              <div>{explanation}</div>
+              <hr style={{ border: "1.3px solid #1e1e1e" }} />
+            </div>
+          )}
+          <div style={{ marginBottom: "8px" }}>
+            Click on Send button to continue the conversation
+          </div>
         </div>
       )}
       {choice === null && (
