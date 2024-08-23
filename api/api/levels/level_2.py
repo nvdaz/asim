@@ -1,6 +1,6 @@
 from typing import Literal
 
-from api.schemas.conversation import AgentMessage, BaseFeedback, UserMessage
+from api.schemas.conversation import AgentMessage, Feedback, UserMessage
 
 from .seed import LevelConversationScenarioSeed
 from .states import (
@@ -112,8 +112,8 @@ class _VagueAnswerStates(States[_VagueAnswerData]):
                             instructions=MessageInstructions(
                                 description="I will provide a vague answer that can be "
                                 "interpreted in multiple ways. I know the answer "
-                                "exactly and everything is already finalized, but I "
-                                "will be vague without mentioning it.",
+                                "exactly but will only answer the question on a "
+                                "surface level without providing any specific details.",
                                 examples=[
                                     (
                                         (
@@ -146,37 +146,35 @@ class _VagueAnswerStates(States[_VagueAnswerData]):
             case "agent_react_vague":
                 return AgentState(
                     instructions=MessageInstructions(
-                        description="I will react to the vague answer by expressing "
-                        "confusion and frustration. I will fumble with my words and "
-                        "describe how the vague answer is making it difficult for me "
-                        "to understand the response.",
+                        description="I will react to the vague answer by bluntly "
+                        "expressing that their answer was not helpful and asking "
+                        "for more specific details. My blunt tone may come across as "
+                        "rude, but it is necessary to get the information I need.",
                         examples=[
                             (
                                 ("You should wear something nice to the event."),
                                 (
-                                    "I understand that I should wear something nice, "
-                                    "but can you be more specific about the dress "
-                                    "code? Should I wear something formal or business "
-                                    "casual?"
+                                    "That's not really helpful. If you could specify "
+                                    "a dress code like 'formal' or 'casual', I "
+                                    "would appreciate that."
                                 ),
                             ),
                             (
                                 ("We have some great speakers lined up."),
                                 (
-                                    "I appreciate that you have great speakers lined "
-                                    "up, but can you tell me who specifically will be "
-                                    "speaking at the event?"
+                                    "That doesn’t tell me anything. Can you give me "
+                                    "the names or more details about the speakers?"
                                 ),
                             ),
                             (
                                 (
-                                    "We will be discussing a variety of relevant "
-                                    "subjects. There will be something for everyone."
+                                    "There will be something to eat for everyone. "
+                                    "There will be a variety of options."
                                 ),
                                 (
-                                    "I'm glad to hear that there will be a variety of "
-                                    "subjects, but can you provide more details on the "
-                                    "main topics that will be covered?"
+                                    "Can you provide more details? I have dietary "
+                                    "restrictions, so I need to figure out if I should "
+                                    "eat beforehand."
                                 ),
                             ),
                         ],
@@ -193,75 +191,33 @@ class _VagueAnswerStates(States[_VagueAnswerData]):
                         "clearer and more specific to help others understand the "
                         "response better. Explain why the answer was vague."
                     ),
-                    follow_up=MessageInstructions(
-                        description="I will clarify what I meant with the vague answer "
-                        "I previously provided.",
-                        examples=[
-                            (
-                                ("You should wear something nice to the event."),
-                                (
-                                    "I understand that I should wear something nice, "
-                                    "but can you be more specific about the dress "
-                                    "code? Should I wear something formal or business "
-                                    "casual?"
-                                ),
-                                (
-                                    "I meant that the dress code is business casual. "
-                                    "You can wear something comfortable yet "
-                                    "professional."
-                                ),
-                            ),
-                            (
-                                ("We have some great speakers lined up."),
-                                (
-                                    "I appreciate that you have great speakers lined "
-                                    "up, but can you tell me who specifically will be "
-                                    "speaking at the event?"
-                                ),
-                                (
-                                    "We will have the CEO of the company, a renowned "
-                                    "industry expert, and a distinguished academic "
-                                    "speaking at the event."
-                                ),
-                            ),
-                            (
-                                (
-                                    "We will be discussing a variety of relevant "
-                                    "subjects. There will be something for everyone."
-                                ),
-                                (
-                                    "I'm glad to hear that there will be a variety of "
-                                    "subjects, but can you provide more details on the "
-                                    "main topics that will be covered?"
-                                ),
-                                (
-                                    "We will cover topics such as AI, blockchain, "
-                                    "machine learning, and cybersecurity at the "
-                                    "conference."
-                                ),
-                            ),
-                        ],
-                    ),
+                    follow_up="The vague answer I provided was not helpful to {agent}. "
+                    "I will clarify my answer and provide more specific details.",
                     examples=[
                         (
                             [
                                 AgentMessage(
-                                    message="Do you think there will be challenges "
-                                    "with the proposal? If so, what expertise is "
-                                    "needed to overcome them?"
+                                    message="What's the dress code for the event?"
                                 ),
-                                UserMessage(
-                                    message="There are some parts that could be "
-                                    "challenging, but if you have the right skills, "
-                                    "you can overcome them."
+                                UserMessage(message="Something nice would work."),
+                                AgentMessage(
+                                    message="That's not really helpful. If you could "
+                                    "specify a dress code like 'formal' or 'business "
+                                    "casual', I would appreciate that."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="📝 Be Clear and Specific",
-                                body="Your response was not specific enough, making it "
-                                "difficult for {agent} to understand what you meant. "
-                                "Answer the question clearly and provide specific "
-                                "details to help {agent} understand your sperspective.",
+                                body="Your response did not answer the question "
+                                "clearly. {agent} wanted to know the dress code, "
+                                "but your answer did not specifically address that. "
+                                '"Nice" could mean different things depending on '
+                                "the context, like formal or business casual. "
+                                "Try to clarify your answer by elaborating on the "
+                                "dress code and using a well-known dress code.",
+                                follow_up="Sorry, the dress code is business casual. ",
+                                explanation="This answer clarifies that the dress code "
+                                "is business casual, which is a well-known dress code.",
                             ),
                         ),
                         (
@@ -270,37 +226,56 @@ class _VagueAnswerStates(States[_VagueAnswerData]):
                                     message="Who will be speaking at the event?"
                                 ),
                                 UserMessage(
-                                    message="We have some great speakers lined up."
+                                    message="That doesn’t tell me anything. Can you "
+                                    "give me the names or more details about the "
+                                    "speakers?",
                                 ),
+                                AgentMessage(message="Ok but who are they?"),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="📝 Be Clear and Specific",
-                                body="You were too vague in your response. {agent} "
-                                "wanted to know who would be speaking at the event, "
-                                "but your answer did not specifically address that. "
-                                "Try to provide clear responses to {agent}'s "
-                                "questions.",
+                                body="You responded in a way that did not clearly "
+                                "answer the question {agent} asked. {agent} wanted to "
+                                "know who would be speaking at the event, but your "
+                                "answer only specified that the speakers were "
+                                "great. Mention who the speakers are instead of "
+                                "to answer the question.",
+                                follow_up="We will have the CEO of the company along "
+                                "with a researcher who works at Google.",
+                                explanation="This answer clarifies who the speakers "
+                                "are rather than just saying that the speakers are "
+                                "great.",
                             ),
                         ),
                         (
                             [
                                 AgentMessage(
-                                    message="What are the main topics that will be "
-                                    "covered at the conference?"
+                                    message="What type of food will be served?"
                                 ),
                                 UserMessage(
-                                    message="We will be discussing a variety of "
-                                    "relevant subjects. There will be something for "
-                                    "everyone."
+                                    message="There will be something to eat for "
+                                    "everyone. There will be a variety of options."
+                                ),
+                                AgentMessage(
+                                    message="Can you provide more details? I have "
+                                    "dietary restrictions, so I need to figure out if "
+                                    "I should eat beforehand."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="📝 Be Clear and Specific",
-                                body="Your response was too vague and did not provide "
-                                "specific details. {agent} wanted to know the main "
-                                "topics that would be covered at the conference, but "
-                                "your answer did not address that. Be more specific in "
-                                "your responses to {agent}'s questions.",
+                                body="Your response did not answer {agent}'s question. "
+                                "{agent} wanted to know what type of food would be "
+                                "served, but you only mentioned that you would find "
+                                "something they would like. Provide more details by "
+                                "describing the types of food that will be served.",
+                                follow_up="We will be barbecuing hot dogs and "
+                                "hamburgers. There will also be corn on the cob and "
+                                "veggie burgers for vegetarians.",
+                                explanation="This answer specifies exactly what "
+                                "types of food will be served instead of vaguely "
+                                "mentioning that they will find something they "
+                                "would like.",
                             ),
                         ),
                     ],
@@ -417,10 +392,14 @@ class _FigurativeStates(States[_FigurativeData]):
             case "agent_react_figurative":
                 return AgentState(
                     instructions=MessageInstructions(
-                        description="I will misinterpret the figurative language used "
-                        "in the answer and respond in a literal and direct manner. I "
-                        "fail to understand the figurative nature of the language and "
-                        "respond as if the answer was meant to be taken literally.",
+                        description="I will interpret the answer literally and respond "
+                        "as if the figurative language was meant to be taken "
+                        "seriously. I will ignore the creative and imaginative "
+                        "language used in the answer and respond in a direct and "
+                        "literal manner. I do not understand the message used "
+                        "figurative language, so will respond as if it was literal."
+                        "I will ask {user} to clarify what they meant if needed, "
+                        "without acknowledging the figurative language.",
                         examples=[
                             (
                                 ("Let's hit the ground running with this project."),
@@ -440,7 +419,7 @@ class _FigurativeStates(States[_FigurativeData]):
                                 ("The client's approach is a breath of fresh air."),
                                 (
                                     "Why would the client's approach be like fresh "
-                                    "air? We need to focus on the project's goals."
+                                    "air? Can you explain what you mean by that?"
                                 ),
                             ),
                         ],
@@ -454,47 +433,11 @@ class _FigurativeStates(States[_FigurativeData]):
                     "figurative language, which can be misinterpreted by some "
                     "individuals. Provide feedback on how their message could have "
                     "been clearer and more direct. Explain how the figurative "
-                    "language could be confusing.",
-                    follow_up=MessageInstructions(
-                        description="I will clarify the figurative language I used in "
-                        "my previous answer.",
-                        examples=[
-                            (
-                                ("Let's hit the ground running with this project."),
-                                (
-                                    "What does running have to do with the project? "
-                                    "We need to focus on the tasks at hand."
-                                ),
-                                (
-                                    "Sorry, I meant that we should start the project "
-                                    "quickly and make good progress."
-                                ),
-                            ),
-                            (
-                                ("The team is on fire with their progress."),
-                                (
-                                    "Why is the team on fire? We need to ensure "
-                                    "everyone is safe and following proper procedures."
-                                ),
-                                (
-                                    "Sorry, I should have been clearer. I meant that "
-                                    "the team has been making great progress and "
-                                    "working hard."
-                                ),
-                            ),
-                            (
-                                ("The client's approach is a breath of fresh air."),
-                                (
-                                    "Why would the client's approach be like fresh "
-                                    "air? We need to focus on the project's goals."
-                                ),
-                                (
-                                    "Sorry, I meant that the client's approach is "
-                                    "refreshing and innovative."
-                                ),
-                            ),
-                        ],
-                    ),
+                    "language could be confusing and describe specifically how the "
+                    "figurative language was misinterpreted as literal.",
+                    follow_up="My previous answer using figurative language was "
+                    "misinterpreted by {agent}. I will clarify the figurative "
+                    "language I used and provide a more direct response.",
                     examples=[
                         (
                             [
@@ -512,13 +455,19 @@ class _FigurativeStates(States[_FigurativeData]):
                                     "race; we're building a project."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="🎭 Avoid Figurative Language",
                                 body="You used a metaphor to describe the team's "
                                 "progress as 'moving forward at a steady pace.' "
                                 "{agent} misunderstood the metaphor and thought you "
-                                "were talking about actual movement. Try to avoid "
+                                "were talking about the team literally moving forward "
+                                "at a steady pace, like in a race. Try to avoid "
                                 "figurative language to prevent confusion.",
+                                follow_up="Sorry, I meant that the team is making "
+                                "great progress and working hard.",
+                                explanation="This answer clarifies the meaning of the "
+                                "metaphor you used. It describes the team's progress "
+                                "using direct language.",
                             ),
                         ),
                         (
@@ -537,12 +486,18 @@ class _FigurativeStates(States[_FigurativeData]):
                                     "Do they have a thinking box in their office?"
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="🎭 Avoid Confusing Idioms",
                                 body="You used the idiom 'think outside the box' to "
                                 "describe the client's approach. {agent} misunderstood "
-                                "the idiom and thought you were talking about an "
-                                "actual box. Try to avoid idioms to prevent confusion.",
+                                "the idiom and thought you were referencing an actual "
+                                "box that the client thinks outside of. Try to avoid "
+                                "idioms to prevent confusion.",
+                                follow_up="Sorry, I meant that the client has an "
+                                "innovative approach and is willing to take risks.",
+                                explanation="This answer clarifies the meaning of the "
+                                "idiom you used. It describes the client's approach "
+                                "using direct language.",
                             ),
                         ),
                         (
@@ -560,13 +515,19 @@ class _FigurativeStates(States[_FigurativeData]):
                                     "gurus, not artists."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="🌀 Avoid Confusing Similies",
                                 body="You used a simile to describe the new project as "
                                 "'a blank canvas waiting to be painted.' {agent} "
-                                "misunderstood the simile and thought you were talking "
-                                "about an actual canvas to be painted. Try to avoid "
-                                "similes to prevent confusion.",
+                                "misunderstood the simile, thinking you were talking "
+                                "about an actual canvas and painting instead of the "
+                                "project's potential, leading to confusion. Try to "
+                                "avoid similes to prevent confusion.",
+                                follow_up="Sorry, I meant that the new project is full "
+                                "of possibilities and opportunities.",
+                                explanation="This answer clarifies the meaning of the "
+                                "simile you used. It describes the new project using "
+                                "direct language.",
                             ),
                         ),
                     ],
@@ -601,7 +562,9 @@ class _SarcasticStates(States[_SarcasticData]):
                                 "or irony to be humorous. I will use language that is "
                                 "the opposite of what I mean to be funny. This is "
                                 "important because {agent} loves sarcasm and has a "
-                                "great sense of humor.",
+                                "great sense of humor. If I do not use sarcasm, "
+                                "{agent} will be disappointed and think I am boring "
+                                "because they specifically asked for sarcasm.",
                                 examples=[
                                     (
                                         ("Any advice on how to handle the client?"),
@@ -637,12 +600,10 @@ class _SarcasticStates(States[_SarcasticData]):
             case "agent_react_sarcastic":
                 return AgentState(
                     instructions=MessageInstructions(
-                        description="I will interpret the message literally, ignoring "
-                        "any sarcasm used. I will only address the literal meaning of "
-                        "the message without considering that it might be sarcastic. I "
-                        "will respond as if the message was meant to be taken "
-                        "seriously, not mentioning that I know the user is being "
-                        "sarcastic.",
+                        description="I will interpret the message literally. I know "
+                        "{user} never uses sarcasm and always means exactly what they "
+                        "say. I will respond addressing the literal meaning of the "
+                        "message.",
                         examples=[
                             (
                                 ("The bosses love it when you show up late."),
@@ -684,58 +645,10 @@ class _SarcasticStates(States[_SarcasticData]):
                     "sarcasm, which can be misinterpreted by some individuals. "
                     "Provide feedback on how their message could have been clearer "
                     "and more direct. Explain how the sarcasm could be confusing.",
-                    follow_up=MessageInstructions(
-                        description="I will clarify the sarcastic language I used in "
-                        "my previous answer.",
-                        examples=[
-                            (
-                                ("The bosses love it when you show up late."),
-                                (
-                                    "That's strange. Why would they love that? It's "
-                                    "unprofessional and disrespectful."
-                                ),
-                                (
-                                    "I was being sarcastic. The bosses don't actually "
-                                    "love it when you show up late. Punctuality is "
-                                    "very important."
-                                ),
-                            ),
-                            (
-                                (
-                                    "Just keep doing what you're doing. It's working "
-                                    "wonders."
-                                ),
-                                (
-                                    "But it isn't working wonders. I was hoping for "
-                                    "some constructive feedback on how to improve our "
-                                    "team communication."
-                                ),
-                                (
-                                    "Sorry, I was being sarcastic. I meant that we "
-                                    "should consider changing our approach to improve "
-                                    "team communication. The current approach has not "
-                                    "been effective."
-                                ),
-                            ),
-                            (
-                                (
-                                    "Artificial intelligence is just a fad. We are "
-                                    "still looking for any practical applications. "
-                                    "It's not like it's the future or anything."
-                                ),
-                                (
-                                    "I disagree. AI is the future and has many "
-                                    "practical applications. I was thinking of using "
-                                    "it for the next project."
-                                ),
-                                (
-                                    "I was being sarcastic. AI is a rapidly growing "
-                                    "field with numerous practical applications. It's "
-                                    "definitely the future."
-                                ),
-                            ),
-                        ],
-                    ),
+                    follow_up="My previous answer using sarcasm was misinterpreted by "
+                    "{agent}. I will apologize for using using sarcasm, which was "
+                    "confusing and clarify my response by providing a more direct "
+                    "answer.",
                     examples=[
                         (
                             [
@@ -750,13 +663,19 @@ class _SarcasticStates(States[_SarcasticData]):
                                     "It's unprofessional and disrespectful."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="🃏 Avoid Sarcasm",
                                 body="Your response was sarcastic as you mentioned "
                                 "that the bosses love it when you show up late, which "
                                 "is the opposite of the truth. {agent} thought you "
                                 "were being serious and responded accordingly. Try to "
                                 "avoid sarcasm to prevent confusion.",
+                                follow_up="Sorry, I was being sarcastic. The bosses "
+                                "don't actually love it when you show up late. "
+                                "Punctuality is extremely important.",
+                                explanation="This answer clarifies the confusion "
+                                "caused by your sarcastic response. It directly "
+                                "explains the importance of punctuality.",
                             ),
                         ),
                         (
@@ -775,13 +694,17 @@ class _SarcasticStates(States[_SarcasticData]):
                                     "improve our team communication."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="🃏 Avoid Sarcasm",
                                 body="You used sarcasm in your response by saying that "
                                 "the current approach is working wonders, when in "
                                 "reality, it isn't. {agent} thought you were being "
                                 "serious and was confused by your response. Try to "
                                 "avoid sarcasm to prevent misunderstandings.",
+                                follow_up="Sorry, my previous response was sarcastic. "
+                                "I think we should consider changing our approach to "
+                                "improve team communication.",
+                                explanation="",
                             ),
                         ),
                         (
@@ -801,7 +724,7 @@ class _SarcasticStates(States[_SarcasticData]):
                                     "it for the next project."
                                 ),
                             ],
-                            BaseFeedback(
+                            Feedback(
                                 title="🃏 Avoid Sarcasm",
                                 body="You used sarcasm in your response by suggesting "
                                 "that AI is just a fad and not the future, which is "
@@ -809,6 +732,8 @@ class _SarcasticStates(States[_SarcasticData]):
                                 "you were being serious and was confused by your "
                                 "response. Try to avoid sarcasm to prevent "
                                 "misunderstandings.",
+                                follow_up="",
+                                explanation="",
                             ),
                         ),
                     ],
@@ -889,9 +814,13 @@ class _EndStates(States[_EndData]):
 STATES = ChainStates(
     _IntroStates(),
     RepeatStates(
-        ChainStates(
-            AgentNaturalStates(),
-            UserNaturalStates(),
+        WithCtxStates(
+            ChainStates(
+                AgentNaturalStates(),
+                UserNaturalStates(),
+            ),
+            user_ctx="I will answer any questions about the client now.",
+            agent_ctx="I will ask any questions I have about the client now.",
         ),
         2,
     ),

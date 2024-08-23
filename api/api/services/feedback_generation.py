@@ -145,10 +145,10 @@ async def _generate_follow_up_explanation(
         "is an improvement over the original one. You are reviewing an ongoing "
         "conversation between the user and an autistic individual. The conversation is "
         "happening over text. The user has received feedback from you and a revised "
-        'question (refer to it as "this version of the question"). Also refer to the '
-        "user using second person pronouns. Provide an explanation for why the revised "
-        "question is an improvement over the original one. Respond with a JSON object "
-        "with key 'explanation' containing the explanation (less than two sentences). "
+        'question (refer to it as "this"). Also refer to the user using second person '
+        "pronouns. Provide an explanation for why the revised question is an "
+        "improvement over the original one. Respond with a JSON object with key "
+        "'explanation' containing the explanation (less than two sentences). "
     )
 
     examples_str = "\n\n".join(

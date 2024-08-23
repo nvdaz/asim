@@ -69,7 +69,11 @@ class _FrustratedStates(States[_FrustratedData]):
                         "bluntly. I am frustrated about the mess and need to inform "
                         "the other person about it. My message will be direct and "
                         "urgent, potentially leading the other person to feel I am "
-                        "upset with them."
+                        "upset with them.",
+                        examples=[
+                            "I can't believe the server crashed again. I need you to "
+                            "fix it now. This is unacceptable.",
+                        ],
                     ),
                     next=None,
                 )
@@ -106,7 +110,29 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                                 "the other person's frustration because I believe they "
                                 "are being rude to me.",
                                 examples=[
-                                    # TODO:
+                                    (
+                                        "If the library printers are offline, how are "
+                                        "we supposed to turn in our report? This is "
+                                        "ridiculous.",
+                                        "Why are you angry with me? I don't control "
+                                        "the printers. If you are going to be rude, "
+                                        "don't talk to me.",
+                                    ),
+                                    (
+                                        "The client is furious that the shipment was "
+                                        "delayed. I can't believe this happened.",
+                                        "I can't believe you're blaming me for the "
+                                        "shipment delay. I can't control whether or "
+                                        "not a truck breaks down. The shipment will "
+                                        "arrive when it arrives.",
+                                    ),
+                                    (
+                                        "I can't believe the power went out in the "
+                                        "middle of my presentation. This is a "
+                                        "disaster.",
+                                        "I can't believe you're blaming me for the "
+                                        "power outage. I can't control the weather. ",
+                                    ),
                                 ],
                             ),
                             next=_UserReactConfrontationalData(
@@ -160,12 +186,7 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                     "to be more empathetic and understanding in their response. "
                     "Provide feedback on how the user could have been more "
                     "understanding and empathetic in their response.",
-                    follow_up=MessageInstructions(
-                        description="I will apologize for being dismissive.",
-                        examples=[
-                            # TODO:
-                        ],
-                    ),
+                    follow_up="I will apologize for being dismissive.",
                     examples=[
                         # TODO:
                     ],
@@ -178,12 +199,7 @@ class _UserReactConfrontationalStates(States[_UserReactConfrontationalData]):
                     "neutral language instead. Provide feedback on how the user "
                     "could have been more empathetic and understanding in their "
                     "response.",
-                    follow_up=MessageInstructions(
-                        description="I will apologize for being confrontational.",
-                        examples=[
-                            # TODO:
-                        ],
-                    ),
+                    follow_up="I will apologize for being confrontational.",
                     examples=[
                         # TODO:
                     ],
@@ -246,13 +262,8 @@ class _UserReactInterpretSarcasmStates(States[_UserReactInterpretSarcasmData]):
                     "dismissed. The user needs to be more empathetic and understanding "
                     "in their response. Provide feedback on how the user could have "
                     "responded more appropriately.",
-                    follow_up=MessageInstructions(
-                        description="I will apologize for incorrectly interpreting the "
-                        "message as sarcastic when it was not intended that way.",
-                        examples=[
-                            # TODO:
-                        ],
-                    ),
+                    follow_up="I will apologize for incorrectly interpreting the "
+                    "message as sarcastic when it was not intended that way.",
                     examples=[
                         # TODO:
                     ],
