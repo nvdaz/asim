@@ -288,8 +288,6 @@ class Conversation(BaseModel):
             agent=data.agent.name,
             state=state,
             elements=data.elements,
-            max_unlocked_stage=ConversationStageStr,
-            m='m'
         )
 
 
