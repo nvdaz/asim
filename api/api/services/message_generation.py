@@ -28,6 +28,7 @@ def _format_instructions(instructions: MessageInstructions | None) -> str:
 
     examples_str = (
         (
+            "IMPORTANT: I MUST MODEL MY RESPONSE AFTER THE EXAMPLES BELOW.\n"
             "<example_responses>\n"
             + "\n".join([_format_example(example) for example in instructions.examples])
             + "\n</example_responses>\n"
@@ -95,7 +96,8 @@ async def generate_message(
         f"with your message as the value and the key 'sender' with '{sender_name}' as "
         "the value. Respond ONLY with your next message. Do not include previous "
         "messages in your response. STAY ON TOPIC. DO NOT reference external "
-        "information. Use casual, conversational language."
+        "information.  Respond using casual, everyday language, like you’re texting a "
+        "friend."
     )
 
     prompt_data = (
