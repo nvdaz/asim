@@ -183,7 +183,7 @@ const Landing = () => {
               <Button
                 sx={{
                   backgroundColor:
-                    allowedLessons === "level-2" ||
+                    allowedLessons >= "level-2" ||
                     allowedLessons === "playground"
                       ? "#FFB930"
                       : "#797979",
@@ -192,14 +192,14 @@ const Landing = () => {
                   padding: 0,
                   "&:hover": {
                     backgroundColor:
-                      allowedLessons === "level-2" ||
+                      allowedLessons >= "level-2" ||
                       allowedLessons === "playground"
                         ? "#FF9430"
                         : "##A3A3A3",
                   },
                   "& .MuiTouchRipple-child": {
                     backgroundColor:
-                      allowedLessons === "level-2" ||
+                      allowedLessons >= "level-2" ||
                       allowedLessons === "playground"
                         ? "#FFCC69"
                         : "#637BC4",
@@ -210,8 +210,8 @@ const Landing = () => {
                   className={styles.lessonsBtn}
                   onClick={() => {
                     if (
-                      allowedLessons === "level-2" ||
-                      allowedLessons === "playground"
+                      allowedLessons >= "level-2" ||
+                      allowedLessons >= "playground"
                     ) {
                       setTimeout(() => {
                         window.location.href = "/lesson/2";
@@ -257,7 +257,7 @@ const Landing = () => {
               <Button
                 sx={{
                   backgroundColor:
-                    allowedLessons === "level-3" ||
+                    allowedLessons >= "level-3" ||
                     allowedLessons === "playground"
                       ? "#FFB930"
                       : "#797979",
@@ -266,14 +266,14 @@ const Landing = () => {
                   padding: 0,
                   "&:hover": {
                     backgroundColor:
-                      allowedLessons === "level-3" ||
+                      allowedLessons >= "level-3" ||
                       allowedLessons === "playground"
                         ? "#FF9430"
                         : "##A3A3A3",
                   },
                   "& .MuiTouchRipple-child": {
                     backgroundColor:
-                      allowedLessons === "level-3" ||
+                      allowedLessons >= "level-3" ||
                       allowedLessons === "playground"
                         ? "#FFCC69"
                         : "#637BC4",
@@ -284,7 +284,7 @@ const Landing = () => {
                   className={styles.lessonsBtn}
                   onClick={() => {
                     if (
-                      allowedLessons === "level-3" ||
+                      allowedLessons >= "level-3" ||
                       allowedLessons === "playground"
                     ) {
                       setTimeout(() => {
