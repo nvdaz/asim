@@ -465,9 +465,9 @@ class _FigurativeStates(States[_FigurativeData]):
                                 "figurative language to prevent confusion.",
                                 follow_up="Sorry, I meant that the team is making "
                                 "great progress and working hard.",
-                                explanation="This answer clarifies the meaning of the "
-                                "metaphor you used. It describes the team's progress "
-                                "using direct language.",
+                                explanation="This answer clarifies that the team is "
+                                "making progress and working hard using direct "
+                                "language.",
                             ),
                         ),
                         (
@@ -575,7 +575,7 @@ class _SarcasticStates(States[_SarcasticData]):
                                     ),
                                     (
                                         (
-                                            "How can we improve the team's "
+                                            "What do you think about the team's "
                                             "communication?"
                                         ),
                                         (
@@ -645,10 +645,9 @@ class _SarcasticStates(States[_SarcasticData]):
                     "sarcasm, which can be misinterpreted by some individuals. "
                     "Provide feedback on how their message could have been clearer "
                     "and more direct. Explain how the sarcasm could be confusing.",
-                    follow_up="My previous answer using sarcasm was misinterpreted by "
-                    "{agent}. I will apologize for using using sarcasm, which was "
-                    "confusing and clarify my response by providing a more direct "
-                    "answer.",
+                    follow_up="My previous answer used sarcasm that was misinterpreted "
+                    "by {agent}. I will apologize for using using sarcasm, which was "
+                    "confusing and clarify what I meant with a more direct response.",
                     examples=[
                         (
                             [
@@ -681,7 +680,7 @@ class _SarcasticStates(States[_SarcasticData]):
                         (
                             [
                                 AgentMessage(
-                                    message="How can we improve the team's "
+                                    message="What do you think about the team's "
                                     "communication?"
                                 ),
                                 UserMessage(
@@ -704,7 +703,10 @@ class _SarcasticStates(States[_SarcasticData]):
                                 follow_up="Sorry, my previous response was sarcastic. "
                                 "I think we should consider changing our approach to "
                                 "improve team communication.",
-                                explanation="",
+                                explanation="This answer clarifies the confusion "
+                                "caused by your sarcastic response. It directly "
+                                "explains that you think the team's communication "
+                                "needs improvement.",
                             ),
                         ),
                         (
@@ -715,25 +717,32 @@ class _SarcasticStates(States[_SarcasticData]):
                                 ),
                                 UserMessage(
                                     message="Artificial intelligence is just a fad. We "
-                                    "are still looking for any practical applications. "
+                                    "are still looking for any practical applications "
                                     "It's not like it's the future or anything."
                                 ),
                                 AgentMessage(
-                                    message="I disagree. AI is the future and has many "
-                                    "practical applications. I was thinking of using "
-                                    "it for the next project."
+                                    message="I disagree. AI has many practical "
+                                    "applications. That's why I was thinking of using "
+                                    "it in our workflow for the next project."
                                 ),
                             ],
                             Feedback(
                                 title="🃏 Avoid Sarcasm",
-                                body="You used sarcasm in your response by suggesting "
-                                "that AI is just a fad and not the future, which is "
-                                "the opposite of what you believe. {agent} thought "
-                                "you were being serious and was confused by your "
-                                "response. Try to avoid sarcasm to prevent "
+                                body="You sarcastically suggested that AI is a fad, "
+                                "while you actually believe it has many practical "
+                                "applications. {agent} thought you were being serious "
+                                "and was confused by your response. They interpreted "
+                                "your sarcasm as a genuine opinion instead of an "
+                                "ironic one. Try to avoid sarcasm to prevent "
                                 "misunderstandings.",
-                                follow_up="",
-                                explanation="",
+                                follow_up="Sorry, I was being sarcastic. I think AI "
+                                "has many practical applications and has a lot of "
+                                "potential for the future. Using it in your workflow "
+                                "is a great idea.",
+                                explanation="This response clarifies the confusion "
+                                "caused by your sarcastic response. It directly "
+                                "explains your opinion on using AI in {agent}'s "
+                                "workflow.",
                             ),
                         ),
                     ],

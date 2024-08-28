@@ -89,13 +89,13 @@ async def generate_feedback_base(
         "the key 'title' containing the title (less than 50 characters, starting with "
         "an interesting emoji) of your feedback, the key 'body' containing the "
         "feedback. Your feedback should be comprehensive and thoroughly explain the "
-        "reasoning behind it. But it should be concise and to the point. DO NOT repeat "
-        "the question! Analyze the user's message and provide feedback WITHOUT "
-        "repeating the question. Use simple, straightforward language that a high "
-        "school student would understand. DO NOT tell the user to send a specific "
-        f"message. Even though {agent.name} is autistic, DO NOT mention autism in your "
-        "feedback. We want to focus on making communication more empathetic, not "
-        "anything else."
+        "reasoning behind it. But it should be concise and to the point. Only extract "
+        "1-2 key words or phrases from the user's message that are most relevant to "
+        "your feedback without repeating them. Use simple, straightforward language "
+        "that a high school student would understand. DO NOT tell the user to send a "
+        f"specific message. Even though {agent.name} is autistic, DO NOT mention "
+        "autism in your feedback. We want to focus on making communication more "
+        "empathetic."
     )
 
     prompt_data = (
@@ -147,7 +147,8 @@ async def _generate_follow_up_explanation(
         "happening over text. The user has received feedback from you and a revised "
         'question (refer to it as "this"). Also refer to the user using second person '
         "pronouns. Provide an explanation for why the revised question is an "
-        "improvement over the original one. Respond with a JSON object with key "
+        "improvement over the original one. Use simple, straightforward language that "
+        "a high school student would understand. Respond with a JSON object with key "
         "'explanation' containing the explanation (less than two sentences). "
     )
 

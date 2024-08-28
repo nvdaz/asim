@@ -285,11 +285,11 @@ class _BinaryIndirectQuestionStates(States[_BinaryIndirectQuestionData]):
                                 description="I want to ask an open-ended question but "
                                 "instead of asking directly, I will ask a yes-or-no "
                                 "question to be more polite. My yes-or-no question "
-                                "will imply that I want something without directly "
-                                "asking. Even though my question is phrased as a "
-                                "yes-or-no question, it will elicit an open-ended "
-                                "responses from {agent}, My question cannot be "
-                                "answered with a simple yes or no.",
+                                "will either ask if the agent knows something or if "
+                                "they are willing to do something. Even though my "
+                                "question is phrased as a yes-or-no question, it will "
+                                "imply that I want more information or action. My "
+                                "question cannot be answered with a simple yes or no.",
                                 examples=[
                                     (
                                         "Do you know what time it is? [asking if they "
@@ -485,7 +485,6 @@ class _BinaryIndirectQuestionStates(States[_BinaryIndirectQuestionData]):
                     "will not start with 'could'.",
                     next=None,
                 )
-
 
 _SuggestiveIndirectQuestionStateId = Literal[
     "user_ask",
