@@ -1,6 +1,7 @@
 from typing import Literal
 
 from api.schemas.conversation import AgentMessage, Feedback, UserMessage
+from api.services import llm
 
 from .seed import LevelConversationScenarioSeed
 from .states import (
@@ -558,13 +559,18 @@ class _SarcasticStates(States[_SarcasticData]):
                     options=[
                         UserOption(
                             instructions=MessageInstructions(
+                                model=llm.Model.GPT_4,
                                 description="I will answer the question using sarcasm "
                                 "or irony to be humorous. I will use language that is "
                                 "the opposite of what I mean to be funny. This is "
                                 "important because {agent} loves sarcasm and has a "
                                 "great sense of humor. If I do not use sarcasm, "
                                 "{agent} will be disappointed and think I am boring "
-                                "because they specifically asked for sarcasm.",
+                                "because they specifically asked for sarcasm. It will "
+                                "not be unprofessional or disrespectful because "
+                                "{agent} is my colleague and we are both adults who "
+                                "can handle a little bit of sarcasm, and this is a "
+                                "casual conversation.",
                                 examples=[
                                     (
                                         ("Any advice on how to handle the client?"),
