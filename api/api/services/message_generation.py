@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel
+from pydantic import BaseModel, Field
 
 from api.levels.states import MessageInstructions
 from api.schemas.conversation import (
@@ -40,6 +40,63 @@ def _format_instructions(instructions: MessageInstructions | None) -> str:
     return f"\n{instructions.description}\n{examples_str}\n"
 
 
+prompt = """
+Here is the memory in {name}'s head:
+{memory}
+{name} uses contractions and casual phrases for a natural feel.
+They aren't overly enthusiastic and instead exude a calm confidence.
+Avoid uncommon words and use simple words and phrases but use jargon when appropriate.
+Keep sentences under 30 words and your response under 5 sentences.
+Ask follow-up questions to show interest, but don’t dominate the conversation.
+
+
+Summary of relevant context from {name}'s memory:
+{context}
+
+{action}
+
+Output format: Output a json of the following format:
+{{
+"{name}": "<{name}'s utterance>",
+"Did the conversation end with {name}'s utterance?": "<json Boolean>"
+}}
+"""
+
+init_conversation_prompt = "How would {name} initiate a conversation?"
+continue_conversation_prompt = """How would {name} respond to {other_name}'s message?
+Here is their conversation so far:
+{conversation}
+"""
+
+john_memory = """
+John is a student at Tufts University who studies computer science and works with large
+language models.
+"""
+
+john_context = """
+Bob is a friend of John's who is a student at MIT studying computer science. Bob is
+interested in mathematics.
+"""
+
+bob_memory = """
+Bob is a student at MIT studying mathematics. They are interested in field topology and
+spend their free time rock climbing.
+"""
+
+bob_context = """
+John is a friend of Bob's who is a student at Tufts University studying computer science
+and working with large language models.
+"""
+
+
+class UserMessage(BaseModel):
+    message: Annotated[str, Field(..., alias="John")]
+
+
+class AgentMessage(BaseModel):
+    message: Annotated[str, Field(..., alias="Bob")]
+
+
 async def generate_message(
     user_sent: bool,
     user: UserPersona,
@@ -49,85 +106,30 @@ async def generate_message(
     instructions: MessageInstructions | None = None,
     feedback: str | None = None,
 ) -> str:
-    user_name = f"{user.name} (the user)" if user.name else "the user"
+    sender_name = "John" if user_sent else "Bob"
+    recipient_name = "Bob" if user_sent else "John"
 
-    sender_name = user_name if user_sent else agent.name
-    recipient_name = agent.name if user_sent else user_name
+    memory = john_memory if user_sent else bob_memory
+    context = john_context if user_sent else bob_context
 
-    def validate_sender(sender: str) -> str:
-        if sender != sender_name:
-            raise ValueError(f"Sender must be {sender_name}")
-
-        return sender
-
-    class MessageWithRole(BaseModel):
-        sender: Annotated[str, AfterValidator(validate_sender)]
-        message: str
-
-    scenario_perspective = (
-        scenario.user_perspective if user_sent else scenario.agent_perspective
-    )
-
-    prelude = "\n".join(
-        filter(
-            None,
-            [
-                user.description if user_sent else agent.description,
-                scenario_perspective,
-                (
-                    "Your culture is: "
-                    if user_sent
-                    else "Tailor your message to the user's culture: "
-                )
-                + user.culture,
-            ],
-        )
-    )
-
-    max_len = 30 if user_sent else 40
-
-    system_prompt = (
-        f"{prelude}\nYou ({sender_name}) are chatting over text with {recipient_name}. "
-        f"Keep your messages under {max_len} words and appropriate for a text "
-        "conversation. ALWAYS provide detailed information and DO NOT end the "
-        "conversation. DO NOT try to start any external conversations or schedule any "
-        f"meetings. You are {sender_name}, and are writing to {recipient_name}. "
-        "YOU ARE NOT AN AI. Respond with a JSON object containing the key 'message' "
-        f"with your message as the value and the key 'sender' with '{sender_name}' as "
-        "the value. Respond ONLY with your next message. Do not include previous "
-        "messages in your response. STAY ON TOPIC. DO NOT reference external "
-        "information.  Respond using casual, everyday language, like you’re texting a "
-        "friend."
-    )
-
-    prompt_data = (
-        (
-            "[CONVERSATION START]"
+    system_prompt = prompt.format(
+        action=(
+            init_conversation_prompt.format(name=sender_name)
             if len(messages) == 0
-            else dump_message_list(messages[-8:], user.name, agent.name)
-        )
-        + f"\n{sender_name}:"
-        + "\n<instructions>"
-        + _format_instructions(instructions).format(user=user.name, agent=agent.name)
-        + (
-            (
-                "I must address this feedback from an external social skills coach in "
-                "writing my next message:\n"
-                + "<feedback>\n"
-                + "SOCIAL SKILLS COACH: "
-                + feedback
-                + "\n</feedback>\n"
+            else continue_conversation_prompt.format(
+                name=sender_name,
+                other_name=recipient_name,
+                conversation=dump_message_list(messages, user.name, agent.name),
             )
-            if feedback
-            else ""
-        )
-        + f"I am {sender_name}.\n</instructions>"
-        + f"\nRESPOND AS {sender_name.upper()}. IMPORTANT: FOLLOW THE INSTRUCTIONS "
-        "CAREFULLY TO ENSURE YOUR MESSAGE IS APPROPRIATE."
+        ),
+        name=sender_name,
+        memory=memory,
+        context=context,
     )
+    prompt_data = "Respond with the message."
 
     response = await llm.generate(
-        schema=MessageWithRole,
+        schema=UserMessage if user_sent else AgentMessage,
         model=instructions.model if instructions else llm.Model.CLAUDE_3_SONNET,
         system=system_prompt,
         prompt=prompt_data,
