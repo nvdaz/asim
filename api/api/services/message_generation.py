@@ -43,13 +43,22 @@ def _format_instructions(instructions: MessageInstructions | None) -> str:
 prompt = """
 Here is the memory in {name}'s head:
 {memory}
-Be casual and relaxed. Vary the sentence structure and inject personality into the
-message to make it sound human. Mix thoughts, use incomplete sentences, and don't be
-perfect. Use contractions and some casual phrases for a natural feel.
-Avoid uncommon words and use simple words and phrases but use jargon when appropriate.
-Reply in at most 5 short sentences.
-Ask follow-up questions to show interest, but avoid changing the topic unnecessarily.
-Focus on the conversation in the moment and do not schedule any external meetings.
+
+Be relaxed and casual. Mix in incomplete thoughts, sentence fragments, hesitations, or
+random asides to keep it spontaneous. Be lively with humor, random thoughts, or
+emotional reactions. Make sure the humor is natural. Never use witty jokes, metaphors,
+similies, or clever wordplay. Only use everyday humor like playful self-deprecation,
+light teasing, or relatable observations from everyday life that the average person
+would find funny.
+
+Keep responses under 5 short sentences. Add some personality and be relatable. Avoid
+getting too technical and don’t worry about being perfect. Use spontaneous tangents,
+filler words, misunderstandings, and interjections to keep it lively.
+
+Use simple language, aiming for a Flesch reading score of 80 or higher. Avoid jargon
+except where necessary. Generally avoid emojis.
+
+Keep the conversation going. Do not plan any external events.
 
 Summary of relevant context from {name}'s memory:
 {context}
@@ -59,12 +68,16 @@ Summary of relevant context from {name}'s memory:
 Output format: Output a json of the following format:
 {{
 "{name}": "<{name}'s utterance>",
-"Did the conversation end with {name}'s utterance?": "<json Boolean>"
 }}
 """
 
-init_conversation_prompt = "How would {name} initiate a conversation?"
-continue_conversation_prompt = """{name} and {other_name} are having a conversation.
+init_conversation_prompt = """
+{observation}
+How would {name} initiate a conversation?
+"""
+
+continue_conversation_prompt = """
+{name} and {other_name} are having a conversation.
 How would {name} respond to {other_name}'s message to continue the conversation?
 Here is their conversation so far:
 {conversation}
@@ -72,7 +85,7 @@ Here is their conversation so far:
 
 john_memory = """
 John is a student at Tufts University who studies computer science and works with large
-language models.
+language models. They are interested in running and hiking.
 """
 
 john_context = """
@@ -80,9 +93,13 @@ Bob is a friend of John's who is a student at MIT studying computer science. Bob
 interested in mathematics.
 """
 
+john_observation = """
+John is interested to learn more about Bob's experience at MIT.
+"""
+
 bob_memory = """
-Bob is a student at MIT studying mathematics. They are interested in field topology and
-spend their free time rock climbing.
+Bob is a student at MIT studying mathematics. They are taking a course in topology and
+spend their free time rock climbing and running.
 """
 
 bob_context = """
@@ -116,7 +133,9 @@ async def generate_message(
 
     system_prompt = prompt.format(
         action=(
-            init_conversation_prompt.format(name=sender_name)
+            init_conversation_prompt.format(
+                name=sender_name, observation=john_observation
+            )
             if len(messages) == 0
             else continue_conversation_prompt.format(
                 name=sender_name,
@@ -128,14 +147,14 @@ async def generate_message(
         memory=memory,
         context=context,
     )
-    prompt_data = "Respond with the message."
+    prompt_data = "Respond with the output."
 
     response = await llm.generate(
         schema=UserMessage if user_sent else AgentMessage,
-        model=instructions.model if instructions else llm.Model.CLAUDE_3_SONNET,
+        model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
-        temperature=0.8,
+        temperature=1.0,
     )
 
     return response.message

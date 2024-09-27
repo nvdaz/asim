@@ -486,6 +486,7 @@ class _BinaryIndirectQuestionStates(States[_BinaryIndirectQuestionData]):
                     next=None,
                 )
 
+
 _SuggestiveIndirectQuestionStateId = Literal[
     "user_ask",
     "agent_answer_suggestive_indirect",
@@ -814,7 +815,7 @@ STATES = ChainStates(
             ),
             AgentNaturalStates(),
         ),
-        2,
+        20,
     ),
     RepeatStates(
         ChainStates(
