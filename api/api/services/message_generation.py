@@ -43,12 +43,13 @@ def _format_instructions(instructions: MessageInstructions | None) -> str:
 prompt = """
 Here is the memory in {name}'s head:
 {memory}
-{name} uses contractions and casual phrases for a natural feel.
-They aren't overly enthusiastic and instead exude a calm confidence.
+Be casual and relaxed. Vary the sentence structure and inject personality into the
+message to make it sound human. Mix thoughts, use incomplete sentences, and don't be
+perfect. Use contractions and some casual phrases for a natural feel.
 Avoid uncommon words and use simple words and phrases but use jargon when appropriate.
-Keep sentences under 30 words and your response under 5 sentences.
-Ask follow-up questions to show interest, but don’t dominate the conversation.
-
+Reply in at most 5 short sentences.
+Ask follow-up questions to show interest, but avoid changing the topic unnecessarily.
+Focus on the conversation in the moment and do not schedule any external meetings.
 
 Summary of relevant context from {name}'s memory:
 {context}
@@ -63,7 +64,8 @@ Output format: Output a json of the following format:
 """
 
 init_conversation_prompt = "How would {name} initiate a conversation?"
-continue_conversation_prompt = """How would {name} respond to {other_name}'s message?
+continue_conversation_prompt = """{name} and {other_name} are having a conversation.
+How would {name} respond to {other_name}'s message to continue the conversation?
 Here is their conversation so far:
 {conversation}
 """
@@ -119,7 +121,7 @@ async def generate_message(
             else continue_conversation_prompt.format(
                 name=sender_name,
                 other_name=recipient_name,
-                conversation=dump_message_list(messages, user.name, agent.name),
+                conversation=dump_message_list(messages, "John", "Bob"),
             )
         ),
         name=sender_name,
