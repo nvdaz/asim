@@ -146,6 +146,7 @@ type Send =
 
 export function useChats() {
   const [chats, setChats] = useState<{ [key: string]: Chat }>({});
+  const { user } = useAuth();
 
   const onMessage = useCallback((message: Recv) => {
     if (message.type === "sync-chats") {
@@ -175,6 +176,18 @@ export function useChats() {
 
   const sendChatMessage = useCallback(
     (id: string, content: string) => {
+      setChats((chats) => {
+        const chat = chats[id];
+        if (!chat.messages) {
+          chat.messages = [];
+        }
+        chat.messages = [
+          ...chat.messages,
+          { sender: user!.name, content, created_at: new Date().toISOString() },
+        ];
+        return { ...chats, [id]: chat };
+      });
+
       sendMessage({ type: "send-message", id, content });
     },
     [sendMessage]
@@ -200,6 +213,9 @@ export function useChats() {
 
   const markRead = useCallback(
     (id: string) => {
+      setChats((chats) => {
+        return { ...chats, [id]: { ...chats[id], unread: false } };
+      });
       sendMessage({ type: "mark-read", id });
     },
     [sendMessage]

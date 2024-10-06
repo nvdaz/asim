@@ -1,9 +1,9 @@
-from typing import Annotated
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from api.levels.states import MessageInstructions
 from api.schemas.chat import ChatMessage
+from api.schemas.user import UserData
+from api.services.memory_store import MemoryStore
 
 from . import llm
 
@@ -15,6 +15,32 @@ def _format_example(
         return " -> ".join([f"'{msg}'" for msg in example])
     else:
         return f"'{example}'"
+
+
+def _format_messages_context(messages: list[ChatMessage], recipient: str) -> str:
+    if len(messages) == 0:
+        return ""
+
+    if messages[-1].sender == recipient:
+        i = len(messages) - 1
+
+        while i >= 0 and messages[i].sender == recipient:
+            i -= 1
+
+        while i >= 0 and messages[i].sender != recipient:
+            i -= 1
+
+        return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[i + 1 :]])
+    else:
+        i = len(messages) - 1
+
+        while i >= 0 and messages[i].sender != recipient:
+            i -= 1
+
+        while i >= 0 and messages[i].sender == recipient:
+            i -= 1
+
+        return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[i + 1 :]])
 
 
 def _format_instructions(instructions: MessageInstructions | None) -> str:
@@ -64,7 +90,7 @@ Change the topic when possible. Do not plan any events outside of the conversati
 
 Output format: Output a json of the following format:
 {{
-"{name}": "<{name}'s utterance>",
+"message": "<{name}'s utterance>",
 }}
 """
 
@@ -78,7 +104,6 @@ be unrealistic.
 """
 
 init_conversation_prompt = """
-{observation}
 How would {name} initiate a conversation?
 """
 
@@ -89,37 +114,6 @@ Here is their conversation so far:
 {conversation}
 """
 
-john_context = """
-John is a student at Tufts University who studies computer science and works with large
-language models. They are interested in running and hiking.
-
-John is from Chicago.
-John is taking courses on data structures and algorithms, and is currently working on a
-project where he writes insertion sort in Python.
-John earned an A on his last data structures exam.
-John last went hiking in the White Mountains with his friends.
-
-Bob is a friend of John's who is a student at MIT studying computer science. Bob is
-interested in mathematics.
-"""
-
-john_observation = """
-John is interested to learn more about Bob's experience on the MIT rock climbing team.
-"""
-
-bob_context = """
-Bob is a student at MIT studying mathematics. They are taking a course in topology and
-spend their free time rock climbing and running.
-
-Bob is from New York City.
-Bob received a B on his last topology exam, despite studying for weeks.
-Bob is currently training for a marathon.
-Bob last went rock climbing at the MIT rock climbing gym with the team.
-
-John is a friend of Bob's who is a student at Tufts University studying computer science
-and working with large language models.
-"""
-
 
 def dump_message_list(
     messages: list[ChatMessage],
@@ -127,44 +121,52 @@ def dump_message_list(
     return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-3:]])
 
 
-class UserMessage(BaseModel):
-    message: Annotated[str, Field(..., alias="John")]
-
-
-class AgentMessage(BaseModel):
-    message: Annotated[str, Field(..., alias="Bob")]
+class Message(BaseModel):
+    message: str
 
 
 async def generate_message(
+    user: UserData,
+    agent_name: str,
+    user_memory_store: MemoryStore,
+    agent_memory_store: MemoryStore,
     user_sent: bool,
     messages: list[ChatMessage],
-    observation: str = "",
+    extra_observation: str = "",
 ) -> str:
-    sender_name = "John" if user_sent else "Bob"
-    recipient_name = "Bob" if user_sent else "John"
+    sender_name = user.persona.name if user_sent else agent_name
+    recipient_name = agent_name if user_sent else user.persona.name
 
-    context = john_context if user_sent else bob_context
+    sender_memory_store = user_memory_store if user_sent else agent_memory_store
+
+    conversation_context = _format_messages_context(messages, recipient_name)
+
+    memory_context = await sender_memory_store.recall(conversation_context, 0, 10)
+
+    context = "\n".join(memory_context)
 
     system_prompt = system_prompt_template.format(name=sender_name)
 
-    prompt_data = prompt.format(
-        action=(
-            init_conversation_prompt.format(
-                name=sender_name, observation=john_observation
-            )
-            if len(messages) == 0
-            else continue_conversation_prompt.format(
-                name=sender_name,
-                other_name=recipient_name,
-                conversation=dump_message_list(messages),
-            )
-        ),
-        name=sender_name,
-        context=context,
+    prompt_data = (
+        prompt.format(
+            action=(
+                init_conversation_prompt.format(name=sender_name)
+                if len(messages) == 0
+                else continue_conversation_prompt.format(
+                    name=sender_name,
+                    other_name=recipient_name,
+                    conversation=conversation_context,
+                )
+            ),
+            name=sender_name,
+            context=context,
+        )
+        + "\n"
+        + extra_observation
     )
 
     response = await llm.generate(
-        schema=UserMessage if user_sent else AgentMessage,
+        schema=Message,
         model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,

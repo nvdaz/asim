@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 
@@ -40,7 +40,7 @@ async def check_for_new_chats(user_id: ObjectId):
         {
             "user_id": user_id,
             "messages": {"$size": 0},
-            "last_updated": {"$lt": datetime.now() - timedelta(seconds=5)},
+            "last_updated": {"$lt": datetime.now(timezone.utc) - timedelta(seconds=30)},
         }
     )
 
@@ -51,7 +51,7 @@ async def check_for_stale_chats(user_id: ObjectId):
     cursor = chats.find(
         {
             "user_id": user_id,
-            "last_updated": {"$lt": datetime.now() - timedelta(hours=12)},
+            "last_updated": {"$lt": datetime.now(timezone.utc) - timedelta(hours=12)},
         }
     )
 

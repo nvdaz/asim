@@ -1,16 +1,15 @@
 import math
 from dataclasses import dataclass
 from heapq import nlargest
-from typing import Callable
 
 import numpy as np
 from pydantic import BaseModel
 
+from api.schemas.chat import MemoryData
+
 from . import llm
 
 MEMORY_HALF_LIFE = 8.0
-
-Recall = Callable[[str], list[str]]
 
 
 importance_prompt = """
@@ -30,14 +29,15 @@ class ImportanceOutput(BaseModel):
 
 
 async def calculate_importance(description: str) -> float:
-    out = await llm.generate(
-        schema=ImportanceOutput,
-        model=llm.Model.GPT_4,
-        system=importance_prompt,
-        prompt=description,
-    )
+    return 1.0
+    # out = await llm.generate(
+    #     schema=ImportanceOutput,
+    #     model=llm.Model.CLAUDE_3_HAIKU,
+    #     system=importance_prompt,
+    #     prompt=description,
+    # )
 
-    return out.importance_rating / 10
+    # return out.importance_rating / 10
 
 
 @dataclass
@@ -47,28 +47,21 @@ class Memory:
     last_accessed: int
     importance: float
 
-
-class MemoryInStore(BaseModel):
-    description: str
-    embedding: list[float]
-    last_accessed: int
-    importance: float
-
     @classmethod
-    def from_memory(cls, memory: Memory) -> "MemoryInStore":
-        return cls(
-            description=memory.description,
-            embedding=memory.embedding.tolist(),
-            last_accessed=memory.last_accessed,
-            importance=memory.importance,
+    def from_data(cls, data: MemoryData) -> "Memory":
+        return Memory(
+            data.description,
+            np.array(data.embedding),
+            data.last_accessed,
+            data.importance,
         )
 
-    def to_memory(self) -> Memory:
-        return Memory(
-            self.description,
-            np.array(self.embedding),
-            self.last_accessed,
-            self.importance,
+    def to_data(self) -> MemoryData:
+        return MemoryData(
+            description=self.description,
+            embedding=self.embedding.tolist(),
+            last_accessed=self.last_accessed,
+            importance=self.importance,
         )
 
 
@@ -77,6 +70,13 @@ class MemoryStore:
 
     def __init__(self, memories: list[Memory]) -> None:
         self._memories = memories
+
+    @classmethod
+    def from_data(cls, data: list[MemoryData]) -> "MemoryStore":
+        return MemoryStore([Memory.from_data(memory) for memory in data])
+
+    def to_data(self) -> list[MemoryData]:
+        return [memory.to_data() for memory in self._memories]
 
     async def remember(self, description: str, time: int) -> None:
         embedding = await llm.embed(description)
@@ -98,10 +98,10 @@ class MemoryStore:
 
         for memory in self._memories:
             similarity = np.dot(query_embedding, memory.embedding)
-            salience = memory.importance
+            importance = memory.importance
             recency = math.exp2((memory.last_accessed - time) / MEMORY_HALF_LIFE)
 
-            overall = similarity + salience + recency
+            overall = similarity + importance + recency
 
             ranked_memories.append((overall, memory.description))
 
@@ -156,3 +156,57 @@ class OpinionModule:
         )
 
         return out.opinion
+
+
+form_conversation_memory_system = """
+You are a conversation memory predictor, who specializes in predicting the memories that
+{name} would form based on the latest message in the conversation. Separate each memory
+by idea so that each memory is a coherent thought including a subject and predicate. If
+there are no memories that Juan would form based on the latest message, provide an empty
+list. Each memory should be unique. Do not repeat memories. Aim to provide between 0 and
+1 memories, but if appropriate use more.
+
+Output format:
+{{
+    "new_memories": ["<memory formed by {name}>", ...]
+}}
+"""
+
+form_conversation_memory_prompt = """
+Summary of relevant context from {name}'s memory:
+{context}
+
+Latest message in the conversation:
+{message}
+
+What are the new thoughts {name} is forming, based on their latest message, without
+repeating things they are already aware of?
+"""
+
+
+class ConversationMemoryOut(BaseModel):
+    new_memories: list[str]
+
+
+class ConversationMemoryModule:
+    def __init__(self, memory_store: MemoryStore) -> None:
+        self.memory_store = memory_store
+
+    async def generate_memory_on_message(self, message: str, name: str):
+        relevant_memory = await self.memory_store.recall(message, 0, 10)
+
+        context = "\n".join(relevant_memory)
+
+        system = form_conversation_memory_system.format(name=name)
+        prompt = form_conversation_memory_prompt.format(
+            name=name, context=context, message=message
+        )
+
+        out = await llm.generate(
+            schema=ConversationMemoryOut,
+            model=llm.Model.CLAUDE_3_HAIKU,
+            system=system,
+            prompt=prompt,
+        )
+
+        return out.new_memories

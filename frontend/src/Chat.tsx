@@ -77,8 +77,10 @@ function Chat() {
 
   const getSuggestedMessages = useCallback(() => {
     setShowSuggestions(true);
-    suggestMessages(currentChatId!);
-  }, [currentChatId, suggestMessages]);
+    if (!currentChat!.suggestions) {
+      suggestMessages(currentChat!.id);
+    }
+  }, [currentChat, suggestMessages]);
 
   useEffect(() => {
     const textarea = inputRef.current;
@@ -91,7 +93,7 @@ function Chat() {
   useEffect(() => {
     setInput("");
     setShowSuggestions(false);
-  }, [currentChat]);
+  }, [currentChatId]);
 
   useEffect(() => {
     if (currentChat && currentChat.unread) {
@@ -199,9 +201,9 @@ function Chat() {
               <div className="flex flex-col gap-2 items-center">
                 {showSuggestions &&
                   (currentChat?.suggestions
-                    ? currentChat.suggestions.map((message) => (
+                    ? currentChat.suggestions.map((message, i) => (
                         <button
-                          key={message}
+                          key={i}
                           onClick={() => {
                             setInput(message);
                             setShowSuggestions(false);

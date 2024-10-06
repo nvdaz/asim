@@ -39,7 +39,9 @@ async def create_pregenerate_task(user_id: ObjectId, stage: ConversationStage) -
             body=options.model_dump_json().encode(),
         ),
         name=name,
-        schedule_time=timestamp_pb2.Timestamp().FromDatetime(datetime.datetime.now()),
+        schedule_time=timestamp_pb2.Timestamp().FromDatetime(
+            datetime.datetime.now(datetime.timezone.utc)
+        ),
     )
 
     with contextlib.suppress(AlreadyExists):

@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { formatRelative } from "date-fns";
 import { motion } from "framer-motion";
 import { Fragment, useEffect, useMemo, useRef } from "react";
+import { useAuth } from "../auth-provider";
 import { ScrollArea } from "./scroll-area";
 
 interface Message {
@@ -25,6 +26,7 @@ export function ChatInterface({
   typing: boolean;
 }) {
   const chatEnd = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const groupedMessages = useMemo(() => {
     const grouped = messages.reduce((acc, msg) => {
@@ -69,7 +71,7 @@ export function ChatInterface({
                 content={msg.content}
                 sender={msg.sender}
                 avatarUrl={msg.avatarUrl}
-                isOutgoing={msg.sender != "Bob"}
+                isOutgoing={msg.sender === user!.name}
               />
             ))}
           </Fragment>
