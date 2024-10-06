@@ -152,8 +152,8 @@ async def handle_connection(
                 await generate_agent_message(
                     chat,
                     MemoryStore.from_data(chat.agent_memories),
-                    extra_observation="Mention that the conversation has been inactive "
-                    "for a while and try to re-engage it.",
+                    extra_observation="Mention that the other person hasn't responded "
+                    "in a while and try to re-engage the conversation.",
                 )
 
             await asyncio.sleep(5)

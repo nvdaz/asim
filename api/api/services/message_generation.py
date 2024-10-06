@@ -86,7 +86,7 @@ misunderstand, and aren't always clear. Use simple language, aiming for a Flesch
 reading score of 80 or higher. Avoid jargon except where necessary. Generally avoid
 adjectives, adverbs, and emojis.
 
-Change the topic when possible. Do not plan any events outside of the conversation.
+Change the topic when appropriate. Do not plan any events outside of the conversation.
 
 Output format: Output a json of the following format:
 {{
