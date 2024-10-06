@@ -1,9 +1,12 @@
+import asyncio
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket
 from pydantic import BaseModel
 
 from api.auth.deps import CurrentInternalAuth, CurrentUser
+from api.db import auth_tokens, users
+from api.schemas.chat import ChatInfo
 from api.schemas.conversation import (
     ConversationStage,
     ConversationStageStr,
@@ -12,9 +15,11 @@ from api.schemas.conversation import (
     conversation_stage_from_str,
 )
 from api.schemas.objectid import PyObjectId
-from api.services import conversation_handler
+from api.services import chat_handler, conversation_handler
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
+
+router_chats = APIRouter(prefix="/chats", tags=["chats"])
 
 
 def _get_conversation_stage(stage: ConversationStageStr) -> ConversationStage:
@@ -94,3 +99,38 @@ async def pregenerate_conversation(
     options: PregenerateOptions,
 ):
     await conversation_handler.pregenerate_conversation(options.user_id, options.stage)
+
+
+@router.websocket("/ws")
+async def ws_endpoint(
+    ws: WebSocket,
+):
+    await asyncio.sleep(1)
+    await ws.accept()
+
+    credentials = await ws.receive_json()
+
+    token = await auth_tokens.get(credentials["token"])
+
+    if not token:
+        await ws.send_json({"error": "Invalid token"})
+        await ws.close()
+        return
+
+    user_id = token.user_id
+
+    user = await users.get(user_id)
+
+    if not user:
+        await ws.send_json({"error": "User not found"})
+        await ws.close()
+        return
+
+    await chat_handler.handle_connection(ws, user)
+
+
+@router_chats.post("/")
+async def list_chats(
+    current_user: CurrentUser,
+) -> list[ChatInfo]:
+    return await chat_handler.get_chats(current_user)

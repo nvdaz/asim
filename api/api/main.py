@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 origins = [
-    "http://localhost:3000",
+    "http://localhost:5173",
     "https://autsim.pages.dev",
     "https://dev.autsim.pages.dev",
 ]
@@ -28,4 +28,5 @@ app.add_middleware(
 logger.debug(f"Allowed origins: {origins}")
 
 app.include_router(conversations.router)
+app.include_router(conversations.router_chats)
 app.include_router(auth.router)

@@ -1,50 +1,50 @@
-# Installation & Development
+# React + TypeScript + Vite
 
-Create a .env file at the root of the frontend folder, and set the environment 
-variable REACT_APP_API_HOST.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-``` sh
-npm install
-npm start
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+
+- Configure the top-level `parserOptions` property like this:
+
+```js
+export default tseslint.config({
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
 ```
 
-# Component Hierarchy
-Lesson page and playground page are very similar with slight differences.
+- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
+- Optionally add `...tseslint.configs.stylisticTypeChecked`
+- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
 
-<img src="doc-image/page-structure.png" alt="page structure"/>
+```js
+// eslint.config.js
+import react from 'eslint-plugin-react'
 
-The Dialog component shows the Scenario and Goal for the lesson page.
-
-# Workflow
-<img src="doc-image/work-flow.png" alt="work flow"/>
-
-# API calls
-
-All API calls are wrapped in functions organized by its request type in 
-utils/request.js. If the call is successful, it will return { ok, data }, 
-wherein ok is a boolean for whether the call was successful, and data is the 
-returned value. If the call is unsuccessful, it will return { ok, error }, where 
-error will be the caught error or "Unknown error".
-
-The series of calls made after clicking the Send button is stored in 
-[src/components/InputSection/util/handleSend.js](./src/components/InputSection/util/handleSend.js).
-
-# Routing
-
-Controlled by App.js, there are currently these routes:
-
-``` js
-<Routes>
-    <Route path={`/:magicLink`} element={<Landing />} />
-    <Route path={`/`} element={<Landing />} />
-    <Route
-        path="/lesson/:lesson/:conversationIDFromParam?"
-        element={<Lesson />}
-    />
-    <Route path="/playground" element={<Playground />} />
-    <Route
-        path="/playground/:conversationIDFromParam"
-        element={<Playground />}
-    />
-</Routes>
+export default tseslint.config({
+  // Set the react version
+  settings: { react: { version: '18.3' } },
+  plugins: {
+    // Add the react plugin
+    react,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended rules
+    ...react.configs.recommended.rules,
+    ...react.configs['jsx-runtime'].rules,
+  },
+})
 ```

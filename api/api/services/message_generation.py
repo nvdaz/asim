@@ -3,12 +3,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from api.levels.states import MessageInstructions
-from api.schemas.conversation import (
-    BaseConversationScenario,
-    Message,
-    dump_message_list,
-)
-from api.schemas.persona import AgentPersona, UserPersona
+from api.schemas.chat import ChatMessage
 
 from . import llm
 
@@ -65,8 +60,7 @@ misunderstand, and aren't always clear. Use simple language, aiming for a Flesch
 reading score of 80 or higher. Avoid jargon except where necessary. Generally avoid
 adjectives, adverbs, and emojis.
 
-Keep the conversation going. Change the topic when possible. Do not plan any events
-outside of the conversation.
+Change the topic when possible. Do not plan any events outside of the conversation.
 
 Output format: Output a json of the following format:
 {{
@@ -74,11 +68,7 @@ Output format: Output a json of the following format:
 }}
 """
 
-prompt = """
-Here is the memory in {name}'s head:
-{memory}
-
-Summary of relevant context from {name}'s memory:
+prompt = """Summary of relevant context from {name}'s memory:
 {context}
 
 {action}
@@ -99,7 +89,7 @@ Here is their conversation so far:
 {conversation}
 """
 
-john_memory = """
+john_context = """
 John is a student at Tufts University who studies computer science and works with large
 language models. They are interested in running and hiking.
 
@@ -108,9 +98,7 @@ John is taking courses on data structures and algorithms, and is currently worki
 project where he writes insertion sort in Python.
 John earned an A on his last data structures exam.
 John last went hiking in the White Mountains with his friends.
-"""
 
-john_context = """
 Bob is a friend of John's who is a student at MIT studying computer science. Bob is
 interested in mathematics.
 """
@@ -119,7 +107,7 @@ john_observation = """
 John is interested to learn more about Bob's experience on the MIT rock climbing team.
 """
 
-bob_memory = """
+bob_context = """
 Bob is a student at MIT studying mathematics. They are taking a course in topology and
 spend their free time rock climbing and running.
 
@@ -127,12 +115,16 @@ Bob is from New York City.
 Bob received a B on his last topology exam, despite studying for weeks.
 Bob is currently training for a marathon.
 Bob last went rock climbing at the MIT rock climbing gym with the team.
-"""
 
-bob_context = """
 John is a friend of Bob's who is a student at Tufts University studying computer science
 and working with large language models.
 """
+
+
+def dump_message_list(
+    messages: list[ChatMessage],
+) -> str:
+    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-3:]])
 
 
 class UserMessage(BaseModel):
@@ -145,17 +137,12 @@ class AgentMessage(BaseModel):
 
 async def generate_message(
     user_sent: bool,
-    user: UserPersona,
-    agent: AgentPersona,
-    messages: list[Message],
-    scenario: BaseConversationScenario,
-    instructions: MessageInstructions | None = None,
-    feedback: str | None = None,
+    messages: list[ChatMessage],
+    observation: str = "",
 ) -> str:
     sender_name = "John" if user_sent else "Bob"
     recipient_name = "Bob" if user_sent else "John"
 
-    memory = john_memory if user_sent else bob_memory
     context = john_context if user_sent else bob_context
 
     system_prompt = system_prompt_template.format(name=sender_name)
@@ -169,11 +156,10 @@ async def generate_message(
             else continue_conversation_prompt.format(
                 name=sender_name,
                 other_name=recipient_name,
-                conversation=dump_message_list(messages, "John", "Bob"),
+                conversation=dump_message_list(messages),
             )
         ),
         name=sender_name,
-        memory=memory,
         context=context,
     )
 
@@ -186,3 +172,38 @@ async def generate_message(
     )
 
     return response.message
+
+
+decide_to_message_system = """
+You are a conversation predictor, who specializes in predicting whether {name} would
+send a follow-up message in a conversation to their last message. {name} should only
+send a message if it is necessary to keep the conversation going or if they have
+something important to say.
+
+Output format: Output a json of the following format:
+{{
+"send_message": <true if {name} would send a message, false otherwise>,
+}}
+"""
+
+
+class DecideToMessageOutput(BaseModel):
+    send_message: bool
+
+
+async def decide_whether_to_message(
+    name: str,
+    messages: list[ChatMessage],
+) -> bool:
+    system_prompt = decide_to_message_system.format(name=name)
+
+    prompt_data = "Here is the conversation so far:\n" + dump_message_list(messages)
+
+    res = await llm.generate(
+        schema=DecideToMessageOutput,
+        model=llm.Model.GPT_4,
+        system=system_prompt,
+        prompt=prompt_data,
+    )
+
+    return res.send_message

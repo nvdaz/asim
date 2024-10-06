@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
@@ -23,6 +24,7 @@ class LoginOptions(BaseModel):
 
 @router.post("/exchange", responses={401: {"description": "Invalid magic link"}})
 async def exchange(options: LoginOptions) -> LoginResult:
+    await asyncio.sleep(5)
     try:
         return await login_user(options.magic_link)
     except InvalidMagicLink as e:
