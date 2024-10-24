@@ -1,5 +1,6 @@
 import { useAuth } from "@/components/auth-provider";
 import { useCallback, useEffect, useRef, useState } from "react";
+import invariant from 'tiny-invariant';
 
 type Message = {
   sender: string;
@@ -7,15 +8,41 @@ type Message = {
   created_at: string;
 };
 
-type Chat = {
+type Feedback = {
+  title: string;
+  body: string;
+};
+
+type Suggestion = {
+  message: string
+  objective?: string
+  feedback?: Feedback
+  needs_improvement: boolean
+};
+
+type ChatLoading = {
+  id: string;
+  agent?: string;
+  last_updated: string;
+  agent_typing?: boolean;
+  unread?: boolean;
+}
+
+type ChatLoaded = {
   id: string;
   agent: string;
-  messages?: Message[];
+  messages: Message[];
   last_updated: string;
   agent_typing: boolean;
-  suggestions?: string[];
+  suggestions?: Suggestion[];
   unread: boolean;
-};
+}
+
+export type Chat = ChatLoading | ChatLoaded;
+
+export function chatIsLoaded(chat: Chat): chat is ChatLoaded {
+  return "messages" in chat;
+}
 
 function useChatSocket<S, R>({
   onMessage,
@@ -115,7 +142,7 @@ type Recv = RecvSyncChats | RecvSynChat | RecvSuggestedMessages;
 type SendChatMessage = {
   type: "send-message";
   id: string;
-  content: string;
+  index: number;
 };
 
 type SendCreateChat = {
@@ -130,6 +157,7 @@ type SendLoadChat = {
 type SendSuggestMessages = {
   type: "suggest-messages";
   id: string;
+  message: string;
 };
 
 type SendMarkRead = {
@@ -137,14 +165,21 @@ type SendMarkRead = {
   id: string;
 };
 
+type SendViewSuggestion = {
+  type: "view-suggestion";
+  id: string;
+  index: number;
+};
+
 type Send =
   | SendChatMessage
   | SendCreateChat
   | SendLoadChat
   | SendSuggestMessages
-  | SendMarkRead;
+  | SendMarkRead
+  | SendViewSuggestion;
 
-export function useChats() {
+export function useChats({ onChatCreated }: { onChatCreated: (id: string) => void }) {
   const [chats, setChats] = useState<{ [key: string]: Chat }>({});
   const { user } = useAuth();
 
@@ -157,6 +192,9 @@ export function useChats() {
         }, {})
       );
     } else if (message.type === "sync-chat") {
+      if (!(message.chat.id in chats)) {
+        onChatCreated(message.chat.id);
+      }
       setChats((chats) => {
         return { ...chats, [message.chat.id]: message.chat };
       });
@@ -175,9 +213,11 @@ export function useChats() {
   });
 
   const sendChatMessage = useCallback(
-    (id: string, content: string) => {
+    (id: string, index: number) => {
       setChats((chats) => {
         const chat = chats[id];
+        invariant(chatIsLoaded(chat));
+        const content = chat.suggestions![index].message;
         if (!chat.messages) {
           chat.messages = [];
         }
@@ -185,10 +225,11 @@ export function useChats() {
           ...chat.messages,
           { sender: user!.name, content, created_at: new Date().toISOString() },
         ];
+        chat.suggestions = undefined;
         return { ...chats, [id]: chat };
       });
 
-      sendMessage({ type: "send-message", id, content });
+      sendMessage({ type: "send-message", id, index });
     },
     [sendMessage]
   );
@@ -205,11 +246,12 @@ export function useChats() {
   );
 
   const suggestMessages = useCallback(
-    (id: string) => {
-      sendMessage({ type: "suggest-messages", id });
+    (id: string, message: string) => {
+      sendMessage({ type: "suggest-messages", id, message });
     },
     [sendMessage]
   );
+
 
   const markRead = useCallback(
     (id: string) => {
@@ -221,6 +263,13 @@ export function useChats() {
     [sendMessage]
   );
 
+  const sendViewSuggestion = useCallback(
+    (id: string, index: number) => {
+      sendMessage({ type: "view-suggestion", id, index });
+    },
+    [sendMessage]);
+
+
   return {
     isConnected,
     isError,
@@ -230,5 +279,6 @@ export function useChats() {
     loadChat,
     suggestMessages,
     markRead,
+    sendViewSuggestion,
   };
 }

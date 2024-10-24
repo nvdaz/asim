@@ -7,7 +7,7 @@ from .client import db
 
 class MagicLink(BaseModel):
     secret: str
-    user_id: PyObjectId
+    user_id: PyObjectId | None
 
     model_config = ConfigDict(populate_by_name=True)
 

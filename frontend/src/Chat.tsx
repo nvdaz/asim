@@ -2,57 +2,46 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, ChevronDown, ChevronLeft, ChevronUp } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUp, ChevronLeft, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatInterface } from "./components/ui/chat";
 import { Loading } from "./components/ui/loading";
 import { Skeleton } from "./components/ui/skeleton";
 import { Textarea } from "./components/ui/textarea";
 import Contacts from "./contacts";
-import { useChats } from "./hooks/use-chats";
+
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "./components/auth-provider";
+import { chatIsLoaded } from "./hooks/use-chats";
+import { useCurrentChat } from "./hooks/use-current-chat";
 import { cn } from "./lib/utils";
 
 function Chat() {
   const {
     isConnected,
     isError,
-    chats,
+    contacts,
+    currentChat,
     sendChatMessage,
     createChat,
     suggestMessages,
-    loadChat,
-    markRead,
-  } = useChats();
-
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+    sendViewSuggestion,
+    setCurrentChatId,
+  } = useCurrentChat();
+  const { toast } = useToast();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [input, setInput] = useState("");
-
-  const currentChat = useMemo(
-    () => (currentChatId ? chats[currentChatId] : null),
-    [currentChatId, chats]
+  const { user } = useAuth();
+  const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(
+    null
   );
-
-  const contacts = useMemo(
-    () =>
-      Object.values(chats).sort(
-        (a, b) => Date.parse(b.last_updated) - Date.parse(a.last_updated)
-      ),
-    [chats]
-  );
-
-  useEffect(() => {
-    if (!currentChatId && contacts.length) {
-      setCurrentChatId(contacts[0].id);
-    }
-  }, [contacts, setCurrentChatId]);
 
   const handleSend = useCallback(() => {
-    setShowSuggestions(false);
-    sendChatMessage(currentChatId!, input);
+    setShowSuggestions(true);
+    suggestMessages(input);
     setInput("");
-  }, [input, sendChatMessage, currentChatId]);
+  }, [input]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -69,37 +58,20 @@ function Chat() {
     };
   }, [inputRef.current, handleSend]);
 
-  useEffect(() => {
-    if (currentChat && !("messages" in currentChat)) {
-      loadChat(currentChatId!);
-    }
-  }, [currentChat, loadChat]);
-
-  const getSuggestedMessages = useCallback(() => {
-    setShowSuggestions(true);
-    if (!currentChat!.suggestions) {
-      suggestMessages(currentChat!.id);
-    }
-  }, [currentChat, suggestMessages]);
-
-  useEffect(() => {
+  const resizeTextarea = useCallback(() => {
     const textarea = inputRef.current;
     if (textarea) {
       textarea.style.height = "auto";
       textarea.style.height = `${textarea.scrollHeight}px`;
     }
-  }, [input]);
+  }, [inputRef.current]);
+
+  useEffect(() => resizeTextarea(), [input]);
 
   useEffect(() => {
     setInput("");
     setShowSuggestions(false);
-  }, [currentChatId]);
-
-  useEffect(() => {
-    if (currentChat && currentChat.unread) {
-      markRead(currentChat.id);
-    }
-  }, [currentChat, chats]);
+  }, [currentChat?.id]);
 
   if (!isConnected) {
     return (
@@ -136,11 +108,15 @@ function Chat() {
     );
   }
 
+  if (currentChat && !chatIsLoaded(currentChat)) {
+    return <Loading />;
+  }
+
   return (
     <div className="flex flex-row min-h-[200px] rounded-lg border w-full h-screen">
       <div
         className={cn(
-          currentChatId ? "lg:w-[400px] hidden" : "w-full",
+          currentChat ? "lg:w-[400px] hidden" : "w-full",
           "overflow-hidden bg-secondary lg:block"
         )}
       >
@@ -148,10 +124,10 @@ function Chat() {
           chats={contacts}
           handleSelect={setCurrentChatId}
           handleNewChat={createChat}
-          selectedChatId={currentChatId}
+          selectedChatId={currentChat?.id || null}
         />
       </div>
-      <div className={cn(!currentChatId && "hidden", "w-full")}>
+      <div className={cn(!currentChat && "hidden", "w-full")}>
         <div className="flex flex-col h-full">
           <div className="flex flex-row items-center p-2">
             <Button
@@ -162,12 +138,22 @@ function Chat() {
             >
               <ChevronLeft />
             </Button>
-            <Avatar>
-              <AvatarFallback>B</AvatarFallback>
-            </Avatar>
-            <h2 className="p-4 font-semibold">{currentChat?.agent}</h2>
+            {currentChat && currentChat.agent ? (
+              <>
+                <Avatar>
+                  <AvatarFallback>{currentChat.agent[0]}</AvatarFallback>
+                </Avatar>
+                <h2 className="p-4 font-semibold">{currentChat.agent}</h2>
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <Skeleton className="h-6 w-40 mx-4 my-4" />
+              </>
+            )}
           </div>
           <Separator />
+          {!(currentChat && "messages" in currentChat) && <Loading />}
           <ChatInterface
             messages={currentChat ? currentChat?.messages || [] : []}
             typing={!!currentChat?.agent_typing}
@@ -175,65 +161,119 @@ function Chat() {
           <Separator />
           <div className="flex flex-col gap-2 p-4">
             <div className="flex flex-col gap-2 w-full">
-              <div>
-                {showSuggestions ? (
-                  <div>
-                    <Button
-                      variant="outline"
-                      className="float-right"
-                      onClick={() => setShowSuggestions(false)}
-                    >
-                      <span className="pr-1">Hide Suggestions</span>
-                      <ChevronDown />
-                    </Button>
-                  </div>
+              <div className="flex flex-col gap-2 items-center">
+                {currentChat?.suggestions || showSuggestions ? (
+                  currentChat?.suggestions ? (
+                    selectedSuggestion !== null ? (
+                      <div className="flex flex-col gap-2 w-full">
+                        {currentChat.suggestions[selectedSuggestion]
+                          .feedback && (
+                          <div className="flex flex-col gap-2 w-full bg-secondary p-4 rounded-md">
+                            <div className="font-semibold">
+                              {
+                                currentChat.suggestions[selectedSuggestion]
+                                  .feedback.title
+                              }
+                            </div>
+                            <div>
+                              {
+                                currentChat.suggestions[selectedSuggestion]
+                                  .feedback.body
+                              }
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex flex-row gap-2 w-full">
+                          <div className="rounded-md border border-input bg-transparent px-3 text-sm shadow-sm flex flex-row gap-2 items-center w-full">
+                            <div className="w-full py-2">
+                              {
+                                currentChat.suggestions[selectedSuggestion]
+                                  .message
+                              }
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="min-w-8"
+                              onClick={() => setSelectedSuggestion(null)}
+                            >
+                              <X />
+                            </Button>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              if (
+                                currentChat.suggestions![selectedSuggestion]
+                                  .needs_improvement &&
+                                user!.options.feedback_mode == "on-suggestion"
+                              ) {
+                                toast({
+                                  variant: "destructive",
+                                  description:
+                                    "The message you selected needs improvement. Please read the feedback and try selecting another message.",
+                                });
+                              } else {
+                                sendChatMessage(selectedSuggestion);
+                                setSelectedSuggestion(null);
+                                setShowSuggestions(false);
+                              }
+                            }}
+                            size="icon"
+                            className="h-100 min-w-8"
+                          >
+                            <ArrowUp />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="div flex flex-col gap-2 w-full align-end">
+                        {currentChat.suggestions.map(({ message }, i) => (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              sendViewSuggestion(i);
+                              setSelectedSuggestion(i);
+                            }}
+                            className="border rounded-md px-4 py-2 w-full text-left min-h-10"
+                          >
+                            {message}
+                          </button>
+                        ))}
+                        <Textarea
+                          value=""
+                          placeholder="Select an option"
+                          ref={inputRef}
+                          rows={1}
+                          className="min-h-[30px] max-h-[120px] resize-none"
+                          disabled
+                        />
+                      </div>
+                    )
+                  ) : (
+                    Array(3)
+                      .fill("")
+                      .map((_, i) => (
+                        <Skeleton key={i} className="h-10 w-full" />
+                      ))
+                  )
                 ) : (
-                  <Button
-                    variant="outline"
-                    className="float-right"
-                    onClick={getSuggestedMessages}
-                  >
-                    <span className="pr-1">Show Suggestions</span>
-                    <ChevronUp />
-                  </Button>
+                  <div className="flex flex-row gap-2 w-full align-end">
+                    <Textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Message"
+                      ref={inputRef}
+                      rows={1}
+                      className="min-h-[30px] max-h-[120px] resize-none"
+                    />
+                    {input.trim() && (
+                      <Button onClick={handleSend} size="icon">
+                        <ArrowUp />
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
-              <div className="flex flex-col gap-2 items-center">
-                {showSuggestions &&
-                  (currentChat?.suggestions
-                    ? currentChat.suggestions.map((message, i) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            setInput(message);
-                            setShowSuggestions(false);
-                          }}
-                          className="border rounded-md px-4 py-2 w-full text-left min-h-10"
-                        >
-                          {message}
-                        </button>
-                      ))
-                    : Array(3)
-                        .fill("")
-                        .map((_, i) => (
-                          <Skeleton key={i} className="h-10 w-full" />
-                        )))}
-              </div>
-            </div>
-            <div className="flex flex-row gap-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Message"
-                ref={inputRef}
-                rows={1}
-                className="min-h-[30px] max-h-[120px] resize-none"
-              />
-              {input.trim() && (
-                <Button onClick={handleSend} size="icon">
-                  <ArrowUp />
-                </Button>
-              )}
             </div>
           </div>
         </div>

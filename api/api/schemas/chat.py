@@ -1,17 +1,11 @@
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from api.schemas.utc_datetime import UTCDatetime
 
 from .objectid import PyObjectId
-
-
-class MemoryData(BaseModel):
-    description: str
-    embedding: list[float]
-    last_accessed: int
-    importance: float
 
 
 class ChatMessage(BaseModel):
@@ -23,6 +17,30 @@ class ChatMessage(BaseModel):
 chat_message_list_adapter = TypeAdapter(list[ChatMessage])
 
 
+class Feedback(BaseModel):
+    title: str
+    body: str
+
+
+class Suggestion(BaseModel):
+    message: str
+    needs_improvement: bool
+    objective: str | None
+    feedback: Feedback | None = None
+
+
+suggestion_list_adapter = TypeAdapter(list[Suggestion])
+
+
+class ChatEvent(BaseModel):
+    name: str
+    data: Any
+    created_at: datetime
+
+
+chat_event_list_adapter = TypeAdapter(list[ChatEvent])
+
+
 class BaseChat(BaseModel):
     user_id: PyObjectId
     messages: list[ChatMessage] = []
@@ -30,7 +48,10 @@ class BaseChat(BaseModel):
     last_updated: UTCDatetime
     agent_typing: bool = False
     unread: bool = False
-    agent_memories: list[MemoryData] = []
+    objectives_used: list[str] = []
+    state: str = "no-objective"
+    suggestions: list[Suggestion] | None = None
+    events: list[ChatEvent] = []
 
 
 class ChatData(BaseChat):
@@ -54,6 +75,7 @@ class ChatApi(BaseModel):
     unread: bool
     agent_typing: bool
     messages: list[ChatMessage]
+    suggestions: list[Suggestion] | None
 
     @classmethod
     def from_data(cls, data: ChatData) -> "ChatApi":

@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from api.levels.states import MessageInstructions
 from api.schemas.chat import ChatMessage
 from api.schemas.user import UserData
-from api.services.memory_store import MemoryStore
 
 from . import llm
 
@@ -17,7 +16,7 @@ def _format_example(
         return f"'{example}'"
 
 
-def _format_messages_context(messages: list[ChatMessage], recipient: str) -> str:
+def format_messages_context(messages: list[ChatMessage], recipient: str) -> str:
     if len(messages) == 0:
         return ""
 
@@ -94,7 +93,7 @@ Output format: Output a json of the following format:
 }}
 """
 
-prompt = """Summary of relevant context from {name}'s memory:
+prompt = """
 {context}
 
 {action}
@@ -128,22 +127,14 @@ class Message(BaseModel):
 async def generate_message(
     user: UserData,
     agent_name: str,
-    user_memory_store: MemoryStore,
-    agent_memory_store: MemoryStore,
     user_sent: bool,
     messages: list[ChatMessage],
-    extra_observation: str = "",
+    objective_prompt: str | None = None,
 ) -> str:
-    sender_name = user.persona.name if user_sent else agent_name
-    recipient_name = agent_name if user_sent else user.persona.name
+    sender_name = user.name if user_sent else agent_name
+    recipient_name = agent_name if user_sent else user.name
 
-    sender_memory_store = user_memory_store if user_sent else agent_memory_store
-
-    conversation_context = _format_messages_context(messages, recipient_name)
-
-    memory_context = await sender_memory_store.recall(conversation_context, 0, 10)
-
-    context = "\n".join(memory_context)
+    conversation_context = format_messages_context(messages, recipient_name)
 
     system_prompt = system_prompt_template.format(name=sender_name)
 
@@ -159,10 +150,18 @@ async def generate_message(
                 )
             ),
             name=sender_name,
-            context=context,
+            context="You are planning a trip to Gloucester, Massachusetts with your "
+            "friend, and you are discussing the details of the trip.",
         )
         + "\n"
-        + extra_observation
+        + (
+            "IMPORTANT: You MUST follow these instructions when generating the "
+            "response. These insights are crucial to the conversation.\n"
+            + objective_prompt.format(name=sender_name)
+            + "\n"
+            if objective_prompt
+            else ""
+        )
     )
 
     response = await llm.generate(

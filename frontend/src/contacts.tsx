@@ -8,9 +8,9 @@ import { Skeleton } from "./components/ui/skeleton";
 
 export type ChatInfo = {
   id: string;
-  agent: string;
+  agent?: string;
   last_updated: string;
-  unread: boolean;
+  unread?: boolean;
 };
 
 function ContactsContainer({
@@ -77,11 +77,19 @@ function Contacts({
             onClick={() => handleSelect(chat.id)}
           >
             <Avatar className="text-black dark:text-white">
-              <AvatarFallback>{chat.agent[0]}</AvatarFallback>
+              {chat.agent ? (
+                <AvatarFallback>{chat.agent[0]}</AvatarFallback>
+              ) : (
+                <Skeleton className="h-10 w-10 rounded-full" />
+              )}
             </Avatar>
             <div className="flex flex-col w-full ml-4">
               <div className="flex flex-row justify-between">
-                <h2 className="ml-4">{chat.agent}</h2>
+                {chat.agent ? (
+                  <h2 className="ml-4">{chat.agent}</h2>
+                ) : (
+                  <Skeleton className="h-4 w-[150px]" />
+                )}
                 {chat.unread && (
                   <div className="w-2 h-2 bg-red-500 rounded-full ml-4" />
                 )}

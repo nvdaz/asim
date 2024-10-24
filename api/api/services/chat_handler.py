@@ -1,4 +1,3 @@
-import asyncio
 import json
 from datetime import datetime, timezone
 
@@ -11,50 +10,31 @@ from api.schemas.chat import (
     BaseChat,
     ChatApi,
     ChatData,
+    ChatEvent,
     ChatInfo,
     ChatMessage,
+    Suggestion,
     chat_info_list_adapter,
+    suggestion_list_adapter,
 )
 from api.schemas.user import UserData
-from api.services import message_generation
-from api.services.memory_store import ConversationMemoryModule, MemoryStore
+from api.services import generate_suggestions, message_generation
 
 fake = faker.Faker()
-
-user_memory_store = MemoryStore([])
 
 
 async def create_chat(
     user: UserData,
-) -> tuple[ChatData, MemoryStore]:
+) -> ChatData:
     name = fake.first_name()
-
-    memory_store = MemoryStore([])
-
-    base_memories = [
-        f"{name} is a student at MIT studying mathematics.",
-        f"{name} is taking a course in topology.",
-        f"{name} spends his free time rock climbing and running.",
-        f"{name} is from New York City.",
-        f"{name} received a B on his last topology exam, despite studying for weeks.",
-        f"{name} is currently training for a marathon.",
-        f"{name} last went rock climbing at the MIT rock climbing gym with the team.",
-        f"{user.persona.name} is a friend of {name}'s who is a student at Tufts.",
-        f"{user.persona.name} studies computer science and works with LLMs.",
-    ]
-
-    await asyncio.gather(
-        *[memory_store.remember(memory, 0) for memory in base_memories]
-    )
 
     chat = BaseChat(
         user_id=user.id,
         agent=name,
         last_updated=datetime.now(timezone.utc),
-        agent_memories=memory_store.to_data(),
     )
 
-    return await chats.create(chat), memory_store
+    return await chats.create(chat)
 
 
 async def get_chat(
@@ -89,32 +69,50 @@ async def handle_connection(
 
     async def generate_agent_message(
         chat: ChatData,
-        agent_memory_store: MemoryStore,
-        extra_observation: str = "",
+        objective: str | None = None,
     ):
         chat.agent_typing = True
+
+        if chat.state == "no-objective":
+            chat.state = "objective"
+        elif chat.state == "objective":
+            if user.options.feedback_mode == "on-suggestion":
+                chat.state = "no-objective"
+            elif user.options.feedback_mode == "on-submit":
+                chat.state = "react"
+            else:
+                raise ValueError(f"Invalid feedback mode: {user.options.feedback_mode}")
+        elif chat.state == "react":
+            chat.state = "no-objective"
+        else:
+            raise ValueError(f"Invalid chat state: {chat.state}")
+
         await ws.send_json(
             {
                 "type": "sync-chat",
                 "chat": json.loads(ChatApi.from_data(chat).model_dump_json()),
             }
         )
+
+        objective_prompt = None
+
+        if chat.state == "react":
+            objective_prompt = (
+                (
+                    generate_suggestions.objective_misunderstand_reaction_prompt(
+                        objective
+                    )
+                )
+                if objective
+                else None
+            )
+
         response = await message_generation.generate_message(
             user=user,
             user_sent=False,
             agent_name=chat.agent,
-            agent_memory_store=agent_memory_store,
-            user_memory_store=user_memory_store,
             messages=chat.messages,
-            extra_observation=extra_observation,
-        )
-
-        new_memories = await ConversationMemoryModule(
-            agent_memory_store
-        ).generate_memory_on_message(f"{chat.agent}: {response}", chat.agent)
-
-        await asyncio.gather(
-            *[agent_memory_store.remember(memory, 0) for memory in new_memories]
+            objective_prompt=objective_prompt,
         )
 
         msg = ChatMessage(
@@ -126,7 +124,17 @@ async def handle_connection(
         chat.last_updated = datetime.now(timezone.utc)
         chat.agent_typing = False
         chat.unread = True
-        chat.agent_memories = agent_memory_store.to_data()
+
+        chat.events.append(
+            ChatEvent(
+                name="recv-message",
+                data={
+                    "chat_id": chat.id,
+                    "message": msg.content,
+                },
+                created_at=datetime.now(timezone.utc),
+            )
+        )
 
         await update_chat(chat)
 
@@ -137,135 +145,203 @@ async def handle_connection(
             }
         )
 
-    async def ev_loop():
-        while True:
-            new_chats = await chats.check_for_new_chats(user.id)
+    while event := await ws.receive_json():
+        if event["type"] == "create-chat":
+            chat = await create_chat(user)
+            await ws.send_json(
+                {
+                    "type": "sync-chat",
+                    "chat": json.loads(ChatApi.from_data(chat).model_dump_json()),
+                }
+            )
 
-            for chat in new_chats:
-                await generate_agent_message(
-                    chat, MemoryStore.from_data(chat.agent_memories)
-                )
+        elif event["type"] == "load-chat":
+            chat = await get_chat(ObjectId(event["id"]), user)
 
-            stale_chats = await chats.check_for_stale_chats(user.id)
+            if not chat:
+                await ws.send_json({"error": "Chat not found"})
+                continue
 
-            for chat in stale_chats:
-                await generate_agent_message(
-                    chat,
-                    MemoryStore.from_data(chat.agent_memories),
-                    extra_observation="Mention that the other person hasn't responded "
-                    "in a while and try to re-engage the conversation.",
-                )
+            await ws.send_json(
+                {
+                    "type": "sync-chat",
+                    "chat": json.loads(ChatApi.from_data(chat).model_dump_json()),
+                }
+            )
+        elif event["type"] == "suggest-messages":
+            chat = await get_chat(ObjectId(event["id"]), user)
 
-            await asyncio.sleep(5)
+            if not chat:
+                await ws.send_json({"error": "Chat not found"})
+                continue
 
-    async def listen_for_events():
-        while event := await ws.receive_json():
-            if event["type"] == "create-chat":
-                chat, _ = await create_chat(user)
-                await ws.send_json(
-                    {
-                        "type": "sync-chat",
-                        "chat": json.loads(ChatApi.from_data(chat).model_dump_json()),
-                    }
-                )
-            elif event["type"] == "load-chat":
-                chat = await get_chat(ObjectId(event["id"]), user)
-
-                if not chat:
-                    await ws.send_json({"error": "Chat not found"})
-                    continue
-
-                await ws.send_json(
-                    {
-                        "type": "sync-chat",
-                        "chat": json.loads(ChatApi.from_data(chat).model_dump_json()),
-                    }
-                )
-            elif event["type"] == "send-message":
-                chat = await get_chat(ObjectId(event["id"]), user)
-
-                if not chat:
-                    await ws.send_json({"error": "Chat not found"})
-                    continue
-
-                msg = ChatMessage(
-                    sender=user.persona.name or "",
-                    content=event["content"],
+            chat.events.append(
+                ChatEvent(
+                    name="suggest-messages",
+                    data={
+                        "chat_id": chat.id,
+                        "input": event["message"],
+                    },
                     created_at=datetime.now(timezone.utc),
                 )
-                chat.messages.append(msg)
-                chat.last_updated = datetime.now(timezone.utc)
+            )
 
-                agent_memory_store = MemoryStore.from_data(chat.agent_memories)
+            context = message_generation.format_messages_context(
+                chat.messages, chat.agent
+            )
 
-                new_memories = await ConversationMemoryModule(
-                    agent_memory_store
-                ).generate_memory_on_message(
-                    f'{user.persona.name}: {event["content"]}', chat.agent
+            objective = None
+
+            message = (
+                event["message"]
+                if user.options.suggestion_generation == "content-inspired"
+                else await message_generation.generate_message(
+                    user, chat.agent, True, chat.messages
+                )
+            )
+
+            if chat.state == "no-objective":
+                suggestions = await generate_suggestions.generate_message_variations_ok(
+                    context, message
+                )
+            elif chat.state == "objective":
+                if len(chat.objectives_used) >= len(generate_suggestions.objectives):
+                    chat.objectives_used = []
+
+                (
+                    objective,
+                    suggestions,
+                ) = await generate_suggestions.generate_message_variations(
+                    chat.objectives_used,
+                    context,
+                    message,
+                    user.options.feedback_mode == "on-suggestion",
                 )
 
-                await asyncio.gather(
-                    *[agent_memory_store.remember(memory, 0) for memory in new_memories]
-                )
+                chat.objectives_used.append(objective)
 
-                chat.agent_memories = agent_memory_store.to_data()
-
-                await update_chat(chat)
-
-                should_message = True
-                while should_message:
-                    await generate_agent_message(chat, agent_memory_store)
-
-                    should_message = await message_generation.decide_whether_to_message(
-                        chat.agent, chat.messages
+            elif chat.state == "react":
+                suggestions = [
+                    Suggestion(
+                        message="[react user suggestion]",
+                        needs_improvement=False,
+                        objective=None,
                     )
-            elif event["type"] == "suggest-messages":
-                chat = await get_chat(ObjectId(event["id"]), user)
-
-                if not chat:
-                    await ws.send_json({"error": "Chat not found"})
-                    continue
-
-                agent_memory_store = MemoryStore.from_data(chat.agent_memories)
-
-                responses = await asyncio.gather(
-                    *[
-                        message_generation.generate_message(
-                            user=user,
-                            agent_name=chat.agent,
-                            user_memory_store=user_memory_store,
-                            agent_memory_store=agent_memory_store,
-                            user_sent=True,
-                            messages=chat.messages,
-                        )
-                        for _ in range(3)
-                    ]
-                )
-
-                await ws.send_json(
-                    {
-                        "type": "suggested-messages",
-                        "messages": responses,
-                        "id": event["id"],
-                    }
-                )
-            elif event["type"] == "mark-read":
-                chat = await get_chat(ObjectId(event["id"]), user)
-
-                if not chat:
-                    await ws.send_json({"error": "Chat not found"})
-                    continue
-
-                chat.unread = False
-                await update_chat(chat)
-
-                await ws.send_json(
-                    {
-                        "type": "sync-chat",
-                        "chat": json.loads(ChatApi.from_data(chat).model_dump_json()),
-                    }
-                )
+                ]
             else:
-                await ws.send_json({"error": "Invalid event type"})
+                raise ValueError(f"Invalid chat state: {chat.state}")
 
-    await asyncio.gather(ev_loop(), listen_for_events())
+            chat.suggestions = suggestions
+
+            chat.events.append(
+                ChatEvent(
+                    name="suggested-messages",
+                    data={
+                        "chat_id": chat.id,
+                        "suggestions": suggestion_list_adapter.dump_python(suggestions),
+                        "objective": objective,
+                    },
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+
+            await update_chat(chat)
+
+            await ws.send_json(
+                {
+                    "type": "suggested-messages",
+                    "messages": suggestion_list_adapter.dump_python(chat.suggestions),
+                    "id": event["id"],
+                }
+            )
+        elif event["type"] == "send-message":
+            chat = await get_chat(ObjectId(event["id"]), user)
+
+            if not chat:
+                await ws.send_json({"error": "Chat not found"})
+                continue
+
+            if not chat.suggestions:
+                await ws.send_json({"error": "No suggestions available"})
+                continue
+
+            index: int = event["index"]
+            suggestion = chat.suggestions[index]
+
+            chat.events.append(
+                ChatEvent(
+                    name="send-message",
+                    data={
+                        "chat_id": chat.id,
+                        "index": index,
+                        "message": suggestion.message,
+                    },
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+
+            msg = ChatMessage(
+                sender=user.name or "",
+                content=suggestion.message,
+                created_at=datetime.now(timezone.utc),
+            )
+            chat.messages.append(msg)
+            chat.last_updated = datetime.now(timezone.utc)
+            chat.suggestions = None
+
+            await update_chat(chat)
+
+            await generate_agent_message(chat, suggestion.objective)
+        elif event["type"] == "mark-read":
+            chat = await get_chat(ObjectId(event["id"]), user)
+
+            if not chat:
+                await ws.send_json({"error": "Chat not found"})
+                continue
+
+            chat.unread = False
+
+            chat.events.append(
+                ChatEvent(
+                    name="mark-read",
+                    data={"chat_id": chat.id},
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+
+            await update_chat(chat)
+
+            await ws.send_json(
+                {
+                    "type": "sync-chat",
+                    "chat": json.loads(ChatApi.from_data(chat).model_dump_json()),
+                }
+            )
+        elif event["type"] == "view-suggestion":
+            chat = await get_chat(ObjectId(event["id"]), user)
+
+            if not chat:
+                await ws.send_json({"error": "Chat not found"})
+                continue
+
+            if not chat.suggestions:
+                await ws.send_json({"error": "No suggestions available"})
+                continue
+
+            index: int = event["index"]
+            suggestion = chat.suggestions[index]
+
+            chat.events.append(
+                ChatEvent(
+                    name="view-suggestion",
+                    data={
+                        "chat_id": chat.id,
+                        "index": index,
+                    },
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+
+            await update_chat(chat)
+        else:
+            await ws.send_json({"error": "Invalid event type"})
