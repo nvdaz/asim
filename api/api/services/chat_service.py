@@ -49,6 +49,7 @@ async def get_chats(user_id: ObjectId) -> list[ChatInfo]:
 class ChatState:
     def __init__(self, chat: ChatData):
         self._chat = chat
+        self._lock = asyncio.Lock()
         self._changed = asyncio.Event()
         self.id = chat.id
 
@@ -62,7 +63,8 @@ class ChatState:
     @asynccontextmanager
     async def modify(self) -> AsyncGenerator[ChatData, None]:
         try:
-            yield self._chat
+            async with self._lock:
+                yield self._chat
         finally:
             self._changed.set()
             await update_chat(self._chat)
@@ -93,8 +95,8 @@ async def generate_agent_message(
     if chat_data.state == "no-objective" and "blunt" not in chat_data.objectives_used:
         chance = (
             1
-            if len(chat_data.objectives_used) >= len(generate_suggestions.objectives)
-            else 0.3
+            # if len(chat_data.objectives_used) >= len(generate_suggestions.objectives)
+            # else 0.3
         )
         if random.random() < chance:
             objective = "blunt-initial"
@@ -140,7 +142,7 @@ async def generate_agent_message(
                 InChatFeedback(feedback=feedback, created_at=datetime.now(timezone.utc))
             )
             chat.loading_feedback = False
-            chat.generating_suggestions = True
+            chat.generating_suggestions = 1
             chat.events.append(
                 ChatEvent(
                     name="feedback-generated",
@@ -174,7 +176,7 @@ async def generate_agent_message(
 
         async with chat_state.modify() as chat:
             chat.suggestions = suggestions
-            chat.generating_suggestions = False
+            chat.generating_suggestions = 0
             chat.events.append(
                 ChatEvent(
                     name="suggested-messages",
@@ -190,7 +192,7 @@ async def generate_agent_message(
 
 async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message: str):
     async with chat_state.modify() as chat:
-        chat.generating_suggestions = True
+        chat.generating_suggestions = 3
         chat.events.append(
             ChatEvent(
                 name="suggestion-request",
@@ -251,7 +253,7 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
 
     async with chat_state.modify() as chat:
         chat.suggestions = suggestions
-        chat.generating_suggestions = False
+        chat.generating_suggestions = 0
         chat.events.append(
             ChatEvent(
                 name="suggestions-generated",
@@ -271,6 +273,9 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
         assert chat.suggestions is not None
 
         suggestion = chat.suggestions[index]
+
+        next_state = chat.state if suggestion.needs_improvement else "no-objective"
+
         chat.messages.append(
             ChatMessage(
                 sender=user.name,
@@ -287,6 +292,7 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
                 created_at=datetime.now(timezone.utc),
             )
         )
+        chat.state = next_state
 
     return suggestion.objective
 

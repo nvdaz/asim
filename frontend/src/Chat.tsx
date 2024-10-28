@@ -111,6 +111,7 @@ function Chat() {
 
   return (
     <div className="flex flex-row min-h-[200px] rounded-lg border w-full h-screen">
+      {currentChat?.loading_feedback && <Loading />}
       <div
         className={cn(
           currentChat ? "lg:w-[400px] hidden" : "w-full",
@@ -247,7 +248,7 @@ function Chat() {
                     )
                   ) : (
                     <div className="flex flex-col gap-2 w-full">
-                      {Array(3)
+                      {Array(currentChat.generating_suggestions)
                         .fill("")
                         .map((_, i) => (
                           <Skeleton key={i} className="h-10 w-full" />
@@ -275,7 +276,7 @@ function Chat() {
                         !currentChat ||
                         currentChat.agent_typing ||
                         currentChat.loading_feedback ||
-                        currentChat.generating_suggestions
+                        currentChat.generating_suggestions > 0
                       }
                     />
                     {input.trim() && (

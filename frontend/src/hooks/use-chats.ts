@@ -40,7 +40,7 @@ type ChatLoaded = {
   last_updated: string;
   agent_typing: boolean;
   loading_feedback: boolean;
-  generating_suggestions: boolean;
+  generating_suggestions: number;
   suggestions?: Suggestion[];
   unread: boolean;
 }
@@ -260,7 +260,7 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
           ...chats,
           [id]: {
             ...chats[id],
-            generating_suggestions: true,
+            generating_suggestions: 3,
           },
         };
       });

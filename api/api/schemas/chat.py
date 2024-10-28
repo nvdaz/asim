@@ -53,7 +53,7 @@ class BaseChat(BaseModel):
     last_updated: UTCDatetime
     agent_typing: bool = False
     loading_feedback: bool = False
-    generating_suggestions: bool = False
+    generating_suggestions: int = 0
     unread: bool = False
     objectives_used: list[str] = []
     state: str = "no-objective"
@@ -82,7 +82,7 @@ class ChatApi(BaseModel):
     unread: bool
     agent_typing: bool
     loading_feedback: bool
-    generating_suggestions: bool
+    generating_suggestions: int
     messages: list[ChatMessage | InChatFeedback]
     suggestions: list[Suggestion] | None
 

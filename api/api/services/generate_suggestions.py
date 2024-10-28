@@ -426,7 +426,13 @@ language.
 {name} will use blunt and direct language in their response, that will cause the other
 person to misunderstand their message as rude or unkind. {name} does not consider that
 the other person may be sensitive to direct language and uses blunt tone and language
-because it is the most efficient way to communicate.
+because it is the most efficient way to communicate. {name} doesn’t care about
+pleasantries or details, only efficiency. {name}'s style should feel somewhat abrupt.
+""",
+        "blunt-misinterpret": """
+{name} does not understand why the other person's message was confrontational and
+believes that the other person didn't understand their message. {name} tells the other
+person that they misunderstood their message and that they were not being rude.
 """,
     }
 
@@ -448,6 +454,10 @@ information they were looking for.
 {name} will clarify the figurative language they used and provide a more direct
 response. {name} will apologize for being unclear and provide a more straightforward
 response.
+""",
+        "blunt-misinterpret": """
+{name} will apologize for misunderstanding the other person's message as rude. {name}
+will rephrase their message to be more polite and not confrontational.
 """,
     }
 

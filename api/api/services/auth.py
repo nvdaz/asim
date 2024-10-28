@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from api.db import auth_tokens, magic_links
 from api.db import users as users
-from api.schemas.user import User, UserData, user_from_data
+from api.schemas.user import BaseUserData, User, UserData, user_from_data
 
 
 class LoginResult(BaseModel):
@@ -24,6 +24,10 @@ class InvalidMagicLink(Exception):
     pass
 
 
+class NeedsSetup(Exception):
+    pass
+
+
 async def login_user(secret: str) -> LoginResult:
     link = await magic_links.get(secret)
 
@@ -31,7 +35,7 @@ async def login_user(secret: str) -> LoginResult:
         raise InvalidMagicLink()
 
     if not link.user_id:
-        raise Exception("Unimplemented: link.user_id is None")
+        raise Exception("Magic link not initialized")
 
     user = await users.get(link.user_id)
 
@@ -43,10 +47,12 @@ async def login_user(secret: str) -> LoginResult:
     return LoginResult(user=user_from_data(user), token=token)
 
 
-async def create_magic_link() -> str:
+async def create_magic_link(data: BaseUserData) -> str:
     secret = secrets.token_urlsafe(16)
 
-    link = magic_links.MagicLink(secret=secret, user_id=None)
+    user = await users.create(data)
+
+    link = magic_links.MagicLink(secret=secret, user_id=user.id)
     await magic_links.create(link)
 
     return link.secret
