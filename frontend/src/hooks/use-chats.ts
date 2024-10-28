@@ -13,6 +13,11 @@ type Feedback = {
   body: string;
 };
 
+type InChatFeedback = {
+  feedback: Feedback;
+  created_at: string;
+}
+
 type Suggestion = {
   message: string
   objective?: string
@@ -31,9 +36,11 @@ type ChatLoading = {
 type ChatLoaded = {
   id: string;
   agent: string;
-  messages: Message[];
+  messages: (Message | InChatFeedback)[];
   last_updated: string;
   agent_typing: boolean;
+  loading_feedback: boolean;
+  generating_suggestions: boolean;
   suggestions?: Suggestion[];
   unread: boolean;
 }
@@ -248,8 +255,16 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
   const suggestMessages = useCallback(
     (id: string, message: string) => {
       sendMessage({ type: "suggest-messages", id, message });
-    },
-    [sendMessage]
+      setChats((chats) => {
+        return {
+          ...chats,
+          [id]: {
+            ...chats[id],
+            generating_suggestions: true,
+          },
+        };
+      });
+    }, [sendMessage]
   );
 
 

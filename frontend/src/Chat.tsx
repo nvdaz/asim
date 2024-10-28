@@ -29,7 +29,6 @@ function Chat() {
     setCurrentChatId,
   } = useCurrentChat();
   const { toast } = useToast();
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [input, setInput] = useState("");
   const { user } = useAuth();
@@ -38,7 +37,6 @@ function Chat() {
   );
 
   const handleSend = useCallback(() => {
-    setShowSuggestions(true);
     suggestMessages(input);
     setInput("");
   }, [input]);
@@ -70,7 +68,6 @@ function Chat() {
 
   useEffect(() => {
     setInput("");
-    setShowSuggestions(false);
   }, [currentChat?.id]);
 
   if (!isConnected) {
@@ -162,7 +159,8 @@ function Chat() {
           <div className="flex flex-col gap-2 p-4">
             <div className="flex flex-col gap-2 w-full">
               <div className="flex flex-col gap-2 items-center">
-                {currentChat?.suggestions || showSuggestions ? (
+                {currentChat?.suggestions ||
+                currentChat?.generating_suggestions ? (
                   currentChat?.suggestions ? (
                     selectedSuggestion !== null ? (
                       <div className="flex flex-col gap-2 w-full">
@@ -184,7 +182,7 @@ function Chat() {
                           </div>
                         )}
                         <div className="flex flex-row gap-2 w-full">
-                          <div className="rounded-md border border-input bg-transparent px-3 text-sm shadow-sm flex flex-row gap-2 items-center w-full">
+                          <div className="rounded-md border border-input bg-transparent pl-3 text-sm shadow-sm flex flex-row gap-2 items-center w-full">
                             <div className="w-full py-2">
                               {
                                 currentChat.suggestions[selectedSuggestion]
@@ -193,8 +191,7 @@ function Chat() {
                             </div>
                             <Button
                               size="icon"
-                              variant="ghost"
-                              className="min-w-8"
+                              className="bg-transparent min-w-8 hover:bg-transparent hover:text-red-500 self-end text-white"
                               onClick={() => setSelectedSuggestion(null)}
                             >
                               <X />
@@ -215,11 +212,10 @@ function Chat() {
                               } else {
                                 sendChatMessage(selectedSuggestion);
                                 setSelectedSuggestion(null);
-                                setShowSuggestions(false);
                               }
                             }}
                             size="icon"
-                            className="h-100 min-w-8"
+                            className="min-w-8 self-end"
                           >
                             <ArrowUp />
                           </Button>
@@ -250,11 +246,21 @@ function Chat() {
                       </div>
                     )
                   ) : (
-                    Array(3)
-                      .fill("")
-                      .map((_, i) => (
-                        <Skeleton key={i} className="h-10 w-full" />
-                      ))
+                    <div className="flex flex-col gap-2 w-full">
+                      {Array(3)
+                        .fill("")
+                        .map((_, i) => (
+                          <Skeleton key={i} className="h-10 w-full" />
+                        ))}
+                      <Textarea
+                        value=""
+                        placeholder="Select an option"
+                        ref={inputRef}
+                        rows={1}
+                        className="min-h-[30px] max-h-[120px] resize-none"
+                        disabled
+                      />
+                    </div>
                   )
                 ) : (
                   <div className="flex flex-row gap-2 w-full align-end">
@@ -265,9 +271,19 @@ function Chat() {
                       ref={inputRef}
                       rows={1}
                       className="min-h-[30px] max-h-[120px] resize-none"
+                      disabled={
+                        !currentChat ||
+                        currentChat.agent_typing ||
+                        currentChat.loading_feedback ||
+                        currentChat.generating_suggestions
+                      }
                     />
                     {input.trim() && (
-                      <Button onClick={handleSend} size="icon">
+                      <Button
+                        onClick={handleSend}
+                        size="icon"
+                        className="self-end"
+                      >
                         <ArrowUp />
                       </Button>
                     )}

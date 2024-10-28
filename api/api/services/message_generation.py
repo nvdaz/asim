@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from api.levels.states import MessageInstructions
-from api.schemas.chat import ChatMessage
+from api.schemas.chat import ChatMessage, InChatFeedback
 from api.schemas.user import UserData
 
 from . import llm
@@ -16,7 +16,13 @@ def _format_example(
         return f"'{example}'"
 
 
-def format_messages_context(messages: list[ChatMessage], recipient: str) -> str:
+def format_messages_context(
+    messages_raw: list[ChatMessage | InChatFeedback], recipient: str
+) -> str:
+    messages: list[ChatMessage] = [
+        msg for msg in messages_raw if isinstance(msg, ChatMessage)
+    ]
+
     if len(messages) == 0:
         return ""
 
@@ -128,7 +134,7 @@ async def generate_message(
     user: UserData,
     agent_name: str,
     user_sent: bool,
-    messages: list[ChatMessage],
+    messages: list[ChatMessage | InChatFeedback],
     objective_prompt: str | None = None,
 ) -> str:
     sender_name = user.name if user_sent else agent_name

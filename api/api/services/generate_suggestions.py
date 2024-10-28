@@ -182,6 +182,23 @@ sense. The expression should convey a different meaning or emotion than its lite
 interpretation. The message should be creative and engaging.
 """
         ),
+        "blunt-misinterpret": (
+            """
+The first variation will interpret the blunt and direct language understandably and
+respond appropriately. The response should be clear and concise, addressing the
+message directly.
+
+The second variation will misinterpret the blunt and direct language as rude or
+unkind. The response should show that the message was misunderstood and that the
+misinterpretation caused confusion. The response will be confrontational because the
+blunt language is interpreted as rude.
+
+The third variation will also misinterpret the blunt and direct language as rude or
+unkind. The response should show that the message was misunderstood and that the
+misinterpretation caused confusion. The response will be confrontational because the
+blunt language is interpreted as rude.
+"""
+        ),
     }
 
     objective_prompt = objective_prompts[objective]
@@ -322,6 +339,18 @@ async def explain_suggestion(
             "the message clearly and directly. The message is straightforward and easy "
             "to understand."
         ),
+        ("blunt-misinterpret", True): (
+            "The user's message needs improvement as it is confrontational in response "
+            "to the other person's blunt and direct language. The user's message is "
+            "rude and unkind because they misinterpret the other person's blunt "
+            "language as rude. The user should consider that the other person did not "
+            "intend to be rude."
+        ),
+        ("blunt-misinterpret", False): (
+            "The user's message is clear and direct, and it is not confrontational to "
+            "blunt language. The user considers that the other person's blunt language "
+            "is not intended to be rude and responds appropriately."
+        ),
     }
 
     objective_prompt = objective_prompts[(objective, needs_improvement)]
@@ -393,6 +422,72 @@ and imaginative language used in the answer and responds in a direct and literal
 {name} will ask for clarification if needed, without acknowledging the figurative
 language.
 """,
+        "blunt-initial": """
+{name} will use blunt and direct language in their response, that will cause the other
+person to misunderstand their message as rude or unkind. {name} does not consider that
+the other person may be sensitive to direct language and uses blunt tone and language
+because it is the most efficient way to communicate.
+""",
     }
 
     return prompts[objective]
+
+
+def objective_misunderstand_follow_up_prompt(objective: str) -> str:
+    prompts = {
+        "yes-no-question": """
+{name} will clarify the indirect question they asked which received a yes or no answer.
+{name} will apologize for being unclear and ask the question directly to get the
+information they were looking for.
+""",
+        "non-literal-emoji": """
+{name} will clarify the figurative emoji they used and provide a more direct response.
+{name} will apologize for being unclear and provide a more straightforward response.
+""",
+        "non-literal-figurative": """
+{name} will clarify the figurative language they used and provide a more direct
+response. {name} will apologize for being unclear and provide a more straightforward
+response.
+""",
+    }
+
+    return prompts[objective]
+
+
+async def generate_message_variations_blunt(
+    objectives_used: list[str], context: str, message: str, feedback: bool
+) -> tuple[str, list[Suggestion]]:
+    messages = []
+
+    messages = await _generate_message_variations(
+        "blunt-misinterpret", context, message
+    )
+
+    if feedback:
+        explanations = await asyncio.gather(
+            *[
+                explain_suggestion("blunt-misinterpret", needs_improvement, message)
+                for needs_improvement, message in messages
+            ]
+        )
+
+        suggestions = [
+            Suggestion(
+                message=message,
+                needs_improvement=needs_improvement,
+                objective="blunt-misinterpret",
+                feedback=explanation,
+            )
+            for (needs_improvement, message), explanation in zip(messages, explanations)
+        ]
+    else:
+        suggestions = [
+            Suggestion(
+                message=message,
+                needs_improvement=needs_improvement,
+                objective="blunt-misinterpret",
+            )
+            for needs_improvement, message in messages
+        ]
+
+    return "blunt-misinterpret", suggestions

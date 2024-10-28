@@ -8,18 +8,23 @@ from api.schemas.utc_datetime import UTCDatetime
 from .objectid import PyObjectId
 
 
+class Feedback(BaseModel):
+    title: str
+    body: str
+
+
 class ChatMessage(BaseModel):
     sender: str
     content: str
     created_at: UTCDatetime
 
 
-chat_message_list_adapter = TypeAdapter(list[ChatMessage])
+class InChatFeedback(BaseModel):
+    feedback: Feedback
+    created_at: UTCDatetime
 
 
-class Feedback(BaseModel):
-    title: str
-    body: str
+chat_message_list_adapter = TypeAdapter(list[ChatMessage | InChatFeedback])
 
 
 class Suggestion(BaseModel):
@@ -43,10 +48,12 @@ chat_event_list_adapter = TypeAdapter(list[ChatEvent])
 
 class BaseChat(BaseModel):
     user_id: PyObjectId
-    messages: list[ChatMessage] = []
+    messages: list[ChatMessage | InChatFeedback] = []
     agent: str
     last_updated: UTCDatetime
     agent_typing: bool = False
+    loading_feedback: bool = False
+    generating_suggestions: bool = False
     unread: bool = False
     objectives_used: list[str] = []
     state: str = "no-objective"
@@ -74,7 +81,9 @@ class ChatApi(BaseModel):
     last_updated: UTCDatetime
     unread: bool
     agent_typing: bool
-    messages: list[ChatMessage]
+    loading_feedback: bool
+    generating_suggestions: bool
+    messages: list[ChatMessage | InChatFeedback]
     suggestions: list[Suggestion] | None
 
     @classmethod

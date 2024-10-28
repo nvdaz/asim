@@ -14,6 +14,18 @@ interface Message {
   created_at: string;
 }
 
+interface InChatFeedback {
+  feedback: {
+    title: string;
+    body: string;
+  };
+  created_at: string;
+}
+
+const isFeedback = (msg: Message | InChatFeedback): msg is InChatFeedback => {
+  return "feedback" in msg;
+};
+
 function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -22,7 +34,7 @@ export function ChatInterface({
   messages,
   typing,
 }: {
-  messages: Message[];
+  messages: (Message | InChatFeedback)[];
   typing: boolean;
 }) {
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -46,7 +58,7 @@ export function ChatInterface({
       }
 
       return acc;
-    }, [] as Message[][]);
+    }, [] as (Message | InChatFeedback)[][]);
 
     return grouped;
   }, [messages]);
@@ -65,15 +77,23 @@ export function ChatInterface({
                 formatRelative(capitalize(group[0].created_at), new Date())
               )}
             </div>
-            {group.map((msg, index) => (
-              <ChatBubble
-                key={index}
-                content={msg.content}
-                sender={msg.sender}
-                avatarUrl={msg.avatarUrl}
-                isOutgoing={msg.sender === user!.name}
-              />
-            ))}
+            {group.map((msg, index) =>
+              isFeedback(msg) ? (
+                <FeedbackBubble
+                  key={index}
+                  title={msg.feedback.title}
+                  body={msg.feedback.body}
+                />
+              ) : (
+                <ChatBubble
+                  key={index}
+                  content={msg.content}
+                  sender={msg.sender}
+                  avatarUrl={msg.avatarUrl}
+                  isOutgoing={msg.sender === user!.name}
+                />
+              )
+            )}
           </Fragment>
         ))}
         {typing && (
@@ -117,6 +137,26 @@ function ChatBubble({ content: message, isOutgoing = false }: ChatBubbleProps) {
             }`}
           >
             <p className="text-sm">{message}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface FeedbackBubbleProps {
+  title: string;
+  body: string;
+}
+
+function FeedbackBubble({ title, body }: FeedbackBubbleProps) {
+  return (
+    <div className="w-full my-4">
+      <div className="flex items-end">
+        <div className="mx-2 flex flex-col">
+          <div className="bg-accent text-accent-foreground rounded-md p-3">
+            <h2>{title}</h2>
+            <p className="text-sm">{body}</p>
           </div>
         </div>
       </div>

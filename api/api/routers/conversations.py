@@ -1,16 +1,16 @@
+import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
-from api.auth.deps import CurrentUser
 from api.db import auth_tokens, users
-from api.schemas.chat import ChatInfo
 from api.schemas.conversation import (
     ConversationStage,
     ConversationStageStr,
     conversation_stage_from_str,
 )
-from api.services import chat_handler
+from api.services import websocket_handler
+from api.services.connection_manager import Connections
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -25,11 +25,15 @@ ConversationStageFromQuery = Annotated[
     ConversationStage, Depends(_get_conversation_stage)
 ]
 
+connections = Connections()
+
 
 @router.websocket("/ws")
 async def ws_endpoint(
     ws: WebSocket,
 ):
+    connection_id = secrets.token_urlsafe(32)
+    connection_manager = None
     try:
         await ws.accept()
 
@@ -51,13 +55,11 @@ async def ws_endpoint(
             await ws.close()
             return
 
-        await chat_handler.handle_connection(ws, user)
+        connection_manager = connections.get(user_id)
+
+        await websocket_handler.handle_connection(
+            ws, connection_manager, connection_id, user
+        )
     except WebSocketDisconnect:
-        pass
-
-
-@router_chats.post("/")
-async def list_chats(
-    current_user: CurrentUser,
-) -> list[ChatInfo]:
-    return await chat_handler.get_chats(current_user)
+        if connection_manager:
+            connection_manager.close(connection_id)
