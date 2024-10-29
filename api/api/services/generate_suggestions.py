@@ -204,9 +204,9 @@ blunt language is interpreted as rude.
     objective_prompt = objective_prompts[objective]
 
     system_prompt = f"""
-You are a message variation generator. Your task is to generate realistic variations of
-the message that fit the given objective. Your top priority is to ensure that the
-message variations fit the context and objectives.
+You are a message rephrasing generator. Your task is to generate realistic rephrasings
+of the message that fit the given objective. Your top priority is to ensure that the
+message are rephrased to fit the context of the conversation and the given objective.
 
 Remember, the two individuals are having a casual conversation. They talk like humans,
 so they may stumble over their words, repeat themselves, or change the subject abruptly.
@@ -220,7 +220,7 @@ and emojis.
 {objective_prompt}
 
 Rrespond with a JSON object containing the key "variations" and a list of the three
-variations as strings.
+rephrasings as strings.
 """
 
     prompt = f"""
@@ -230,11 +230,11 @@ Here is the conversation context:
 </context>
 
 You are generating variations of the message below.
-<message>
+<message_to_rephrase>
 {message}
-</message>
+</message_to_rephrase>
 
-Remember, you are generating VARIATIONS of the provided message, not responding to it.
+Remember, you are generating REPHRASINGS of the provided message, not responding to it.
 """
 
     out = await llm.generate(
@@ -266,9 +266,9 @@ async def generate_message_variations_ok(
 
 async def _generate_message_variations_ok(context: str, message: str) -> list[str]:
     system_prompt = """
-You are a message variation generator. Your task is to generate realistic variations of
-the message that are different but convey the same meaning. Your top priority is to
-ensure that the message variations fit the context of the conversation.
+You are a message rephrasing generator. Your task is to generate realistic rephrasings
+of the message that fit the given objective. Your top priority is to ensure that the
+message are rephrased to fit the context of the conversation and the given objective.
 
 Remember, the two individuals are having a casual conversation. They talk like humans,
 so they may stumble over their words, repeat themselves, or change the subject abruptly.
@@ -280,18 +280,18 @@ thought-out or planned humor. Use simple language, aiming for a Flesch reading s
 and emojis.
 
 Rrespond with a JSON object containing the key "variations" and a list of the three
-variations as strings.
+rephrasings as strings.
 """
 
     prompt = f"""
 {context}
 
-You are generating variations of the message below.
-<message_original>
+You are generating rephrasings of the message below.
+<message_to_rephrase>
 {message}
-</message_original>
+</message_to_rephrase>
 
-Remember, you are generating VARIATIONS of the provided message, not responding to it.
+Remember, you are generating REPHRASINGS of the provided message, not responding to it.
 """
 
     out = await llm.generate(
@@ -421,6 +421,17 @@ and answers directly by saying yes without providing the information requested. 
 knows the answer and is physically capable of providing the information but does not
 because the question was indirect. Since {name} was not asked directly, {name} will not
 provide the information requested and will not elaborate.
+
+Examples:
+Do you know any good restaurant in the area? -> Yeah, I do know a few spots.
+
+Have you thought about what you want to do? -> Yes, I have thought about it.
+
+Do you have any specific spots in mind for the trip? -> Yes, I do.
+
+
+Make sure {name} answers with a YES or NO without elaboration.
+
 """,
         "non-literal-emoji": """
 {name} received a message with a figurative emoji that is not used in a literal sense.
@@ -429,6 +440,17 @@ interpreted as a literal representation of the message. {name} ignores the rceat
 imaginative language used in the answer and responds in a direct and literal manner.
 {name} will ask for clarification if needed, without acknowledging the figurative
 language.
+
+Examples:
+Let's just find the nearest pizza joint. Can't go wrong with pizza. 🧭 ->
+I love pizza too! But I don't think we'll need a compass for the trip.
+
+Any good activities that we should do? 🎈 -> Yeah, I was thinking about visiting the
+local museum. Are you thinking about something with balloons? I'm not sure what you
+mean with the balloon emoji.
+
+That sounds like a great time! 🚀 -> Yeah, I'm excited for the trip too! But I don't
+think they have any rocket ships at the beach if that's what you're thinking.
 """,
         "non-literal-figurative": """
 {name} received a message with figurative language that is not used in a literal sense.
@@ -437,6 +459,17 @@ be interpreted as a literal representation of the message. {name} ignores the cr
 and imaginative language used in the answer and responds in a direct and literal manner.
 {name} will ask for clarification if needed, without acknowledging the figurative
 language.
+
+Examples:
+I'm feeling a bit under the weather today. -> Are you saying the weather conditions are
+affecting you somehow? I'm not sure what you mean.
+
+I'm just trying to keep my head above water. -> Are you drowning? Should I call for
+help? What do you mean by that?
+
+As long as we're on the same page, I think we'll be fine. -> I'm not sure what you mean
+by that. I'm not reading anything right now. Which page are you talking about?
+
 """,
         "blunt-initial": """
 {name} will use blunt and direct language in their response, that will cause the other
@@ -444,6 +477,13 @@ person to misunderstand their message as rude or unkind. {name} does not conside
 the other person may be sensitive to direct language and uses blunt tone and language
 because it is the most efficient way to communicate. {name} doesn’t care about
 pleasantries or details, only efficiency. {name}'s style should feel somewhat abrupt.
+
+Examples:
+I need you to get this done by the end of the day or we're going to have a problem.
+
+Are you going to finish that report today or not? I need to know now.
+
+I don't have time for this. Just get it done and let me know when it's finished.
 """,
         "blunt-misinterpret": """
 {name} does not understand why the other person's message was confrontational and

@@ -138,7 +138,9 @@ async def generate_agent_message(
             feedback = await generate_suggestions.explain_suggestion(
                 objective,
                 True,
-                message_generation.format_messages_context(chat.messages, chat.agent),
+                message_generation.format_messages_context_short(
+                    chat.messages, chat.agent
+                ),
             )
 
             async with chat_state.modify() as chat:
@@ -212,7 +214,9 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
             )
         )
 
-    context = message_generation.format_messages_context(chat.messages, chat.agent)
+    context = message_generation.format_messages_context_short(
+        chat.messages, chat.agent
+    )
 
     objective = None
 

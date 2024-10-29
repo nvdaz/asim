@@ -16,7 +16,7 @@ def _format_example(
         return f"'{example}'"
 
 
-def format_messages_context(
+def format_messages_context_short(
     messages_raw: list[ChatMessage | InChatFeedback], recipient: str
 ) -> str:
     messages: list[ChatMessage] = [
@@ -46,6 +46,19 @@ def format_messages_context(
             i -= 1
 
         return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[i + 1 :]])
+
+
+def format_messages_context_long(
+    messages_raw: list[ChatMessage | InChatFeedback], recipient: str
+) -> str:
+    messages: list[ChatMessage] = [
+        msg for msg in messages_raw if isinstance(msg, ChatMessage)
+    ]
+
+    if len(messages) == 0:
+        return ""
+
+    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-12:]])
 
 
 def _format_instructions(instructions: MessageInstructions | None) -> str:
@@ -140,7 +153,7 @@ async def generate_message(
     sender_name = user.name if user_sent else agent_name
     recipient_name = agent_name if user_sent else user.name
 
-    conversation_context = format_messages_context(messages, recipient_name)
+    conversation_context = format_messages_context_long(messages, recipient_name)
 
     system_prompt = system_prompt_template.format(name=sender_name)
 
