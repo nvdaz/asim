@@ -19,8 +19,8 @@ class ConnectionManager:
             async def listen():
                 while True:
                     await chat_state.wait_for_change()
-                    for on_change in self._on_change.values():
-                        on_change(chat_state)
+                    for on_change_id in self._on_change:
+                        self._on_change[on_change_id](chat_state)
 
             self._listeners[chat_state.id] = asyncio.create_task(listen())
 

@@ -74,7 +74,7 @@ function Chat() {
     return (
       <div className="container relative h-full flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 px-8">
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <Loading />
+          {!isError && <Loading />}
           <AnimatePresence mode="wait">
             {isError ? (
               <motion.h1
@@ -85,7 +85,7 @@ function Chat() {
                 transition={{ duration: 0.3 }}
                 className="text-2xl font-semibold tracking-tight"
               >
-                Something went wrong. We're trying to reconnect...
+                Error connecting to server.
               </motion.h1>
             ) : (
               <motion.h1

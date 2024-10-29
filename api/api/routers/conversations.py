@@ -55,6 +55,8 @@ async def ws_endpoint(
             await ws.close()
             return
 
+        await ws.send_json({"type": "connected", "connection_id": connection_id})
+
         connection_manager = connections.get(user_id)
 
         await websocket_handler.handle_connection(

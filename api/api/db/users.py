@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from bson import ObjectId
 
 from api.schemas.conversation import ConversationStage
@@ -12,11 +10,6 @@ users = db.users
 
 async def get(id: ObjectId):
     user = await users.find_one({"_id": id})
-    return UserData(**user) if user else None
-
-
-async def get_by_qa_id(qa_id: UUID):
-    user = await users.find_one({"qa_id": qa_id})
     return UserData(**user) if user else None
 
 

@@ -224,10 +224,17 @@ variations as strings.
 """
 
     prompt = f"""
+Here is the conversation context:
+<context>
 {context}
+</context>
 
 You are generating variations of the message below.
+<message>
 {message}
+</message>
+
+Remember, you are generating VARIATIONS of the provided message, not responding to it.
 """
 
     out = await llm.generate(
@@ -280,7 +287,11 @@ variations as strings.
 {context}
 
 You are generating variations of the message below.
+<message_original>
 {message}
+</message_original>
+
+Remember, you are generating VARIATIONS of the provided message, not responding to it.
 """
 
     out = await llm.generate(
@@ -386,7 +397,12 @@ async def explain_suggestion(
         f"{action}"
     )
 
-    prompt = message
+    prompt = f"""
+You are providing feedback on the message below:
+<message>
+{message}
+</message>
+    """
 
     return await llm.generate(
         schema=Feedback,

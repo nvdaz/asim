@@ -1,5 +1,6 @@
 import { useAuth } from "@/components/auth-provider";
 import { useCallback, useEffect, useRef, useState } from "react";
+import useWebsocket, { ReadyState } from 'react-use-websocket';
 import invariant from 'tiny-invariant';
 
 type Message = {
@@ -56,76 +57,47 @@ function useChatSocket<S, R>({
 }: {
   onMessage: (message: R) => void;
 }) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
+  const didUnmount = useRef(false);
   const { token } = useAuth();
-  const connectDelayRef = useRef(1000);
-  const [connectTimeout, setConnectTimeout] = useState<number | null>(null);
-  const messageQueueRef = useRef<S[]>([]);
 
-  const flushMessageQueue = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      while (messageQueueRef.current.length > 0) {
-        const message = messageQueueRef.current.shift();
-        wsRef.current.send(JSON.stringify(message));
-      }
+  const {
+    sendJsonMessage: sendSocketMessage, lastMessage: lastSocketMessage, readyState,
+  } = useWebsocket(`${import.meta.env.VITE_API_URL}/conversations/ws`, {
+    onOpen: () => {
+      sendSocketMessage({ token });
+    },
+    retryOnError: true,
+    reconnectInterval: (lastAttemptNumber) => Math.min(16000, 2 ** lastAttemptNumber * 1000),
+    reconnectAttempts: 10,
+    shouldReconnect: () => {
+      return !didUnmount.current;
     }
-  }, [wsRef.current]);
+  });
 
-  const connect = useCallback(() => {
-    const ws = new WebSocket(
-      `${import.meta.env.VITE_API_URL}/conversations/ws`
-    );
-
-    ws.addEventListener("open", () => {
-      setIsConnected(true);
-      setIsError(false);
-      ws.send(JSON.stringify({ token }));
-      flushMessageQueue();
-    });
-
-    ws.addEventListener("error", () => {
-      setIsError(true);
-    });
-
-    ws.addEventListener("close", () => {
-      setIsConnected(false);
-      setConnectTimeout(window.setTimeout(connect, connectDelayRef.current));
-      connectDelayRef.current = Math.min(connectDelayRef.current * 2, 60000);
-    });
-
-    ws.addEventListener("message", (event) => {
-      const data = JSON.parse(event.data);
-      onMessage(data);
-    });
-
-    wsRef.current = ws;
-  }, [connectDelayRef, token]);
 
   useEffect(() => {
-    connect();
-
+    didUnmount.current = false;
     return () => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.close();
-      }
-
-      if (connectTimeout) {
-        window.clearTimeout(connectTimeout);
-      }
+      didUnmount.current = true;
     };
   }, []);
 
-  const sendMessage = (message: S) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message));
-    } else {
-      messageQueueRef.current.push(message);
+  useEffect(() => {
+    if (lastSocketMessage) {
+      const message = JSON.parse(lastSocketMessage.data) as R;
+      onMessage(message);
     }
+  }, [lastSocketMessage, onMessage]);
+
+  const sendMessage = (message: S) => {
+    sendSocketMessage(message);
   };
 
-  return { isConnected, isError, sendMessage };
+  return {
+    isConnected: readyState === ReadyState.OPEN,
+    isError: false,
+    sendMessage
+  };
 }
 
 type RecvSyncChats = {

@@ -95,8 +95,8 @@ async def generate_agent_message(
     if chat_data.state == "no-objective" and "blunt" not in chat_data.objectives_used:
         chance = (
             1
-            # if len(chat_data.objectives_used) >= len(generate_suggestions.objectives)
-            # else 0.3
+            if len(chat_data.objectives_used) >= len(generate_suggestions.objectives)
+            else 0.3
         )
         if random.random() < chance:
             objective = "blunt-initial"
@@ -127,65 +127,74 @@ async def generate_agent_message(
             )
         )
 
-    if chat.state == "react" and objective:
-        async with chat_state.modify() as chat:
-            chat.loading_feedback = True
+    if chat.state == "react":
+        if not objective:
+            async with chat_state.modify() as chat:
+                chat.state = "objective"
+        else:
+            async with chat_state.modify() as chat:
+                chat.loading_feedback = True
 
-        feedback = await generate_suggestions.explain_suggestion(
-            objective,
-            True,
-            message_generation.format_messages_context(chat.messages, chat.agent),
-        )
-
-        async with chat_state.modify() as chat:
-            chat.messages.append(
-                InChatFeedback(feedback=feedback, created_at=datetime.now(timezone.utc))
+            feedback = await generate_suggestions.explain_suggestion(
+                objective,
+                True,
+                message_generation.format_messages_context(chat.messages, chat.agent),
             )
-            chat.loading_feedback = False
-            chat.generating_suggestions = 1
-            chat.events.append(
-                ChatEvent(
-                    name="feedback-generated",
-                    data=feedback,
-                    created_at=datetime.now(timezone.utc),
+
+            async with chat_state.modify() as chat:
+                chat.messages.append(
+                    InChatFeedback(
+                        feedback=feedback, created_at=datetime.now(timezone.utc)
+                    )
                 )
-            )
-
-        follow_up = await message_generation.generate_message(
-            user=user,
-            user_sent=True,
-            agent_name=chat.agent,
-            messages=chat.messages,
-            objective_prompt=generate_suggestions.objective_misunderstand_follow_up_prompt(
-                objective
-            ),
-        )
-
-        explanation = await generate_suggestions.explain_suggestion(
-            objective, False, follow_up
-        )
-
-        suggestions = [
-            Suggestion(
-                message=follow_up,
-                feedback=explanation,
-                objective=objective,
-                needs_improvement=False,
-            )
-        ]
-
-        async with chat_state.modify() as chat:
-            chat.suggestions = suggestions
-            chat.generating_suggestions = 0
-            chat.events.append(
-                ChatEvent(
-                    name="suggested-messages",
-                    data={
-                        "suggestions": suggestion_list_adapter.dump_python(suggestions)
-                    },
-                    created_at=datetime.now(timezone.utc),
+                chat.loading_feedback = False
+                chat.generating_suggestions = 1
+                chat.events.append(
+                    ChatEvent(
+                        name="feedback-generated",
+                        data=feedback,
+                        created_at=datetime.now(timezone.utc),
+                    )
                 )
+
+            follow_up = await message_generation.generate_message(
+                user=user,
+                user_sent=True,
+                agent_name=chat.agent,
+                messages=chat.messages,
+                objective_prompt=generate_suggestions.objective_misunderstand_follow_up_prompt(
+                    objective
+                ),
             )
+
+            explanation = await generate_suggestions.explain_suggestion(
+                objective, False, follow_up
+            )
+
+            suggestions = [
+                Suggestion(
+                    message=follow_up,
+                    feedback=explanation,
+                    objective=objective,
+                    needs_improvement=False,
+                )
+            ]
+
+            async with chat_state.modify() as chat:
+                chat.suggestions = suggestions
+                chat.generating_suggestions = 0
+                chat.events.append(
+                    ChatEvent(
+                        name="suggested-messages",
+                        data={
+                            "suggestions": suggestion_list_adapter.dump_python(
+                                suggestions
+                            )
+                        },
+                        created_at=datetime.now(timezone.utc),
+                    )
+                )
+                chat.state = "react"
 
     return chat_data
 
@@ -274,7 +283,14 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
 
         suggestion = chat.suggestions[index]
 
-        next_state = chat.state if suggestion.needs_improvement else "no-objective"
+        chat.state = (
+            chat.state
+            if not (
+                not suggestion.needs_improvement
+                and chat.state in ("objective", "objective-blunt")
+            )
+            else "react"
+        )
 
         chat.messages.append(
             ChatMessage(
@@ -292,7 +308,6 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
                 created_at=datetime.now(timezone.utc),
             )
         )
-        chat.state = next_state
 
     return suggestion.objective
 
