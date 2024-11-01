@@ -4,11 +4,19 @@ from api.services import generate_suggestions, message_generation
 
 
 async def generate_agent_message(
-    user: UserData, chat: ChatData, state: str, objective: str | None
+    user: UserData,
+    chat: ChatData,
+    state: str,
+    objective: str | None,
+    problem: str | None,
 ):
     if state == "react" or state == "objective-blunt":
         objective_prompt = (
-            (generate_suggestions.objective_misunderstand_reaction_prompt(objective))
+            (
+                generate_suggestions.objective_misunderstand_reaction_prompt(
+                    objective, problem
+                )
+            )
             if objective
             else None
         )

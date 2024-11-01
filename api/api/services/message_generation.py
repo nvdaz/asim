@@ -58,7 +58,7 @@ def format_messages_context_long(
     if len(messages) == 0:
         return ""
 
-    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-12:]])
+    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-18:]])
 
 
 def _format_instructions(instructions: MessageInstructions | None) -> str:

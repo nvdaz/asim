@@ -19,7 +19,12 @@ from api.schemas.chat import (
     suggestion_list_adapter,
 )
 from api.schemas.user import UserData
-from api.services import chat_generation, generate_suggestions, message_generation
+from api.services import (
+    chat_generation,
+    generate_feedback,
+    generate_suggestions,
+    message_generation,
+)
 
 _fake = faker.Faker()
 
@@ -103,7 +108,11 @@ async def generate_agent_message(
             next_state = "objective-blunt"
 
     response_content = await chat_generation.generate_agent_message(
-        user=user, chat=chat_data, state=next_state, objective=objective
+        user=user,
+        chat=chat_data,
+        state=next_state,
+        objective=objective,
+        problem=chat.current_problem,
     )
 
     response = ChatMessage(
@@ -135,12 +144,17 @@ async def generate_agent_message(
             async with chat_state.modify() as chat:
                 chat.loading_feedback = True
 
-            feedback = await generate_suggestions.explain_suggestion(
+            assert isinstance(chat.messages[-2], ChatMessage)
+            assert isinstance(chat.messages[-1], ChatMessage)
+            assert chat.current_problem is not None
+
+            feedback = await generate_feedback.explain_message(
+                user,
+                chat.agent,
                 objective,
-                True,
-                message_generation.format_messages_context_short(
-                    chat.messages, chat.agent
-                ),
+                chat.current_problem,
+                chat.messages[-2].content,
+                chat.messages[-1].content,
             )
 
             async with chat_state.modify() as chat:
@@ -165,12 +179,12 @@ async def generate_agent_message(
                 agent_name=chat.agent,
                 messages=chat.messages,
                 objective_prompt=generate_suggestions.objective_misunderstand_follow_up_prompt(
-                    objective
+                    objective, chat.current_problem
                 ),
             )
 
             explanation = await generate_suggestions.explain_suggestion(
-                objective, False, follow_up
+                user, chat.agent, objective, None, follow_up
             )
 
             suggestions = [
@@ -178,7 +192,7 @@ async def generate_agent_message(
                     message=follow_up,
                     feedback=explanation,
                     objective=objective,
-                    needs_improvement=False,
+                    problem=chat.current_problem,
                 )
             ]
 
@@ -242,6 +256,8 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
             objective,
             suggestions,
         ) = await generate_suggestions.generate_message_variations(
+            user,
+            chat.agent,
             chat.objectives_used,
             context,
             base_message,
@@ -254,6 +270,8 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
             objective,
             suggestions,
         ) = await generate_suggestions.generate_message_variations_blunt(
+            user,
+            chat.agent,
             chat.objectives_used,
             context,
             base_message,
@@ -290,7 +308,7 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
         chat.state = (
             chat.state
             if not (
-                not suggestion.needs_improvement
+                not suggestion.problem is not None
                 and chat.state in ("objective", "objective-blunt")
             )
             else "react"
@@ -312,6 +330,7 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
                 created_at=datetime.now(timezone.utc),
             )
         )
+        chat.current_problem = suggestion.problem
 
     return suggestion.objective
 

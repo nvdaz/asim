@@ -101,7 +101,7 @@ async def handle_connection(
             objective_prompt = (
                 (
                     generate_suggestions.objective_misunderstand_reaction_prompt(
-                        objective
+                        objective, chat.current_problem
                     )
                 )
                 if objective
@@ -159,8 +159,10 @@ async def handle_connection(
             )
 
             feedback = await generate_suggestions.explain_suggestion(
+                user,
+                chat.agent,
                 objective,
-                True,
+                chat.current_problem,
                 message_generation.format_messages_context_short(
                     chat.messages, chat.agent
                 ),
@@ -198,12 +200,12 @@ async def handle_connection(
                 agent_name=chat.agent,
                 messages=chat.messages,
                 objective_prompt=generate_suggestions.objective_misunderstand_follow_up_prompt(
-                    objective
+                    objective, chat.current_problem
                 ),
             )
 
             explanation = await generate_suggestions.explain_suggestion(
-                objective, False, follow_up
+                user, chat.agent, objective, None, follow_up
             )
 
             suggestions = [
@@ -211,7 +213,7 @@ async def handle_connection(
                     message=follow_up,
                     feedback=explanation,
                     objective=objective,
-                    needs_improvement=False,
+                    problem=None,
                 )
             ]
 
@@ -297,6 +299,8 @@ async def handle_connection(
                     objective,
                     suggestions,
                 ) = await generate_suggestions.generate_message_variations(
+                    user,
+                    chat.agent,
                     chat.objectives_used,
                     context,
                     message,
@@ -356,7 +360,7 @@ async def handle_connection(
             )
 
             msg = ChatMessage(
-                sender=user.name or "",
+                sender=user.name,
                 content=suggestion.message,
                 created_at=datetime.now(timezone.utc),
             )

@@ -29,7 +29,7 @@ chat_message_list_adapter = TypeAdapter(list[ChatMessage | InChatFeedback])
 
 class Suggestion(BaseModel):
     message: str
-    needs_improvement: bool
+    problem: str | None = None
     objective: str | None
     feedback: Feedback | None = None
 
@@ -54,6 +54,7 @@ class BaseChat(BaseModel):
     agent_typing: bool = False
     loading_feedback: bool = False
     generating_suggestions: int = 0
+    current_problem: str | None = None
     unread: bool = False
     objectives_used: list[str] = []
     state: str = "no-objective"
