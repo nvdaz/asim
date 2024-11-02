@@ -58,7 +58,7 @@ def format_messages_context_long(
     if len(messages) == 0:
         return ""
 
-    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-18:]])
+    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-8:]])
 
 
 def _format_instructions(instructions: MessageInstructions | None) -> str:
@@ -188,7 +188,6 @@ async def generate_message(
         model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt_data,
-        temperature=1.0,
     )
 
     return response.message

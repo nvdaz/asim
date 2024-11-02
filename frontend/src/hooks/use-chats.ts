@@ -23,7 +23,7 @@ type Suggestion = {
   message: string
   objective?: string
   feedback?: Feedback
-  needs_improvement: boolean
+  problem: string | null
 };
 
 type ChatLoading = {

@@ -273,7 +273,7 @@ async def handle_connection(
             )
             chat.generating_suggestions = True
 
-            context = message_generation.format_messages_context_short(
+            context = message_generation.format_messages_context_long(
                 chat.messages, chat.agent
             )
 

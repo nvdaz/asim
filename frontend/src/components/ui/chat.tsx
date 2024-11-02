@@ -73,9 +73,7 @@ export function ChatInterface({
         {groupedMessages.map((group, index) => (
           <Fragment key={index}>
             <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 mt-2">
-              {capitalize(
-                formatRelative(capitalize(group[0].created_at), new Date())
-              )}
+              {capitalize(formatRelative(group[0].created_at, new Date()))}
             </div>
             {group.map((msg, index) =>
               isFeedback(msg) ? (

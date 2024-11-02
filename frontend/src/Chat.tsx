@@ -201,8 +201,8 @@ function Chat() {
                           <Button
                             onClick={() => {
                               if (
-                                currentChat.suggestions![selectedSuggestion]
-                                  .needs_improvement &&
+                                !!currentChat.suggestions![selectedSuggestion]
+                                  .problem &&
                                 user!.options.feedback_mode == "on-suggestion"
                               ) {
                                 toast({

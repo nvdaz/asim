@@ -83,8 +83,8 @@ Provide a title with less than 50 characters that briefly summarizes the lesson 
 feedback and ending with an engaging emoji.
 Then, provide comprehensive feedback and thoroughly explain the reasoning behind it.
 Extract 1-2 key words or phrases from {user}'s message that are most relevant to your
-feedback, while avoiding repeating more than necessary.
-Be thorough in your explanation, but be concise and to the point.
+feedback. Never repeat the user's message in your feedback.
+Be thorough in your explanation, but be concise and keep to under 100 words.
 Never provide alternative messages, only provide feedback on the current message.
 Use simple, straightforward language that a high school student would understand.
 
@@ -125,16 +125,13 @@ async def explain_message(
     objective: str,
     problem: str,
     message: str,
+    context: str,
     reaction: str,
 ) -> Feedback:
     objective_prompts = {
         "yes-no-question": """
-{user} asked a yes-or-no question that was interpreted as either a yes or no question or
-as a request for more information. {agent} responded with a yes or no answer, which is
-not what {user} is looking for. Instead, {user} should have asked a direct question to
-get the information they wanted from {agent}. Explain how the specific phrasing of the
-question caused their question to be misinterpreted as a simple yes or no question,
-and explain that the correct interpretation is unclear.
+{user} asked a question that could be answered by either a simple yes or no statement or
+as a request for more information.
 """,
         "non-literal-emoji": """
 {user} used an emoji in a non-literal way that was be misinterpreted. Explain
@@ -158,23 +155,21 @@ consider that {agent} did not intend to be rude, and resond in a more understand
     objective_prompt = objective_prompts[objective].format(user=user.name, agent=agent)
 
     system_prompt_template = """
-As an expert in different communication styles, you are providing feedback on a possible
-message in an ongoing conversation between {user} and {agent}.
+As a helpful communication guide, you are guiding {user} on their conversation with {agent}.
 
 {objective_prompt}
 
-You are providing feedback directly to {user}, so address them using second person
-pronouns (begin with "Your").
-Provide a title with less than 50 characters that briefly summarizes the lesson of your
-feedback and ending with an engaging emoji.
-Then, provide comprehensive feedback and thoroughly explain the reasoning behind it.
-Extract 1-2 key words or phrases from {user}'s message that are most relevant to your
-feedback, while avoiding repeating more than necessary.
-Never provide alternative messages, only provide feedback on the current message.
-Use simple, straightforward language that a high school student would understand.
+In a friendly way, you provide communication guidance to {user}.
+Make sure to:
 
-Here is the problem you need to address:
-{problem}
+1. Never repeat the user's message in your feedback.
+2. Be comprehensive in your explanation, while being concise, friendly and keep to under 100 words.
+3. Empathise with the recipeient's confusion if needed.
+4. Never provide alternative messages, only provide feedback on the current message.
+5. Use simple, straightforward language that a high school student would understand.
+
+Secondly, provide a title with less than 50 characters that briefly summarizes the content of your
+feedback ending with an engaging emoji.
 
 Respond with a JSON object with keys "title" and "body" containing your feedback.
 """
@@ -183,17 +178,25 @@ Respond with a JSON object with keys "title" and "body" containing your feedback
         objective_prompt=objective_prompt,
         user=user.name,
         agent=agent,
-        problem=problem,
+        # problem=problem,
     )
 
     prompt_template = """
-You are providing feedback on this message from {user}:
-<message>{message}</message>
-<reaction>{reaction}</reaction>
+Here is the conversation history between {user} and {agent}:
+{context}
+
+From {agent}'s perspective, explain what caused them to respond to {user} in the way they did in their last message.
+The problem may be that {problem}. Focus mainly on {agent}'s most likely thought process.
+Be encoruaging but friendly, and feel free to refer to 1-2 key words from {user}'s message.
+Limit your answer to a maximum of 100 words but shorter the better.
+
+Secondly, provide a title with less than 50 characters that accurately summarizes your feedback alongside an emoji.
+
+Respond with a JSON object with keys "title" and "body".
 """
 
     prompt = prompt_template.format(
-        user=user.name, agent=agent, message=message, reaction=reaction
+        user=user.name, agent=agent, message=message, context=context, problem=problem
     )
 
     return await llm.generate(
