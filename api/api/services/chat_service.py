@@ -2,7 +2,7 @@ import asyncio
 import random
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 
 import faker
 from bson import ObjectId
@@ -65,63 +65,70 @@ class ChatState:
     def read(self) -> ChatData:
         return self._chat
 
+    def mark_changed(self):
+        self._changed.set()
+
     @asynccontextmanager
-    async def modify(self) -> AsyncGenerator[ChatData, None]:
+    async def transaction(
+        self,
+    ) -> AsyncGenerator[tuple[ChatData, Callable[[], None]], None]:
         try:
             async with self._lock:
-                yield self._chat
+                yield self._chat, self.mark_changed
         finally:
-            self._changed.set()
+            self.mark_changed()
             await update_chat(self._chat)
 
 
 async def generate_agent_message(
     chat_state: ChatState, user: UserData, objective: str | None = None
 ):
-    async with chat_state.modify() as chat:
+    async with chat_state.transaction() as (chat, mark_changed):
         chat.agent_typing = True
+        mark_changed()
 
-    chat_data = chat_state.read()
+        next_state = None
 
-    next_state = None
+        match (chat.state, user.options.feedback_mode):
+            case ("no-objective", _):
+                next_state = "objective"
+            case ("objective" | "objective-blunt", "on-suggestion"):
+                next_state = "no-objective"
+            case ("objective" | "objective-blunt", "on-submit"):
+                next_state = "react"
+            case ("react", _):
+                next_state = "no-objective"
 
-    match (chat_data.state, user.options.feedback_mode):
-        case ("no-objective", _):
-            next_state = "objective"
-        case ("objective" | "objective-blunt", "on-suggestion"):
-            next_state = "no-objective"
-        case ("objective" | "objective-blunt", "on-submit"):
-            next_state = "react"
-        case ("react", _):
-            next_state = "no-objective"
+        assert next_state is not None
 
-    assert next_state is not None
+        # if (
+        #     chat.state == "no-objective"
+        #     and "blunt" not in chat.objectives_used
+        # ):
+        #     chance = (
+        #         1
+        #         if len(chat.objectives_used)
+        #         >= len(generate_suggestions.objectives)
+        #         else 0.3
+        #     )
+        #     if random.random() < chance:
+        #         objective = "blunt-initial"
+        #         next_state = "objective-blunt"
 
-    # if chat_data.state == "no-objective" and "blunt" not in chat_data.objectives_used:
-    #     chance = (
-    #         1
-    #         if len(chat_data.objectives_used) >= len(generate_suggestions.objectives)
-    #         else 0.3
-    #     )
-    #     if random.random() < chance:
-    #         objective = "blunt-initial"
-    #         next_state = "objective-blunt"
+        response_content = await chat_generation.generate_agent_message(
+            user=user,
+            chat=chat,
+            state=next_state,
+            objective=objective,
+            problem=chat.current_problem,
+        )
 
-    response_content = await chat_generation.generate_agent_message(
-        user=user,
-        chat=chat_data,
-        state=next_state,
-        objective=objective,
-        problem=chat.current_problem,
-    )
+        response = ChatMessage(
+            sender=chat.agent,
+            content=response_content,
+            created_at=datetime.now(timezone.utc),
+        )
 
-    response = ChatMessage(
-        sender=chat_data.agent,
-        content=response_content,
-        created_at=datetime.now(timezone.utc),
-    )
-
-    async with chat_state.modify() as chat:
         chat.messages.append(response)
         chat.last_updated = datetime.now(timezone.utc)
         chat.agent_typing = False
@@ -135,54 +142,53 @@ async def generate_agent_message(
                 created_at=datetime.now(timezone.utc),
             )
         )
+        mark_changed()
 
-    if chat.state == "react":
-        if not objective:
-            async with chat_state.modify() as chat:
+        if chat.state == "react":
+            if not objective:
                 chat.state = "objective"
-        else:
-            async with chat_state.modify() as chat:
+            else:
                 chat.loading_feedback = True
+                mark_changed()
 
-            assert isinstance(chat.messages[-2], ChatMessage)
-            assert isinstance(chat.messages[-1], ChatMessage)
-            assert chat.current_problem is not None
+                assert isinstance(chat.messages[-2], ChatMessage)
+                assert isinstance(chat.messages[-1], ChatMessage)
+                assert chat.current_problem is not None
 
-            async def generate_feedback_suggestions():
-                follow_up = await message_generation.generate_message(
-                    user=user,
-                    user_sent=True,
-                    agent_name=chat.agent,
-                    messages=chat.messages,
-                    objective_prompt=generate_suggestions.objective_misunderstand_follow_up_prompt(
-                        objective, chat.current_problem
+                async def generate_feedback_suggestions():
+                    follow_up = await message_generation.generate_message(
+                        user=user,
+                        user_sent=True,
+                        agent_name=chat.agent,
+                        messages=chat.messages,
+                        objective_prompt=generate_suggestions.objective_misunderstand_follow_up_prompt(
+                            objective, chat.current_problem
+                        ),
+                    )
+
+                    return [
+                        Suggestion(
+                            message=follow_up,
+                            objective=objective,
+                            problem=chat.current_problem,
+                        )
+                    ]
+
+                feedback, suggestions = await asyncio.gather(
+                    generate_feedback.explain_message(
+                        user,
+                        chat.agent,
+                        objective,
+                        chat.current_problem,
+                        chat.messages[-2].content,
+                        message_generation.format_messages_context_long(
+                            chat.messages, chat.agent
+                        ),
+                        chat.messages[-1].content,
                     ),
+                    generate_feedback_suggestions(),
                 )
 
-                return [
-                    Suggestion(
-                        message=follow_up,
-                        objective=objective,
-                        problem=chat.current_problem,
-                    )
-                ]
-
-            feedback, suggestions = await asyncio.gather(
-                generate_feedback.explain_message(
-                    user,
-                    chat.agent,
-                    objective,
-                    chat.current_problem,
-                    chat.messages[-2].content,
-                    message_generation.format_messages_context_long(
-                        chat.messages, chat.agent
-                    ),
-                    chat.messages[-1].content,
-                ),
-                generate_feedback_suggestions(),
-            )
-
-            async with chat_state.modify() as chat:
                 chat.messages.append(
                     InChatFeedback(
                         feedback=feedback, created_at=datetime.now(timezone.utc)
@@ -210,11 +216,11 @@ async def generate_agent_message(
                 )
                 chat.state = "react"
 
-    return chat_data
+            return chat
 
 
 async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message: str):
-    async with chat_state.modify() as chat:
+    async with chat_state.transaction() as (chat, mark_changed):
         chat.generating_suggestions = 3
         chat.events.append(
             ChatEvent(
@@ -225,62 +231,62 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
                 created_at=datetime.now(timezone.utc),
             )
         )
+        mark_changed()
 
-    context = message_generation.format_messages_context_short(
-        chat.messages, chat.agent
-    )
-
-    objective = None
-
-    if user.options.suggestion_generation == "random":
-        base_message = await message_generation.generate_message(
-            user=user,
-            agent_name=chat.agent,
-            user_sent=True,
-            messages=chat.messages,
-        )
-    else:
-        base_message = prompt_message
-
-    if chat.state == "no-objective":
-        suggestions = await generate_suggestions.generate_message_variations_ok(
-            context, base_message
-        )
-    elif chat.state == "objective":
-        if len(chat.objectives_used) >= len(generate_suggestions.objectives):
-            chat.objectives_used = []
-
-        (
-            objective,
-            suggestions,
-        ) = await generate_suggestions.generate_message_variations(
-            user,
-            chat.agent,
-            chat.objectives_used,
-            context,
-            base_message,
-            user.options.feedback_mode == "on-suggestion",
+        context = message_generation.format_messages_context_short(
+            chat.messages, chat.agent
         )
 
-        chat.objectives_used.append(objective)
-    elif chat.state == "objective-blunt":
-        (
-            objective,
-            suggestions,
-        ) = await generate_suggestions.generate_message_variations_blunt(
-            user,
-            chat.agent,
-            chat.objectives_used,
-            context,
-            base_message,
-            user.options.feedback_mode == "on-suggestion",
-        )
+        objective = None
 
-        chat.objectives_used.append("blunt")
-    else:
-        raise ValueError(f"Invalid chat state: {chat.state}")
+        if user.options.suggestion_generation == "random":
+            base_message = await message_generation.generate_message(
+                user=user,
+                agent_name=chat.agent,
+                user_sent=True,
+                messages=chat.messages,
+            )
+        else:
+            base_message = prompt_message
 
-    async with chat_state.modify() as chat:
+        if chat.state == "no-objective":
+            suggestions = await generate_suggestions.generate_message_variations_ok(
+                context, base_message
+            )
+        elif chat.state == "objective":
+            if len(chat.objectives_used) >= len(generate_suggestions.objectives):
+                chat.objectives_used = []
+
+            (
+                objective,
+                suggestions,
+            ) = await generate_suggestions.generate_message_variations(
+                user,
+                chat.agent,
+                chat.objectives_used,
+                context,
+                base_message,
+                user.options.feedback_mode == "on-suggestion",
+            )
+
+            chat.objectives_used.append(objective)
+        elif chat.state == "objective-blunt":
+            (
+                objective,
+                suggestions,
+            ) = await generate_suggestions.generate_message_variations_blunt(
+                user,
+                chat.agent,
+                chat.objectives_used,
+                context,
+                base_message,
+                user.options.feedback_mode == "on-suggestion",
+            )
+
+            chat.objectives_used.append("blunt")
+        else:
+            raise ValueError(f"Invalid chat state: {chat.state}")
+
         chat.suggestions = suggestions
         chat.generating_suggestions = 0
         chat.events.append(
@@ -298,7 +304,7 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
 
 
 async def send_message(chat_state: ChatState, user: UserData, index: int):
-    async with chat_state.modify() as chat:
+    async with chat_state.transaction() as (chat, _):
         assert chat.suggestions is not None
 
         suggestion = chat.suggestions[index]
@@ -334,7 +340,7 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
 
 
 async def mark_view_suggestion(chat_state: ChatState, index: int):
-    async with chat_state.modify() as chat:
+    async with chat_state.transaction() as (chat, _):
         assert chat.suggestions is not None
 
         suggestion = chat.suggestions[index]
@@ -349,5 +355,5 @@ async def mark_view_suggestion(chat_state: ChatState, index: int):
 
 
 async def mark_read(chat_state: ChatState):
-    async with chat_state.modify() as chat:
+    async with chat_state.transaction() as (chat, _):
         chat.unread = False

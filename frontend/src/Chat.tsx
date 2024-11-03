@@ -72,7 +72,11 @@ function Chat() {
   useEffect(() => resizeTextarea(), [input]);
 
   const sendSuggestion = useCallback(() => {
-    if (currentChat && chatIsLoaded(currentChat) && selectedSuggestion) {
+    if (
+      currentChat &&
+      chatIsLoaded(currentChat) &&
+      selectedSuggestion !== null
+    ) {
       if (
         !!currentChat.suggestions![selectedSuggestion].problem &&
         user!.options.feedback_mode == "on-suggestion"
