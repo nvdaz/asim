@@ -66,6 +66,40 @@ function Chat() {
 
   useEffect(() => resizeTextarea(), [input]);
 
+  const sendSuggestion = useCallback(() => {
+    if (currentChat && chatIsLoaded(currentChat) && selectedSuggestion) {
+      if (
+        !!currentChat.suggestions![selectedSuggestion].problem &&
+        user!.options.feedback_mode == "on-suggestion"
+      ) {
+        toast({
+          variant: "destructive",
+          description:
+            "The message you selected needs improvement. Please read the feedback and try selecting another message.",
+        });
+      } else {
+        sendChatMessage(selectedSuggestion);
+        setSelectedSuggestion(null);
+      }
+    }
+  }, [currentChat, selectedSuggestion]);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedSuggestion(null);
+      } else if (e.key === "Enter") {
+        sendSuggestion();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [sendSuggestion]);
+
   useEffect(() => {
     setInput("");
   }, [currentChat?.id]);
@@ -192,29 +226,14 @@ function Chat() {
                             </div>
                             <Button
                               size="icon"
-                              className="bg-transparent min-w-8 hover:bg-transparent hover:text-red-500 self-end text-white"
+                              className="bg-transparent min-w-8 hover:bg-transparent hover:text-red-500 self-end text-black dark:text-white shadow-none"
                               onClick={() => setSelectedSuggestion(null)}
                             >
                               <X />
                             </Button>
                           </div>
                           <Button
-                            onClick={() => {
-                              if (
-                                !!currentChat.suggestions![selectedSuggestion]
-                                  .problem &&
-                                user!.options.feedback_mode == "on-suggestion"
-                              ) {
-                                toast({
-                                  variant: "destructive",
-                                  description:
-                                    "The message you selected needs improvement. Please read the feedback and try selecting another message.",
-                                });
-                              } else {
-                                sendChatMessage(selectedSuggestion);
-                                setSelectedSuggestion(null);
-                              }
-                            }}
+                            onClick={sendSuggestion}
                             size="icon"
                             className="min-w-8 self-end"
                           >
