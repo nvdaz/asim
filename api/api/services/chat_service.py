@@ -159,14 +159,9 @@ async def generate_agent_message(
                     ),
                 )
 
-                explanation = await generate_suggestions.explain_suggestion(
-                    user, chat.agent, objective, None, follow_up
-                )
-
                 return [
                     Suggestion(
                         message=follow_up,
-                        feedback=explanation,
                         objective=objective,
                         problem=chat.current_problem,
                     )
