@@ -35,6 +35,11 @@ function Chat() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(
     null
   );
+  const chatEnd = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEnd.current?.scrollIntoView({ behavior: "instant" });
+  }, [chatEnd.current, currentChat]);
 
   const handleSend = useCallback(() => {
     suggestMessages(input);
@@ -189,6 +194,7 @@ function Chat() {
           <ChatInterface
             messages={currentChat ? currentChat?.messages || [] : []}
             typing={!!currentChat?.agent_typing}
+            chatEnd={chatEnd}
           />
           <Separator />
           <div className="flex flex-col gap-2 p-4">

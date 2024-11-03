@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { formatRelative } from "date-fns";
 import { motion } from "framer-motion";
-import { Fragment, useEffect, useMemo, useRef } from "react";
+import { Fragment, useMemo } from "react";
 import { useAuth } from "../auth-provider";
 import { ScrollArea } from "./scroll-area";
 
@@ -33,11 +33,12 @@ function capitalize(str: string) {
 export function ChatInterface({
   messages,
   typing,
+  chatEnd,
 }: {
   messages: (Message | InChatFeedback)[];
   typing: boolean;
+  chatEnd: React.RefObject<HTMLDivElement>;
 }) {
-  const chatEnd = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
   const groupedMessages = useMemo(() => {
@@ -62,10 +63,6 @@ export function ChatInterface({
 
     return grouped;
   }, [messages]);
-
-  useEffect(() => {
-    chatEnd.current?.scrollIntoView({ behavior: "instant" });
-  }, [chatEnd.current, messages]);
 
   return (
     <ScrollArea className="h-full w-full">
