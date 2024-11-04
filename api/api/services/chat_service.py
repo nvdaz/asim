@@ -91,7 +91,11 @@ async def generate_agent_message(
 
         match (chat.state, user.options.feedback_mode):
             case ("no-objective", _):
-                next_state = "objective"
+                next_state = (
+                    "objective"
+                    if len(generate_suggestions.objectives) > 0
+                    else "no-objective"
+                )
             case ("objective" | "objective-blunt", "on-suggestion"):
                 next_state = "no-objective"
             case ("objective" | "objective-blunt", "on-submit"):
@@ -101,19 +105,19 @@ async def generate_agent_message(
 
         assert next_state is not None
 
-        # if (
-        #     chat.state == "no-objective"
-        #     and "blunt" not in chat.objectives_used
-        # ):
-        #     chance = (
-        #         1
-        #         if len(chat.objectives_used)
-        #         >= len(generate_suggestions.objectives)
-        #         else 0.3
-        #     )
-        #     if random.random() < chance:
-        #         objective = "blunt-initial"
-        #         next_state = "objective-blunt"
+        if len(chat.objectives_used) > len(generate_suggestions.objectives):
+            chat.objectives_used = []
+
+        if (
+            chat.state == "no-objective"
+            and "blunt" not in chat.objectives_used
+            and len(chat.messages) > 1
+        ) and (
+            len(chat.objectives_used) >= len(generate_suggestions.objectives)
+            or random.random() < 0.4
+        ):
+            objective = "blunt-initial"
+            next_state = "objective-blunt"
 
         response_content = await chat_generation.generate_agent_message(
             user=user,

@@ -113,7 +113,7 @@ Output format: Output a json of the following format:
 """
 
 prompt = """
-{context}
+{scenario}
 
 {action}
 
@@ -126,10 +126,10 @@ How would {name} initiate a conversation?
 """
 
 continue_conversation_prompt = """
-{name} and {other_name} are having a conversation.
-How would {name} respond to {other_name}'s message to continue the conversation?
-Here is their conversation so far:
+Here is the conversation so far between {name} and {other_name}:
 {conversation}
+
+How would {name} respond to {other_name}'s last message?
 """
 
 
@@ -169,8 +169,7 @@ async def generate_message(
                 )
             ),
             name=sender_name,
-            context="You are planning a trip to Gloucester, Massachusetts with your "
-            "friend, and you are discussing the details of the trip.",
+            scenario=f"{sender_name} and {recipient_name} are colleagues who recently met at work and are planning a trip to Gloucester, Massachusetts. They are discussing the details of the trip.",
         )
         + "\n"
         + (

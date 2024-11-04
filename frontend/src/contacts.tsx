@@ -22,7 +22,7 @@ function ContactsContainer({
 }) {
   return (
     <div className="flex flex-col h-full">
-      <div className="flex flex-row items-center justify-between p-4">
+      <div className="flex flex-row items-center justify-between p-4 h-16">
         <span className="font-semibold">Contacts</span>
         <Button variant="link" className="ml-4" onClick={handleNewChat}>
           <SquarePen className="w-[20px]" />

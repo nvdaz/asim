@@ -292,7 +292,7 @@ async def handle_connection(
                     context, message
                 )
             elif chat.state == "objective":
-                if len(chat.objectives_used) >= len(generate_suggestions.objectives):
+                if len(chat.objectives_used) > len(generate_suggestions.objectives):
                     chat.objectives_used = []
 
                 (

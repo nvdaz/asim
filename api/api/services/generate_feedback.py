@@ -186,13 +186,13 @@ Here is the conversation history between {user} and {agent}:
 {context}
 
 From {agent}'s perspective, explain what caused them to respond to {user} in the way they did in their last message.
-The problem may be that {problem}. Focus mainly on {agent}'s most likely thought process.
+The problem might be that {problem}, but mainly focus on {agent}'s most likely thought process based on their response.
 Be encoruaging but friendly, and feel free to refer to 1-2 key words from {user}'s message.
 Limit your answer to a maximum of 100 words but shorter the better.
 
 Secondly, provide a title with less than 50 characters that accurately summarizes your feedback alongside an emoji.
 
-Respond with a JSON object with keys "title" and "body".
+Be very specific and explain your feedback so {user} understands! Talk to {user} in first person. Respond with a JSON object with keys "title" and "body".
 """
 
     prompt = prompt_template.format(

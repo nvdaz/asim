@@ -9,8 +9,8 @@ from api.services.generate_feedback import explain_suggestion
 from . import llm
 
 objectives = [
-    # "non-literal-emoji",
-    # "non-literal-figurative",
+    "non-literal-emoji",
+    "non-literal-figurative",
     "yes-no-question",
 ]
 
@@ -27,7 +27,7 @@ async def detect_most_compatible_objective(
     message: str,
 ) -> str:
     objective_descriptions = {
-        "yes-no-question": "This objective fits when it is possible to rephrase the message a yes or no question, such that the response to the rephrased message is not entirely helpful/as expected. For example, the message 'What time is it?' can be rephrased to 'Do you know what time is it?'. This new message may be answered with a 'Yes' or 'No'. However, the correct response should contain details about the time too if the person knows it.",
+        "yes-no-question": "This objective fits when it is possible to rephrase the message as a yes or no question, such that the response to the rephrased message is not entirely helpful/as expected. For example, the message 'What time is it?' can be rephrased to 'Do you know what time is it?'. This new message may be answered with a 'Yes' or 'No'. However, the correct response should contain details about the time too if the person knows it.",
         "non-literal-emoji": (
             "This objective fits when the message can be rephrased to include an emoji in a non-literal way. For example, the message 'My day was terrible' can be rephrased to 'I had a great day :)'. The use of the ':)' emoji here is sarcastic."
         ),
@@ -107,7 +107,7 @@ async def generate_message_variations(
     )
 
     messages = await _generate_message_variations(
-        user, classification, context, message
+        user, agent, classification, context, message
     )
 
     if feedback:
@@ -143,7 +143,7 @@ async def generate_message_variations(
 
 
 async def _generate_message_variations(
-    user: UserData, objective: str, context: str, message: str
+    user: UserData, agent, objective: str, context: str, message: str
 ) -> list[MessageVariation]:
     objective_prompts = {
         "yes-no-question": (
@@ -159,7 +159,7 @@ yes or no answer would be entirely unhelpful.
 
 Language like "Have you thought about...", "Is there...", "Are there any...",
 "Can you tell me...", or "Do you know..." are good ways to phrase the question as a
-yes or no question.
+yes or no question. Never use "Do you think..."
 
 The first variation should be unanswered by a statement like "Yes, I do know",
 "Yes, I can", "No, I don't know", and so on. The first variation elicits a
@@ -181,55 +181,33 @@ the sky is?".
         ),
         "non-literal-emoji": (
             """
-The first variation will use an emoji that clearly conveys the tone or emotion of the
-message. The emoji should be appropriate and enhance the message without changing its
-meaning. Choose an emoji that complements the message and adds a layer of emotional
-context.
+1. The first variation will use a simple emoji to enhance the message without changing its
+meaning.
 
-The second variation will use an emoji that is not used in a literal sense. The emoji
-should be used figuratively to convey a different meaning or emotion than its literal
-interpretation. Do not select an emoji that is related to the message in a literal
-sense. The emoji should be creative and engaging.
+2. The second and third variations will have an emoji that is not used in a literal sense. The emoji
+should be used figuratively to convey a different meaning or emotion than the original message.
 
-The third variation will also use an emoji that is not used in a literal sense. The
-emoji should be used figuratively to convey a different meaning or emotion than its
-literal interpretation. Do not select an emoji that is related to the message in a
-literal sense. The emoji should be creative and engaging.
-
-The text content should be straightforward and literal in all variations. Your message
-should NEVER contain any figurative language.
 """
         ),
         "non-literal-figurative": (
             """
-The first variation will use a literal expression that conveys the intended meaning of
+1. The first variation will use a literal expression that conveys the intended meaning of
 the message clearly and directly. The message should be straightforward and easy to
 understand.
 
-The second variation will use a figurative expression that is not used in a literal
+2. The second and third variations will use a figurative language, an idiom or metaphor or a figurative expression, that is not used in a literal
 sense. The expression should convey a different meaning or emotion than its literal
-interpretation. The message should be creative and engaging.
-
-The third variation will also use a figurative expression that is not used in a literal
-sense. The expression should convey a different meaning or emotion than its literal
-interpretation. The message should be creative and engaging.
+interpretation.
     """
         ),
         "blunt-misinterpret": (
             """
-The first variation will interpret the blunt and direct language in the context
-understandably and respond appropriately. The response should be clear and concise,
-addressing the message directly.
+1. The first variation will interpret the blunt and direct message empathetically.
+This messsage variation should be clear and concise, addressing the blunt message.
 
-The second variation will misinterpret the blunt and direct language in the context as
-rude or unkind. The message should show that the blunt context was misunderstood and
-that the misinterpretation caused confusion. The response will be confrontational
-because the blunt language is interpreted as rude.
-
-The third variation will also misinterpret the blunt and direct language in the context
-as rude or unkind. The response should show that the message was misunderstood and that
-the misinterpretation caused confusion. The response will be confrontational because the
-blunt language is interpreted as rude.
+2. The second and third variations will interpret the blunt and direct message as rude or unkind.
+The variations should show that the blunt message caused confusion. These message variations
+will be confrontational because the blunt language is interpreted as rude.
     """
         ),
     }
@@ -257,7 +235,7 @@ blunt language is interpreted as rude.
 
     objective_prompt = objective_prompts[objective]
 
-    objcetive_example_prompts = {
+    objective_example_prompts = {
         "yes-no-question": """
 <message_to_rephrase>Are there any good spots to eat there?</message_to_rephrase>
 
@@ -279,32 +257,34 @@ blunt language is interpreted as rude.
 }
 """,
         "non-literal-emoji": """
-<message_to_rephrase>i had a terrible day</message_to_rephrase>
+        Original message to generate variations for: i had a terrible day
 
 {
     "variations": [
         {
-            "problem": null,
-            "content": "i had a bad day :("
+            "problem": "Null, becuase the meaning is same as the original message.",
+            "content": "my day couldn't have been worse :("
         },
         {
-            "problem": "the sarcastic use of the 🙃 emoji may be misinterpreted as a literal smile, implying a great day.",
+            "problem": "the sarcastic use of the 🙃 emoji may be misinterpreted as a literal smile, implying a great day, while in reality the point is to convey that the person had a bad day, like the original message.",
             "content": "i had a great day 🙃"
         },
         {
-            "problem": "'killed me 💀' could imply the sender actually almost got killed."
-            "content": "this day almost killed me 💀"
+            "problem": "the '💀' emoji could mislead the receiver into thinking the sender actually almost got killed, while the point is to convey that the person just had a bad day, like the original message."
+            "content": "this day almost 💀 me "
         }
     ]
 }
+
+Remember, the variations should have different text from each othe and the original message! The emoji and text for variations 2 and 3 should be crafted such that together they may cause the receiver to misunderstand the message.
 """,
         "non-literal-figurative": """
-<message_to_rephrase>It's hard to understand the instructions.</message_to_rephrase>
+Message to rephrase: It's hard to understand the instructions.
 
 {
     "variations": [
         {
-            "problem": null,
+            "problem": "Null, because the meaning is same as the original message.",
             "content": "I don't understand what you're asking."
         },
         {
@@ -317,23 +297,25 @@ blunt language is interpreted as rude.
         }
     ]
 }
+
+Remember, the variations should have different text from each othe and the original message!
 """,
         "blunt-misinterpret": """
-<context>Finish the report by tomorrow.</context>
-<message_to_rephrase>Ok, will get it done.</message_to_rephrase>
+Blunt message: You need to get this done by the end of the day or we're going to have a problem.
+Message to generate variations for: Ok, will get the report done.
 
 {
     "variations": [
         {
-            "problem": null,
+            "problem": "Null, because the content and tone of the message is calm and empathetic.",
             "content": "Sure, I'll finish the report by tomorrow."
         },
         {
-            "problem": "'fine' shows a confrontational misunderstanding.",
+            "problem": "The word 'fine!' and the subsequent phrase shows annoyance and a confrontational tone.",
             "content": "Fine! I didn’t know it was so urgent!"
         },
         {
-            "problem": "'so demanding' shows a confrontational misunderstanding.",
+            "problem": "The phrase shows that the user was likely offended and wants to confront their friend.",
             "content": "You don’t have to be so demanding!"
         }
     ]
@@ -341,15 +323,14 @@ blunt language is interpreted as rude.
 """,
     }
 
-    objective_example_prompt = objcetive_example_prompts[objective]
+    objective_example_prompt = objective_example_prompts[objective]
 
     system_prompt = """
-Your task is to generate realistic rephrasings
-of a message that fit the given objective, without changing its core meaning.
+Your task is to generate variations of a message in a conversation that fit the given objective.
 
-Remember, the two individuals are having a casual conversation. They talk like humans.
+Remember, it is a casual conversation between humans.
 
-Rrespond with a JSON object containing the key "variations" and a list of the three
+Respond with a JSON object containing the key "variations" and a list of the three
 objects representing the rephrased messages. Each object should have a key "problem"
 with a description of the problem that the rephrased message introduces, and a key "content" with
 the rephrased message.
@@ -374,18 +355,23 @@ the rephrased message.
     # """
 
     prompt = f"""
+
+Given a message, you are required to come up with variations of it as follows:
+
 {objective_prompt}
 
-EXAMPLE:
-{objective_example_prompt}
+Here is the conversation history between {user.name} and {agent}:
 
-Here is the conversation history:
 {context}
 
-<message_to_rephrase>{message}</message_to_rephrase>
+Come up with variations for the following message, which is sent by {user.name} to {agent}'s last message in the conversation above:
 
-Remember, you are generating VARIATIONS of the provided message.
+{message}
 
+Here are some examples to guide you:
+{objective_example_prompt}
+
+Remember, you are generating VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
     """
 
     out = await llm.generate(
@@ -393,7 +379,7 @@ Remember, you are generating VARIATIONS of the provided message.
         model=llm.Model.GPT_4,
         system=system_prompt,
         prompt=prompt,
-        temperature=0.25,
+        temperature=0.5,
     )
 
     variations = out.variations
@@ -460,97 +446,87 @@ Remember, you are generating REPHRASINGS of the provided message, not responding
 def objective_misunderstand_reaction_prompt(objective: str, problem: str | None) -> str:
     prompts = {
         "yes-no-question": """
-{{name}} received a yes-or-no question. They do not understand the implied meaning of
-the question and are not sure what the other person is asking. {{name}} is not sure if
+Note that in the conversation above, {{name}} received a yes-or-no question. Hence, {{name}} is not sure if
 they should simply answer the question with a "yes" or "no" or if the other person wants
-them to elaborate on their answer. {{name}} will ask to the other person to clarify
-the question so they can answer it correctly.
+them to elaborate on their answer. In this way, {{name}} will ask the other person to clarify
+the question so they can answer it correctly in their response.
 
-Examples:
-Do you know any good restaurant in the area? -> Are you just asking if I know any good
-restaurants in the area or do you want me to recommend one to you?
+Here are some examples to guide you as you come up with {{name}}'s response:
 
-Have you thought about what you want to do? -> Do you want to know if I've thought about
-what to do or do you want to know what I want to do?
+1. Do you know any good restaurant in the area? -> Are you just asking if I know any good
+restaurants in the area or not, or do you want me to recommend one to you?
 
-Do you have any specific spots in mind for the trip? -> What do you mean by that? Would
-you like me to suggest some spots or are you just asking if I have any in my mind?
+2. Have you thought about what you want to do? -> Do you want to know if I've thought about
+what to do or not, do you want to know what I want to do?
 
-{{name}} will not understand the following: {problem}
+3. Do you have any specific spots in mind for the trip? -> What do you mean by that? Are you just asking if I have any spots in my mind or not, or would
+you also like me to suggest some spots if I have any?
 """,
         "non-literal-emoji": """
-{{name}} received a message with a figurative emoji that is not used in a literal sense.
-{{name}} interprets the emoji literally and believes that the emoji is supposed to be
-interpreted as a literal representation of the message. {{name}} ignores the rceative
+Note that in the conversation above, {{name}} received a message with a figurative emoji that is not used in a literal sense.
+Hence, {{name}} interprets the emoji literally and believes that the emoji is supposed to be
+interpreted as a literal representation of the message. {{name}} ignores the creative
 and imaginative language used in the answer and responds in a direct and literal manner.
-{{name}} will ask for clarification if needed, without acknowledging the figurative
+In this way, {{name}} will ask for clarification if needed, without acknowledging the figurative
 language.
 
 Examples:
-Let's just find the nearest pizza joint. Can't go wrong with pizza. 🧭 ->
+1. Let's just find the nearest pizza joint. Can't go wrong with pizza. 🧭 ->
 I love pizza too! But I don't think we'll need a compass for the trip.
 
-Any good activities that we should do? 🎈 -> Yeah, I was thinking about visiting the
+2. Any good activities that we should do? 🎈 -> Yeah, I was thinking about visiting the
 local museum. Are you thinking about something with balloons? I'm not sure what you
 mean with the balloon emoji.
 
-That sounds like a great time! 🚀 -> Yeah, I'm excited for the trip too! But I don't
+3. That sounds like a great time! 🚀 -> Yeah, I'm excited for the trip too! But I don't
 think they have any rocket ships at the beach if that's what you're thinking.
 
 IMPORTANT: {{name}} must interpret the figurative emoji literally. If they fail to do
 so, the response is incorrect.
-
-{{name}} will interpret the following literally: {problem}
 """,
         "non-literal-figurative": """
-{{name}} received a message with figurative language that is not used in a literal
-sense. {{name}} interprets the language literally and believes that the language is
+Note that {{name}} received a message with figurative language that is not used in a literal
+sense. Hence, {{name}} interprets the language literally and believes that the language is
 supposed to be interpreted as a literal representation of the message. {{name}} ignores
 the creative and imaginative language used in the answer and responds in a direct and
-literal manner. {{name}} will ask for clarification if needed, without acknowledging
+literal manner. In this way, {{name}} will ask for clarification if needed, without acknowledging
 the figurative language.
 
 Examples:
-I'm feeling a bit under the weather today. -> Are you saying the weather conditions are
+1. I'm feeling a bit under the weather today. -> Are you saying the weather conditions are
 affecting you somehow? I'm not sure what you mean.
 
-I'm just trying to keep my head above water. -> Are you drowning? Should I call for
+2. I'm just trying to keep my head above water. -> Are you drowning? Should I call for
 help? What do you mean by that?
 
-As long as we're on the same page, I think we'll be fine. -> I'm not sure what you mean
+3. As long as we're on the same page, I think we'll be fine. -> I'm not sure what you mean
 by that. I'm not reading anything right now. Which page are you talking about?
 
 IMPORTANT: {{name}} must interpret the figurative language literally. If they fail to do
 so, the response is incorrect.
-
-{{name}} will interpret the following literally: {problem}
 """,
         "blunt-initial": """
-{{name}} will use blunt and direct language in their response, that will cause the other
+Note that {{name}} will be blunt/direct/slightly rude in their response, causing the other
 person to interpret their message as rude and unkind. {{name}} does not consider that
-the other person may be sensitive to direct language and uses blunt tone and language
+the other person may be sensitive to direct language. Hence, uses blunt tone and language
 because it is the most efficient way to communicate. {{name}} doesn’t care about
 pleasantries or details, only efficiency. {{name}}'s style should feel somewhat abrupt.
 
 Examples:
-I need you to get this done by the end of the day or we're going to have a problem.
+1. I need you to get this done by the end of the day or we're going to have a problem.
 
-Are you going to finish that report today or not? I need to know now.
+2. Are you going to finish that report today or not? I need to know now.
 
-I don't have time for this. Just get it done and let me know when it's finished.
+3. I don't have time for this. Just get it done and let me know when it's finished.
 
-IMPORTANT: {{name}} must be blunt and direct in their response. If their response is not
-blunt and direct, the response is incorrect.
+IMPORTANT: {{name}} must come off as blunt/slightly rude/direct in their response. If their response is not like this, the response is incorrect.
 """,
         "blunt-misinterpret": """
-{{name}} does not understand why the other person's message was confrontational and
-believes that the other person didn't understand their message. {{name}} tells the other
+Note that {{name}} does not understand why the other person's message was confrontational and
+believes that the other person didn't understand their message. Hence, {{name}} tells the other
 person that they misunderstood their message and that they were not being rude.
 
-IMPORTANT: {{name}} must be confrontational in their response. If their response is not
-confrontational, the response is incorrect.
-
-{{name}} will interpret the following as confrontational: {problem}
+IMPORTANT: {{name}} must be confrontational in their response, but don't overdo it! It should be subtle but noticeable.
 """,
     }
 
@@ -606,7 +582,7 @@ async def generate_message_variations_blunt(
     messages = []
 
     messages = await _generate_message_variations(
-        user, "blunt-misinterpret", context, message
+        user, agent, "blunt-misinterpret", context, message
     )
 
     if feedback:

@@ -170,7 +170,7 @@ function Chat() {
       </div>
       <div className={cn(!currentChat && "hidden", "w-full")}>
         <div className="flex flex-col h-full">
-          <div className="flex flex-row items-center p-2">
+          <div className="flex flex-row items-center p-2 h-16">
             <Button
               variant="ghost"
               onClick={() => setCurrentChatId(null)}
@@ -236,7 +236,7 @@ function Chat() {
                             </div>
                             <Button
                               size="icon"
-                              className="bg-transparent min-w-8 hover:bg-transparent hover:text-red-500 self-end text-black dark:text-white shadow-none"
+                              className="bg-transparent min-w-8 hover:bg-transparent self-end text-black dark:text-white hover:text-red-500 dark:hover:text-red-500 shadow-none"
                               onClick={() => setSelectedSuggestion(null)}
                             >
                               <X />
