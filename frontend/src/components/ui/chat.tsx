@@ -19,6 +19,8 @@ interface InChatFeedback {
     title: string;
     body: string;
   };
+  alternative: string;
+  alternative_feedback: string;
   created_at: string;
 }
 
@@ -74,11 +76,7 @@ export function ChatInterface({
             </div>
             {group.map((msg, index) =>
               isFeedback(msg) ? (
-                <FeedbackBubble
-                  key={index}
-                  title={msg.feedback.title}
-                  body={msg.feedback.body}
-                />
+                <FeedbackBubble key={index} feedback={msg} />
               ) : (
                 <ChatBubble
                   key={index}
@@ -139,19 +137,21 @@ function ChatBubble({ content: message, isOutgoing = false }: ChatBubbleProps) {
   );
 }
 
-interface FeedbackBubbleProps {
-  title: string;
-  body: string;
-}
-
-function FeedbackBubble({ title, body }: FeedbackBubbleProps) {
+function FeedbackBubble({ feedback }: { feedback: InChatFeedback }) {
   return (
-    <div className="w-full my-4">
-      <div className="flex items-end">
-        <div className="mx-2 flex flex-col">
-          <div className="bg-accent text-accent-foreground rounded-md p-3">
-            <h2>{title}</h2>
-            <p className="text-sm">{body}</p>
+    <div className="w-full flex items-center justify-center">
+      <div className="max-w-screen-sm my-4">
+        <div className="flex items-end">
+          <div className="mx-2 flex flex-col">
+            <div className="bg-accent text-accent-foreground rounded-md p-3">
+              <h2 className="font-semibold">{feedback.feedback.title}</h2>
+              <p className="text-sm">{feedback.feedback.body}</p>
+              <h2 className="mt-4 font-semibold">Instead, You Could Say:</h2>
+              <p className="text-sm rounded-md bg-gray-300 p-2 my-1">
+                {feedback.alternative}
+              </p>
+              <p className="text-sm">{feedback.alternative_feedback}</p>
+            </div>
           </div>
         </div>
       </div>

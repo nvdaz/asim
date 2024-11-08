@@ -158,6 +158,9 @@ async def generate_agent_message(
                 assert isinstance(chat.messages[-2], ChatMessage)
                 assert isinstance(chat.messages[-1], ChatMessage)
                 assert chat.current_problem is not None
+                assert chat.best_suggestion is not None
+
+                alternative_message = chat.best_suggestion.message
 
                 async def generate_feedback_suggestions():
                     follow_up = await message_generation.generate_message(
@@ -178,24 +181,44 @@ async def generate_agent_message(
                         )
                     ]
 
-                feedback, suggestions = await asyncio.gather(
+                context = message_generation.format_messages_context_long(
+                    chat.messages, chat.agent
+                )
+
+                (
+                    feedback_original,
+                    suggestions,
+                ) = await asyncio.gather(
                     generate_feedback.explain_message(
                         user,
                         chat.agent,
                         objective,
                         chat.current_problem,
                         chat.messages[-2].content,
-                        message_generation.format_messages_context_long(
-                            chat.messages, chat.agent
-                        ),
+                        context,
                         chat.messages[-1].content,
                     ),
                     generate_feedback_suggestions(),
                 )
 
+                feedback_alternative = (
+                    await generate_feedback.explain_message_alternative(
+                        user,
+                        chat.agent,
+                        objective,
+                        alternative_message,
+                        context,
+                        original=chat.messages[-2].content,
+                        feedback_original=feedback_original.body,
+                    )
+                )
+
                 chat.messages.append(
                     InChatFeedback(
-                        feedback=feedback, created_at=datetime.now(timezone.utc)
+                        feedback=feedback_original,
+                        alternative=alternative_message,
+                        alternative_feedback=feedback_alternative,
+                        created_at=datetime.now(timezone.utc),
                     )
                 )
                 chat.suggestions = suggestions
@@ -203,7 +226,7 @@ async def generate_agent_message(
                 chat.events.append(
                     ChatEvent(
                         name="feedback-generated",
-                        data=feedback,
+                        data=feedback_original,
                         created_at=datetime.now(timezone.utc),
                     )
                 )
@@ -237,7 +260,7 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
         )
         mark_changed()
 
-        context = message_generation.format_messages_context_short(
+        context = message_generation.format_messages_context_long(
             chat.messages, chat.agent
         )
 
@@ -255,7 +278,11 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
 
         if chat.state == "no-objective":
             suggestions = await generate_suggestions.generate_message_variations_ok(
-                context, base_message
+                user,
+                chat.agent,
+                context,
+                base_message,
+                user.options.feedback_mode == "on-suggestion",
             )
         elif chat.state == "objective":
             if len(chat.objectives_used) >= len(generate_suggestions.objectives):
@@ -330,6 +357,7 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
             )
         )
         chat.last_updated = datetime.now(timezone.utc)
+        chat.best_suggestion = chat.suggestions[0]
         chat.suggestions = None
         chat.events.append(
             ChatEvent(

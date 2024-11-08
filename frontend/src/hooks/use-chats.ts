@@ -12,6 +12,8 @@ type Message = {
 type Feedback = {
   title: string;
   body: string;
+  alternative: string;
+  alternative_feedback: string;
 };
 
 type InChatFeedback = {

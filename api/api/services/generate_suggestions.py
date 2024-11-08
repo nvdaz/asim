@@ -72,7 +72,7 @@ async def detect_most_compatible_objective(
 
     out = await llm.generate(
         schema=ObjectiveOut,
-        model=llm.Model.GPT_4,
+        model=llm.Model.GPT_4o,
         system=system.format(objectives_consider_str=objectives_consider_str),
         prompt=prompt,
     )
@@ -114,7 +114,12 @@ async def generate_message_variations(
         explanations = await asyncio.gather(
             *[
                 explain_suggestion(
-                    user, agent, classification, variation.problem, variation.content
+                    user,
+                    agent,
+                    classification,
+                    variation.problem,
+                    context,
+                    variation.content,
                 )
                 for variation in messages
             ]
@@ -187,6 +192,7 @@ meaning.
 2. The second and third variations will have an emoji that is not used in a literal sense. The emoji
 should be used figuratively to convey a different meaning or emotion than the original message.
 
+Even though the focus is on the emoji, the text content MUST also be different between each variation.
 """
         ),
         "non-literal-figurative": (
@@ -276,7 +282,7 @@ will be confrontational because the blunt language is interpreted as rude.
     ]
 }
 
-Remember, the variations should have different text from each othe and the original message! The emoji and text for variations 2 and 3 should be crafted such that together they may cause the receiver to misunderstand the message.
+Remember, the variations should have different text from each other and the original message! The emoji and text for variations 2 and 3 should be crafted such that together they may cause the receiver to misunderstand the message.
 """,
         "non-literal-figurative": """
 Message to rephrase: It's hard to understand the instructions.
@@ -298,7 +304,7 @@ Message to rephrase: It's hard to understand the instructions.
     ]
 }
 
-Remember, the variations should have different text from each othe and the original message!
+Remember, the variations should have different text from each other and the original message!
 """,
         "blunt-misinterpret": """
 Blunt message: You need to get this done by the end of the day or we're going to have a problem.
@@ -312,14 +318,14 @@ Message to generate variations for: Ok, will get the report done.
         },
         {
             "problem": "The word 'fine!' and the subsequent phrase shows annoyance and a confrontational tone.",
-            "content": "Fine! I didn’t know it was so urgent!"
+            "content": "Fine I'll do it! I didn’t know it was so urgent!"
         },
         {
             "problem": "The phrase shows that the user was likely offended and wants to confront their friend.",
-            "content": "You don’t have to be so demanding!"
+            "content": "I’ll get it done. But you don’t have to be so demanding!"
         }
     ]
-    }
+}
 """,
     }
 
@@ -336,26 +342,7 @@ with a description of the problem that the rephrased message introduces, and a k
 the rephrased message.
 """
 
-    #     prompt = f"""
-    # Here is your objective: {objective_prompt}
-
-    # Your task is to come up 3 variations of a given message as follows:
-
-    # {objective_example_prompt}
-
-    # Here is the conversation history:
-    # {context}
-
-    # You are generating rephrasings of this message, which is the next message in the history above sent by {user.name}.
-    # {message}
-
-    # Remember, you are generating VARIATIONS of the provided message in the
-    # message_to_rephrase tag. DO NOT respond to the message. The second and third variations must be problematic (i.e., they could lead to Yes or No response)
-
-    # """
-
     prompt = f"""
-
 Given a message, you are required to come up with variations of it as follows:
 
 {objective_prompt}
@@ -368,15 +355,15 @@ Come up with variations for the following message, which is sent by {user.name} 
 
 {message}
 
-Here are some examples to guide you:
+Here is an example to guide you:
 {objective_example_prompt}
 
 Remember, you are generating VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
-    """
+"""
 
     out = await llm.generate(
         schema=MessageVariationOut,
-        model=llm.Model.GPT_4,
+        model=llm.Model.GPT_4o,
         system=system_prompt,
         prompt=prompt,
         temperature=0.5,
@@ -389,25 +376,52 @@ Remember, you are generating VARIATIONS of {user.name}'s message, not responding
 
 
 async def generate_message_variations_ok(
-    context: str, message: str
+    user: UserData, agent: str, context: str, message: str, feedback: bool
 ) -> list[Suggestion]:
-    messages = await _generate_message_variations_ok(context, message)
-    suggestions = [
-        Suggestion(
-            message=message,
-            problem=None,
-            objective="ok",
+    messages = await _generate_message_variations_ok(user, agent, context, message)
+    if feedback:
+        explanations = await asyncio.gather(
+            *[
+                explain_suggestion(
+                    user,
+                    agent,
+                    "generic",
+                    None,
+                    context,
+                    message,
+                )
+                for message in messages
+            ]
         )
-        for message in messages
-    ]
+
+        suggestions = [
+            Suggestion(
+                message=message,
+                problem=None,
+                objective=None,
+                feedback=explanation,
+            )
+            for message, explanation in zip(messages, explanations)
+        ]
+    else:
+        suggestions = [
+            Suggestion(
+                message=message,
+                problem=None,
+                objective=None,
+            )
+            for message in messages
+        ]
     return suggestions
 
 
-async def _generate_message_variations_ok(context: str, message: str) -> list[str]:
+async def _generate_message_variations_ok(
+    user: UserData, agent: str, context: str, message: str
+) -> list[str]:
     system_prompt = """
 You are a message rephrasing generator. Your task is to generate realistic rephrasings
-of the message that fit the given objective. Your top priority is to ensure that the
-message are rephrased to fit the context of the conversation and the given objective.
+of the message. Your top priority is to ensure that the message is rephrased to fit the
+context of the conversation.
 
 Remember, the two individuals are having a casual conversation. They talk like humans,
 so they may stumble over their words, repeat themselves, or change the subject abruptly.
@@ -423,19 +437,20 @@ rephrasings as strings.
 """
 
     prompt = f"""
+Here is the conversation history between {user.name} and {agent}:
+
 {context}
 
-You are generating rephrasings of the message below.
-<message_to_rephrase>
-{message}
-</message_to_rephrase>
+Come up with variations for the following message, which is sent by {user.name} to {agent}'s last message in the conversation above:
 
-Remember, you are generating REPHRASINGS of the provided message, not responding to it.
+{message}
+
+Remember, you are generating VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
 """
 
     out = await llm.generate(
         schema=MessageVariationOutOk,
-        model=llm.Model.GPT_4,
+        model=llm.Model.GPT_4o,
         system=system_prompt,
         prompt=prompt,
     )
@@ -446,21 +461,20 @@ Remember, you are generating REPHRASINGS of the provided message, not responding
 def objective_misunderstand_reaction_prompt(objective: str, problem: str | None) -> str:
     prompts = {
         "yes-no-question": """
-Note that in the conversation above, {{name}} received a yes-or-no question. Hence, {{name}} is not sure if
-they should simply answer the question with a "yes" or "no" or if the other person wants
-them to elaborate on their answer. In this way, {{name}} will ask the other person to clarify
-the question so they can answer it correctly in their response.
+Note that in the conversation above, {{name}} received a yes-or-no question.
+{{name}} is not sure if they should simply answer the question literally with "yes" or "no", which wouldn't contribute to the conversation as much as elaborating themslves more.
+{{name}} will only ask for clarification, without assuming the intention behind the question because it is innapropriate to do so.
 
-Here are some examples to guide you as you come up with {{name}}'s response:
+Here are some samples to guide you as you come up with {{name}}'s response, which should be a clarification of the question:
 
-1. Do you know any good restaurant in the area? -> Are you just asking if I know any good
-restaurants in the area or not, or do you want me to recommend one to you?
+Sample Message 1: Do you know any good restaurant in the area?
+Sample Response 1: Are you just asking if I know any good restaurants in the area or not, or do you want me to recommend one to you?
 
-2. Have you thought about what you want to do? -> Do you want to know if I've thought about
-what to do or not, do you want to know what I want to do?
+Sample Message 2: Have you thought about what you want to do?
+Sample Response 2: Do you want to know if I've thought about what to do or not, do you want to know what I want to do?
 
-3. Do you have any specific spots in mind for the trip? -> What do you mean by that? Are you just asking if I have any spots in my mind or not, or would
-you also like me to suggest some spots if I have any?
+Sample Message 3: Do you have any specific spots in mind for the trip?
+Sample Response 3: Are you just asking if I have any spots in my mind or not, or would you like me to suggest some spots?
 """,
         "non-literal-emoji": """
 Note that in the conversation above, {{name}} received a message with a figurative emoji that is not used in a literal sense.
@@ -471,15 +485,14 @@ In this way, {{name}} will ask for clarification if needed, without acknowledgin
 language.
 
 Examples:
-1. Let's just find the nearest pizza joint. Can't go wrong with pizza. 🧭 ->
-I love pizza too! But I don't think we'll need a compass for the trip.
+Sample Message 1: Let's just find the nearest pizza joint. Can't go wrong with pizza. 🧭
+Sample Response 1: I love pizza too! But I don't think we'll need a compass for the trip.
 
-2. Any good activities that we should do? 🎈 -> Yeah, I was thinking about visiting the
-local museum. Are you thinking about something with balloons? I'm not sure what you
-mean with the balloon emoji.
+Sample Message 2: I had a great day 🙃
+Sampe Response 2: Did you actually have a great day? The emoji's smiling but it's upside down, so I'm not really sure.
 
-3. That sounds like a great time! 🚀 -> Yeah, I'm excited for the trip too! But I don't
-think they have any rocket ships at the beach if that's what you're thinking.
+Sample Message 3: That sounds like a great time! 🚀
+Sampe Response 3: Yeah, I'm excited for the trip too! But I don't think they have any rocket ships at the beach if that's what you're thinking.
 
 IMPORTANT: {{name}} must interpret the figurative emoji literally. If they fail to do
 so, the response is incorrect.
@@ -525,6 +538,17 @@ IMPORTANT: {{name}} must come off as blunt/slightly rude/direct in their respons
 Note that {{name}} does not understand why the other person's message was confrontational and
 believes that the other person didn't understand their message. Hence, {{name}} tells the other
 person that they misunderstood their message and that they were not being rude.
+
+Examples:
+
+Sample Message 1: Fine, I'll do it! I didn’t know it was so urgent!
+Sample Response 1: I didn't intend to create urgency. Take your time please.
+
+Sample Message 2: Of course I can afford it! I'm not broke.
+Sample Response 2: I didn't mean to imply that you're broke. I was just asking if you wanted to split the bill.
+
+Sample Message 3: Why are you judging my abilities? I'm not incompetent.
+Sample Response 3: I didn't mean to imply that you're incompetent. I was just asking if you needed help.
 
 IMPORTANT: {{name}} must be confrontational in their response, but don't overdo it! It should be subtle but noticeable.
 """,
@@ -589,7 +613,12 @@ async def generate_message_variations_blunt(
         explanations = await asyncio.gather(
             *[
                 explain_suggestion(
-                    user, agent, "blunt-misinterpret", variant.problem, variant.content
+                    user,
+                    agent,
+                    "blunt-misinterpret",
+                    variant.problem,
+                    context,
+                    variant.content,
                 )
                 for variant in messages
             ]

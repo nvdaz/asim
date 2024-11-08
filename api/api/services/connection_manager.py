@@ -9,9 +9,10 @@ from api.services.chat_service import ChatState
 
 
 class ConnectionManager:
-    _on_change: dict[str, Callable[[ChatState], None]] = {}
-    _listeners: dict[ObjectId, Task] = {}
-    _actions: dict[ObjectId, tuple[ChatState, dict[str, Task]]] = {}
+    def __init__(self):
+        self._on_change: dict[str, Callable[[ChatState], None]] = {}
+        self._listeners: dict[ObjectId, Task] = {}
+        self._actions: dict[ObjectId, tuple[ChatState, dict[str, Task]]] = {}
 
     def _add_listener(self, chat_state: ChatState):
         if chat_state.id not in self._listeners:
@@ -19,6 +20,7 @@ class ConnectionManager:
             async def listen():
                 while True:
                     await chat_state.wait_for_change()
+                    print(f"sending", chat_state._chat.agent_typing)
                     for on_change_id in self._on_change:
                         self._on_change[on_change_id](chat_state)
 

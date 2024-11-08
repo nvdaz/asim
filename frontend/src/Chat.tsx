@@ -94,6 +94,14 @@ function Chat() {
   }, [currentChat, selectedSuggestion]);
 
   useEffect(() => {
+    if (currentChat && chatIsLoaded(currentChat)) {
+      if (currentChat.suggestions && currentChat.suggestions.length === 1) {
+        setSelectedSuggestion(0);
+      }
+    }
+  }, [selectedSuggestion, currentChat, setSelectedSuggestion]);
+
+  useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setSelectedSuggestion(null);
@@ -209,6 +217,12 @@ function Chat() {
                   currentChat?.suggestions ? (
                     selectedSuggestion !== null ? (
                       <div className="flex flex-col gap-2 w-full">
+                        {currentChat.suggestions.length == 1 && (
+                          <p className="text-secondary-foreground font-medium">
+                            Send this message to clarify and continue the
+                            conversation.
+                          </p>
+                        )}
                         {currentChat.suggestions[selectedSuggestion]
                           .feedback && (
                           <div className="flex flex-col gap-2 w-full bg-secondary p-4 rounded-md">
@@ -234,13 +248,15 @@ function Chat() {
                                   .message
                               }
                             </div>
-                            <Button
-                              size="icon"
-                              className="bg-transparent min-w-8 hover:bg-transparent self-end text-black dark:text-white hover:text-red-500 dark:hover:text-red-500 shadow-none"
-                              onClick={() => setSelectedSuggestion(null)}
-                            >
-                              <X />
-                            </Button>
+                            {currentChat.suggestions.length > 1 && (
+                              <Button
+                                size="icon"
+                                className="bg-transparent min-w-8 hover:bg-transparent self-end text-black dark:text-white hover:text-red-500 dark:hover:text-red-500 shadow-none"
+                                onClick={() => setSelectedSuggestion(null)}
+                              >
+                                <X />
+                              </Button>
+                            )}
                           </div>
                           <Button
                             onClick={sendSuggestion}
@@ -253,6 +269,10 @@ function Chat() {
                       </div>
                     ) : (
                       <div className="div flex flex-col gap-2 w-full align-end">
+                        <p className="text-secondary-foreground font-medium">
+                          Select the best message to send and continue the
+                          conversation.
+                        </p>
                         {currentChat.suggestions.map(({ message }, i) => (
                           <button
                             key={i}

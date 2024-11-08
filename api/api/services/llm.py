@@ -3,17 +3,21 @@ import json
 import logging
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from typing import TypeVar, overload
 
 import numpy as np
+import requests
 import websockets as ws
 from pydantic import BaseModel, TypeAdapter
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 _LLM_URI: str = os.getenv("LLM_URI", "")
+_LLM_KEY: str = os.getenv("LLM_KEY", "")
 
 assert _LLM_URI != "", "LLM_URI environment variable must be set"
+assert _LLM_KEY != "", "LLM_KEY environment variable must be set"
 
 
 class ModelVendor(str, Enum):
@@ -30,62 +34,55 @@ class ModelVendor(str, Enum):
 
 class Model(str, Enum):
     GPT_4 = "gpt4-new"
+    GPT_4o = "gpt-4o"
+    GPT_4o_mini = "4o-mini"
     GPT_3_5 = "gpt3-5"
     CLAUDE_3_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0"
     CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0"
 
     def vendor(self) -> ModelVendor:
         match self:
-            case Model.GPT_4 | Model.GPT_3_5:
+            case Model.GPT_4 | Model.GPT_3_5 | Model.GPT_4o | Model.GPT_4o_mini:
                 return ModelVendor.OPENAI
             case Model.CLAUDE_3_SONNET | Model.CLAUDE_3_HAIKU:
                 return ModelVendor.ANTHROPIC
 
 
-_GENERATE_SEMAPHORES = {
-    vendor: asyncio.Semaphore(vendor.concurrency_limit()) for vendor in ModelVendor
-}
-
-
 async def _generate_unchecked(
     model: Model, prompt: str, system: str, temperature: float | None = None
-):
-    async with _GENERATE_SEMAPHORES[model.vendor()], asyncio.timeout(120), ws.connect(
-        _LLM_URI
-    ) as conn:
-        action = {
-            "action": "runModel",
-            "model": model.value,
-            "system": system,
-            "prompt": prompt,
-            "temperature": temperature,
-        }
-        await conn.send(json.dumps(action))
+) -> str:
+    params = {
+        "model": model.value,
+        "system": system,
+        "query": prompt,
+        "lastk": 1,
+        "temperature": temperature,
+        "cache_match_thresh": 1.1,
+    }
 
-        response, response_dict = None, None
-        while response_dict is None or "message" in response_dict:
-            response = await conn.recv()
+    headers = {"x-api-key": _LLM_KEY}
 
-            response_dict = json.loads(response)
+    def make_request():
+        response = requests.get(_LLM_URI, headers=headers, params=params)
+        response.raise_for_status()
+        return response.json()
 
-            if (
-                "message" in response_dict
-                and response_dict["message"] == "Internal server error"
-            ):
-                logging.error(
-                    f"Could not invoke LLM generate: ISE. action: {action}. "
-                    f"response: {response}"
-                )
-                raise RuntimeError("Could not invoke LLM generate: ISE")
+    loop = asyncio.get_running_loop()
+    with ThreadPoolExecutor() as pool:
+        try:
+            res = await loop.run_in_executor(pool, make_request)
+        except requests.exceptions.HTTPError as e:
+            print(f"Request failed: {e}")
+            raise e
 
-        print("-----------------")
-        print(system)
-        print(prompt)
-        print("---")
-        print(response_dict)
-        print("-----------------")
+    print("-----------------")
+    print(system)
+    print(prompt)
+    print("---")
+    print(res)
+    print("-----------------")
 
-        return response_dict["result"]
+    return res["result"]
 
 
 SchemaType = TypeVar("SchemaType", bound=BaseModel)

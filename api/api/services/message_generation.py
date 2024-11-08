@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 
-from api.levels.states import MessageInstructions
 from api.schemas.chat import ChatMessage, InChatFeedback
 from api.schemas.user import UserData
 
@@ -58,25 +57,7 @@ def format_messages_context_long(
     if len(messages) == 0:
         return ""
 
-    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-8:]])
-
-
-def _format_instructions(instructions: MessageInstructions | None) -> str:
-    if not instructions:
-        return ""
-
-    examples_str = (
-        (
-            "IMPORTANT: I MUST MODEL MY RESPONSE AFTER THE EXAMPLES BELOW.\n"
-            "<example_responses>\n"
-            + "\n".join([_format_example(example) for example in instructions.examples])
-            + "\n</example_responses>\n"
-        )
-        if instructions.examples
-        else ""
-    )
-
-    return f"\n{instructions.description}\n{examples_str}\n"
+    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages])
 
 
 system_prompt_template = """
@@ -105,6 +86,8 @@ reading score of 80 or higher. Avoid jargon except where necessary. Generally av
 adjectives, adverbs, and emojis.
 
 Change the topic when appropriate. Do not plan any events outside of the conversation.
+Keep the conversation going naturally. Do not end the conversation. Introduce new
+topics if the conversation is dying.
 
 Output format: Output a json of the following format:
 {{
@@ -112,24 +95,24 @@ Output format: Output a json of the following format:
 }}
 """
 
+action_begin = """
+Begin the conversation between {name} and {other_name}.
+"""
+
+action_continue = """
+Here is the conversation so far between {name} and {other_name}:
+{conversation}
+
+{objective_prompt}
+
+In {name}'s voice, generate their response to {other_name}'s last message in the convo above. The response should be such that the conversation is personalized for {other_name} based on the information provided about them in the scenario.
+"""
+
+# scenario is the situation in which the conversation is taking place (i.e. gloucester trip)
 prompt = """
 {scenario}
 
 {action}
-
-Reply using {name}'s voice. Do not copy the other person's style or language. That would
-be unrealistic.
-"""
-
-init_conversation_prompt = """
-How would {name} initiate a conversation?
-"""
-
-continue_conversation_prompt = """
-Here is the conversation so far between {name} and {other_name}:
-{conversation}
-
-How would {name} respond to {other_name}'s last message?
 """
 
 
@@ -157,34 +140,36 @@ async def generate_message(
 
     system_prompt = system_prompt_template.format(name=sender_name)
 
-    prompt_data = (
-        prompt.format(
-            action=(
-                init_conversation_prompt.format(name=sender_name)
-                if len(messages) == 0
-                else continue_conversation_prompt.format(
-                    name=sender_name,
-                    other_name=recipient_name,
-                    conversation=conversation_context,
-                )
-            ),
-            name=sender_name,
-            scenario=f"{sender_name} and {recipient_name} are colleagues who recently met at work and are planning a trip to Gloucester, Massachusetts. They are discussing the details of the trip.",
-        )
-        + "\n"
-        + (
-            "IMPORTANT: You MUST follow these instructions when generating the "
-            "response. These insights are crucial to the conversation.\n"
-            + objective_prompt.format(name=sender_name)
+    action_prompt = action_begin if len(messages) == 0 else action_continue
+
+    action = action_prompt.format(
+        name=sender_name,
+        other_name=recipient_name,
+        conversation=conversation_context,
+        objective_prompt=(
+            objective_prompt.format(name=sender_name)
             + "\n"
+            + "IMPORTANT: You MUST follow these instructions when generating the "
+            "response. These insights are crucial to the conversation.\n"
             if objective_prompt
             else ""
-        )
+        ),
+    )
+
+    prompt_data = prompt.format(
+        name=sender_name,
+        other_name=recipient_name,
+        conversation=conversation_context,
+        scenario=f"""
+Here is the scenario:
+{agent_name} wants to plan a trip with {user.name}. Both of them are colleagues at work who recently met each other. They work at Google and live in New York. {user.name} is 26 years old, male (he/him) and a Computer Scientist. {user.name} is originally from Boston, MA. Politically, {user.name} is a liberal. {user.name} is vegetarian, and likes to bike and run a lot. {user.name} likes Orlando, Florida because of its sunny weather, theme parks and close proximity to beaches. In this conversation, {agent_name} will float the idea of planning a trip to Orlando, Florida, discuss details/itinerary and convince {user.name} to join them.
+""",
+        action=action,
     )
 
     response = await llm.generate(
         schema=Message,
-        model=llm.Model.GPT_4,
+        model=llm.Model.GPT_4o,
         system=system_prompt,
         prompt=prompt_data,
     )
@@ -219,7 +204,7 @@ async def decide_whether_to_message(
 
     res = await llm.generate(
         schema=DecideToMessageOutput,
-        model=llm.Model.GPT_4,
+        model=llm.Model.GPT_4o,
         system=system_prompt,
         prompt=prompt_data,
     )

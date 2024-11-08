@@ -21,6 +21,8 @@ class ChatMessage(BaseModel):
 
 class InChatFeedback(BaseModel):
     feedback: Feedback
+    alternative: str | None = None
+    alternative_feedback: str | None = None
     created_at: UTCDatetime
 
 
@@ -58,6 +60,7 @@ class BaseChat(BaseModel):
     unread: bool = False
     objectives_used: list[str] = []
     state: str = "no-objective"
+    best_suggestion: Suggestion | None = None
     suggestions: list[Suggestion] | None = None
     events: list[ChatEvent] = []
 
