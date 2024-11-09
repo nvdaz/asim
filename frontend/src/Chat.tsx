@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, ChevronLeft, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChatInterface } from "./components/ui/chat";
+import { ChatInterface, InChatFeedback, Message } from "./components/ui/chat";
 import { Loading } from "./components/ui/loading";
 import { Skeleton } from "./components/ui/skeleton";
 import { Textarea } from "./components/ui/textarea";
@@ -204,7 +204,11 @@ function Chat() {
           <Separator />
           {!(currentChat && "messages" in currentChat) && <Loading />}
           <ChatInterface
-            messages={currentChat ? currentChat?.messages || [] : []}
+            messages={
+              currentChat
+                ? (currentChat?.messages as (Message | InChatFeedback)[]) || []
+                : []
+            }
             typing={!!currentChat?.agent_typing}
             chatEnd={chatEnd}
           />

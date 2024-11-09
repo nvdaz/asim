@@ -197,6 +197,10 @@ async def generate_agent_message(
                         chat.messages[-2].content,
                         context,
                         chat.messages[-1].content,
+                        chat.messages[-3].content
+                        if len(chat.messages) > 2
+                        and isinstance(chat.messages[-3], ChatMessage)
+                        else None,
                     ),
                     generate_feedback_suggestions(),
                 )

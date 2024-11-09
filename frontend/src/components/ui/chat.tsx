@@ -5,7 +5,7 @@ import { Fragment, useMemo } from "react";
 import { useAuth } from "../auth-provider";
 import { ScrollArea } from "./scroll-area";
 
-interface Message {
+export interface Message {
   id?: number;
   content: string;
   sender: string;
@@ -14,7 +14,7 @@ interface Message {
   created_at: string;
 }
 
-interface InChatFeedback {
+export interface InChatFeedback {
   feedback: {
     title: string;
     body: string;

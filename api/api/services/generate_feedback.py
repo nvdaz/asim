@@ -203,7 +203,10 @@ async def explain_message(
     message: str,
     context: str,
     reaction: str,
+    last3: str | None,
 ) -> Feedback:
+    if not last3:
+        last3 = "** Not given **"
     objective_prompts = {
         "yes-no-question": """
 {user} asked a yes-or-no question that could be interpreted as either a yes or no
@@ -232,20 +235,49 @@ communication styles and some may prefer straightforward language to avoid confu
 """,
         "blunt-misinterpret": """
 {user} was confrontational in response to {agent}'s blunt and direct language and
-misinterpreted {agent}'s blunt language as rude. Explain how this might be {agent}'s
-natural way of speaking. Clarify to {user} what {agent} probably wanted to convey and
-that they did not intend to be rude. Briefly mention that {user} should consider
-resonding in a more neutral way since people may have different communication styles,
+misinterpreted {agent}'s blunt language as rude. First, float the idea that {agent} was
+possibly just being straightforward as this might be {agent}'s
+preferred way of speaking; explain the meaning of their blunt message from this perspective.
+This is the blunt message by {agent}:
+{last3}
+
+Then, briefly mention that {user} should consider
+resonding in a more thoughtful way since people may have different communication styles,
 and some may naturally sound blunt.
 """,
     }
 
-    objective_prompt = objective_prompts[objective].format(user=user.name, agent=agent)
+    examples = {
+        "blunt-misinterpret": """
+At the end is a model output to help you out:
+Blunt message by John: Kyle, we already talked about finding budget-friendly places. How about you just search for some cheap hostels or Airbnbs? We don't have time to go back and forth on this.
+Confrontational message by Kyle: I thought you would have some suggestions ready.
+John's reaction: I didn't mean I wouldn't help, Kyle. I thought you'd want to find some options since you're so into exploring and all that. I can help you search if you need it.
+
+{{
+    "title": "Avoid Confrontational Tone 🗣️",
+    "feedback": "John was possibly just being straightforward and wanted to clarify that you should look for cheap hostels or Airbnbs as there is not a lot of time left until the trip. The phrase 'I thought you would have some suggestions ready' can come across as confrontational and show annoyance. John might have taken this as you being upset that he didn't have recommendations prepared. This might not have been clear, likely causing the misunderstanding."
+}}
+""",
+        "figurative": """
+At the end is a model output based on the following sample original message:
+"How about we find a place where we can dip our toes in the ocean right from our balcony?"
+
+{{
+    "title": "Clarify Figurative Expressions 🗣️",
+    "feedback": "When you mentioned 'dip our toes in the ocean right from our balcony,' Stephanie took it literally, thinking you actually wanted to be able to dip your toes in the ocean from the balcony. It might have helped to clearly specify that you're looking for a place with an ocean view and easy beach access to avoid confusion! 😊"
+}}
+""",
+    }
+
+    example = examples.get(objective, examples["figurative"])
+
+    objective_prompt = objective_prompts[objective].format(
+        user=user.name, agent=agent, last3=last3
+    )
 
     system_prompt_template = """
 As a helpful communication guide, you are guiding {user} on their conversation with {agent}.
-
-{objective_prompt}
 
 Respond with a JSON object with keys "title" and "feedback" containing your feedback.
 """
@@ -254,10 +286,11 @@ Respond with a JSON object with keys "title" and "feedback" containing your feed
         objective_prompt=objective_prompt,
         user=user.name,
         agent=agent,
-        # problem=problem,
     )
 
     prompt_template = """
+{objective_prompt}
+
 Here is the conversation history between {user} and {agent}:
 {context}
 
@@ -282,14 +315,7 @@ Secondly, provide a title with less than 50 characters that accurately summarize
 Remember, explain to {user} what elements of the original message are confusing for {agent}.
 You MUST NEVER repeat the original message in your feedback.
 
-
-At the end is a model output based on the following sample original message:
-"How about we find a place where we can dip our toes in the ocean right from our balcony?"
-
-{{
-    "title": "Clarify Figurative Expressions 🗣️",
-    "feedback": "When you mentioned 'dip our toes in the ocean right from our balcony,' Stephanie took it literally, thinking you actually wanted to be able to dip your toes in the ocean from the balcony. It might have helped to clearly specify that you're looking for a place with an ocean view and easy beach access to avoid confusion! 😊"
-}}
+{example}
 """
 
     prompt = prompt_template.format(
@@ -299,6 +325,8 @@ At the end is a model output based on the following sample original message:
         original=message,
         reaction=reaction,
         problem=problem,
+        objective_prompt=objective_prompt,
+        example=example,
     )
 
     out = await llm.generate(

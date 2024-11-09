@@ -57,7 +57,7 @@ def format_messages_context_long(
     if len(messages) == 0:
         return ""
 
-    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages])
+    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-20:]])
 
 
 system_prompt_template = """
@@ -162,7 +162,7 @@ async def generate_message(
         conversation=conversation_context,
         scenario=f"""
 Here is the scenario:
-{agent_name} wants to plan a trip with {user.name}. Both of them are colleagues at work who recently met each other. They work at Google and live in New York. {user.name} is 26 years old, male (he/him) and a Computer Scientist. {user.name} is originally from Boston, MA. Politically, {user.name} is a liberal. {user.name} is vegetarian, and likes to bike and run a lot. {user.name} likes Orlando, Florida because of its sunny weather, theme parks and close proximity to beaches. In this conversation, {agent_name} will float the idea of planning a trip to Orlando, Florida, discuss details/itinerary and convince {user.name} to join them.
+{agent_name} wants to plan a trip with {user.name}. Both of them are colleagues at work who recently met each other. They work at Google and live in New York. {user.name} is 26 years old, male (he/him) and a Computer Scientist. {user.name} is originally from Boston, MA. Politically, {user.name} is a liberal. {user.name} is vegetarian, and likes to bike and run a lot. {user.name} likes Orlando, Florida because of its sunny weather, theme parks and close proximity to beaches. {user.name} loves Coldplay concerts and swimming. They are on a tight budget. {user.name} likes to explore stuff like paranormal phenomena, abandoned houses, and picking locks. In this conversation, {agent_name} will float the idea of planning a trip to Orlando, Florida, discuss details/itinerary and convince {user.name} to join them.
 """,
         action=action,
     )

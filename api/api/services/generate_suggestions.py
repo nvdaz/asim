@@ -9,9 +9,9 @@ from api.services.generate_feedback import explain_suggestion
 from . import llm
 
 objectives = [
-    "non-literal-emoji",
-    "non-literal-figurative",
-    "yes-no-question",
+    # "non-literal-emoji",
+    # "non-literal-figurative",
+    # "yes-no-question",
 ]
 
 
@@ -213,7 +213,7 @@ This messsage variation should be clear and concise, addressing the blunt messag
 
 2. The second and third variations will interpret the blunt and direct message as rude or unkind.
 The variations should show that the blunt message caused confusion. These message variations
-will be confrontational because the blunt language is interpreted as rude.
+will be confrontational in a subtle way because the blunt language is interpreted as rude.
     """
         ),
     }
@@ -519,11 +519,10 @@ IMPORTANT: {{name}} must interpret the figurative language literally. If they fa
 so, the response is incorrect.
 """,
         "blunt-initial": """
-Note that {{name}} will be blunt/direct/slightly rude in their response, causing the other
-person to interpret their message as rude and unkind. {{name}} does not consider that
+Note that {{name}} will be blunt/direct in a subtle way in their response, causing the other
+person to interpret their message as seemingly rude. {{name}} does not consider that
 the other person may be sensitive to direct language. Hence, uses blunt tone and language
-because it is the most efficient way to communicate. {{name}} doesn’t care about
-pleasantries or details, only efficiency. {{name}}'s style should feel somewhat abrupt.
+because it is the most efficient way to communicate.
 
 Examples:
 1. I need you to get this done by the end of the day or we're going to have a problem.
