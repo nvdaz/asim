@@ -11,12 +11,14 @@ import { Textarea } from "./components/ui/textarea";
 import Contacts from "./contacts";
 
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "./components/auth-provider";
 import { chatIsLoaded } from "./hooks/use-chats";
 import { useCurrentChat } from "./hooks/use-current-chat";
 import { cn } from "./lib/utils";
 
 function Chat() {
+  const { token } = useAuth();
   const {
     isConnected,
     isError,
@@ -36,6 +38,13 @@ function Chat() {
     null
   );
   const chatEnd = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/");
+    }
+  }, [token]);
 
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "instant" });

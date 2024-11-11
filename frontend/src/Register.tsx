@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./components/auth-provider";
 import {
@@ -129,6 +130,12 @@ function Register() {
         navigate("/chat");
       });
   };
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/");
+    }
+  });
 
   const scenarioType = form.watch("scenario.type");
 
@@ -316,7 +323,7 @@ function Register() {
                       <FormLabel>Vacation Explanation</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="I love the beaches and the food!"
+                          placeholder="The beaches are beautiful and the food is amazing"
                           {...field}
                         />
                       </FormControl>

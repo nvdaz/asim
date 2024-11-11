@@ -1,33 +1,29 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "./components/auth-provider";
 
 function App() {
-  const [count, setCount] = useState(0);
+  const { token } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (token) {
+      navigate("/chat");
+    }
+  });
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
+    <div className="container relative h-full flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 px-8">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Hello! You are not logged in.
+        </h1>
+        <p className="text-lg">
+          If you are seeing this page, you have not logged in yet. Please use
+          the link that was provided to you to log in.
         </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   );
 }
 
