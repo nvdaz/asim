@@ -1,7 +1,7 @@
 import { createContext, useContext, useState } from "react";
 
 type User = {
-  name: string;
+  name: string | null;
   options: {
     feedback_mode: "on-submit" | "on-suggestion";
     suggestion_generation: "random" | "inspired";

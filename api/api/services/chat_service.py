@@ -339,6 +339,7 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
 
 
 async def send_message(chat_state: ChatState, user: UserData, index: int):
+    assert user.name
     async with chat_state.transaction() as (chat, _):
         assert chat.suggestions is not None
 

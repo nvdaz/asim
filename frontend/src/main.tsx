@@ -8,6 +8,7 @@ import "../index.css";
 import App from "./App.tsx";
 import Auth from "./Auth.tsx";
 import Chat from "./Chat.tsx";
+import Register from "./Register.tsx";
 
 const router = createBrowserRouter([
   {
@@ -22,6 +23,10 @@ const router = createBrowserRouter([
     path: "/auth/:magic",
     element: <Auth />,
   },
+  {
+    path: "/register",
+    element: <Register />,
+  }
 ]);
 
 createRoot(document.getElementById("root")!).render(

@@ -20,7 +20,6 @@ class ConnectionManager:
             async def listen():
                 while True:
                     await chat_state.wait_for_change()
-                    print(f"sending", chat_state._chat.agent_typing)
                     for on_change_id in self._on_change:
                         self._on_change[on_change_id](chat_state)
 

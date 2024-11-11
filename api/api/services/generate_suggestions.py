@@ -9,9 +9,9 @@ from api.services.generate_feedback import explain_suggestion
 from . import llm
 
 objectives = [
-    # "non-literal-emoji",
-    # "non-literal-figurative",
-    # "yes-no-question",
+    "non-literal-emoji",
+    "non-literal-figurative",
+    "yes-no-question",
 ]
 
 
@@ -218,26 +218,6 @@ will be confrontational in a subtle way because the blunt language is interprete
         ),
     }
 
-    #     objective_prompts = {
-    #         "yes-no-question": "Come up with 3 variations of the given message, such that the second and third variations lead to 'Yes' or 'No' responses.",
-    #         "non-literal-emoji": (
-    #             "This objective fits when the message can be rephrased to include an emoji in a non-literal way."
-    #         ),
-    #         "non-literal-figurative": (
-    #             "This objective fits when the message can be rephrased to include a figurative expression."
-    #         ),
-    #         "blunt-misinterpret": (
-    #             """ The first variation will interpret the blunt and direct language in the context
-    # understandably, as if it is not blunt, and respond appropriately. The response should be clear and concise,
-    # addressing the message directly.
-
-    # The second and third variation will misinterpret the blunt and direct language in the context as
-    # rude or unkind. The message should show that the blunt context was misunderstood and
-    # that the misinterpretation caused confusion. The response will be confrontational
-    # because the blunt language is interpreted as rude.
-    # """
-    #         ),
-    #     }
 
     objective_prompt = objective_prompts[objective]
 

@@ -48,7 +48,11 @@ function Auth() {
 
     if (state === "done") {
       timeout = window.setTimeout(() => {
-        navigate("/chat");
+        if (user!.name) {
+          navigate("/chat");
+        } else {
+          navigate("/register");
+        }
       }, 2500);
     }
 
@@ -89,7 +93,7 @@ function Auth() {
               </motion.h1>
             )}
             {state === "done" &&
-              (user ? (
+              (user!.name ? (
                 <motion.h1
                   key="welcome-back"
                   initial={{ opacity: 0, y: 20 }}
@@ -98,7 +102,7 @@ function Auth() {
                   transition={{ duration: 0.3 }}
                   className="text-2xl font-semibold tracking-tight"
                 >
-                  Welcome back, {user.name}!
+                  Welcome back, {user!.name}!
                 </motion.h1>
               ) : (
                 <motion.h1
@@ -109,7 +113,7 @@ function Auth() {
                   transition={{ duration: 0.3 }}
                   className="text-2xl font-semibold tracking-tight"
                 >
-                  Welcome!
+                  Welcome! Please complete your registration.
                 </motion.h1>
               ))}
           </AnimatePresence>

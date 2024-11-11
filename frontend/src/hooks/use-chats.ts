@@ -204,7 +204,7 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
         }
         chat.messages = [
           ...chat.messages,
-          { sender: user!.name, content, created_at: new Date().toISOString() },
+          { sender: user!.name!, content, created_at: new Date().toISOString() },
         ];
         chat.suggestions = undefined;
         return { ...chats, [id]: chat };

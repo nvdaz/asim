@@ -17,7 +17,8 @@ default_options = Options(
 
 
 class BaseUserData(BaseModel):
-    name: str
+    name: str | None = None
+    scenario: str | None = None
     options: Options = default_options
 
 
@@ -35,5 +36,6 @@ def user_from_data(data: UserData) -> User:
     return User(
         id=data.id,
         name=data.name,
+        scenario=data.scenario,
         options=data.options,
     )

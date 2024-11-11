@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from api.db import auth_tokens, magic_links
 from api.db import users as users
+from api.schemas import user
 from api.schemas.user import BaseUserData, User, UserData, user_from_data
 
 
@@ -47,10 +48,10 @@ async def login_user(secret: str) -> LoginResult:
     return LoginResult(user=user_from_data(user), token=token)
 
 
-async def create_magic_link(data: BaseUserData) -> str:
+async def create_magic_link(options: user.Options) -> str:
     secret = secrets.token_urlsafe(16)
 
-    user = await users.create(data)
+    user = await users.create(BaseUserData(options=options))
 
     link = magic_links.MagicLink(secret=secret, user_id=user.id)
     await magic_links.create(link)
@@ -62,12 +63,13 @@ class AlreadyInitialized(Exception):
     pass
 
 
-async def init_user(user_id: ObjectId, name: str) -> UserData:
+async def init_user(user_id: ObjectId, name: str, scenario: str) -> UserData:
     user = await users.get(user_id)
 
     if not user:
         raise ValueError("User not found")
 
     user.name = name
+    user.scenario = scenario
 
     return await users.update(user_id, user)

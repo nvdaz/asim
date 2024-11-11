@@ -108,8 +108,9 @@ Here is the conversation so far between {name} and {other_name}:
 In {name}'s voice, generate their response to {other_name}'s last message in the convo above. The response should be such that the conversation is personalized for {other_name} based on the information provided about them in the scenario.
 """
 
-# scenario is the situation in which the conversation is taking place (i.e. gloucester trip)
+# scenario is the situation in which the conversation is taking place (e.g. gloucester trip)
 prompt = """
+Here is the scenario:
 {scenario}
 
 {action}
@@ -133,6 +134,7 @@ async def generate_message(
     messages: list[ChatMessage | InChatFeedback],
     objective_prompt: str | None = None,
 ) -> str:
+    assert user.name
     sender_name = user.name if user_sent else agent_name
     recipient_name = agent_name if user_sent else user.name
 
@@ -156,14 +158,13 @@ async def generate_message(
         ),
     )
 
+    assert user.scenario
+
     prompt_data = prompt.format(
         name=sender_name,
         other_name=recipient_name,
         conversation=conversation_context,
-        scenario=f"""
-Here is the scenario:
-{agent_name} wants to plan a trip with {user.name}. Both of them are colleagues at work who recently met each other. They work at Google and live in New York. {user.name} is 26 years old, male (he/him) and a Computer Scientist. {user.name} is originally from Boston, MA. Politically, {user.name} is a liberal. {user.name} is vegetarian, and likes to bike and run a lot. {user.name} likes Orlando, Florida because of its sunny weather, theme parks and close proximity to beaches. {user.name} loves Coldplay concerts and swimming. They are on a tight budget. {user.name} likes to explore stuff like paranormal phenomena, abandoned houses, and picking locks. In this conversation, {agent_name} will float the idea of planning a trip to Orlando, Florida, discuss details/itinerary and convince {user.name} to join them.
-""",
+        scenario=user.scenario.format(user=user.name, agent=agent_name),
         action=action,
     )
 
