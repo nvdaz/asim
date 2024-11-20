@@ -16,10 +16,32 @@ default_options = Options(
 )
 
 
+class LocationOptions(BaseModel):
+    city: str
+    country: str
+
+
+class PlanVacationScenarioOptions(BaseModel):
+    vacation_destination: str
+    vacation_explanation: str
+
+
+class UserPersonalizationOptions(BaseModel):
+    name: str
+    age: str
+    gender: str
+    location: LocationOptions
+    company: str
+    occupation: str
+    interests: str
+    scenario: PlanVacationScenarioOptions
+    personality: list[str]
+
+
 class BaseUserData(BaseModel):
     name: str | None = None
-    scenario: str | None = None
     options: Options = default_options
+    personalization: UserPersonalizationOptions | None = None
 
 
 class UserData(BaseUserData):
@@ -36,6 +58,5 @@ def user_from_data(data: UserData) -> User:
     return User(
         id=data.id,
         name=data.name,
-        scenario=data.scenario,
         options=data.options,
     )

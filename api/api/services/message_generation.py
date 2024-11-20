@@ -1,7 +1,12 @@
 from pydantic import BaseModel
 
 from api.schemas.chat import ChatMessage, InChatFeedback
-from api.schemas.user import UserData
+from api.schemas.user import (
+    LocationOptions,
+    PlanVacationScenarioOptions,
+    UserData,
+    UserPersonalizationOptions,
+)
 
 from . import llm
 
@@ -60,43 +65,34 @@ def format_messages_context_long(
     return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-20:]])
 
 
+def format_messages_context_m(
+    messages_raw: list[ChatMessage | InChatFeedback], recipient: str
+) -> str:
+    messages: list[ChatMessage] = [
+        msg for msg in messages_raw if isinstance(msg, ChatMessage)
+    ]
+
+    if len(messages) == 0:
+        return ""
+
+    return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-4:]])
+
+
 system_prompt_template = """
 You are a conversation predictor, who specializes in predicting the next message in a
 conversation between two people.
 
-They are relaxed and casual, using incomplete thoughts, sentence fragments, hesitations,
-and random asides as they speak. They use everyday humor that is off-the-cuff, awkward,
-and imperfect. Never use witty jokes, metaphors, similies, or clever wordplay. Never
-use thought-out or planned humor.
-
-Keep the predicted message under 5 sentences, but you should aim for just 2-3 sentences.
-
-Remember, the two individuals are having a casual conversation. They talk like humans,
-not like chatbots, so their conversation is not always logical or coherent. They may
-stumble over their words, repeat themselves, or change the subject abruptly. Take on
-{name}'s voice and perspective, only using information that they would know. Focus on
-using their specific personal details to drive the conversation. Don't use any
-information that they wouldn't know. Ask clarifying questions when {name} would be
-confused.
-
-People use spontaneous tangents, filler words, misunderstandings, and interjections to
-keep it real. They use varied sentence length and structure. They may hesitate,
-misunderstand, and aren't always clear. Use simple language, aiming for a Flesch
-reading score of 80 or higher. Avoid jargon except where necessary. Generally avoid
-adjectives, adverbs, and emojis.
-
-Change the topic when appropriate. Do not plan any events outside of the conversation.
-Keep the conversation going naturally. Do not end the conversation. Introduce new
-topics if the conversation is dying.
+Keep the predicted message short and natural-sounding, like text messages typically are.
 
 Output format: Output a json of the following format:
 {{
-"message": "<{name}'s utterance>",
+"message": "<{name}'s utterance>"
 }}
 """
 
 action_begin = """
 Begin the conversation between {name} and {other_name}.
+In {name}'s voice, start the conversation by sending a message to {other_name}.
 """
 
 action_continue = """
@@ -105,15 +101,21 @@ Here is the conversation so far between {name} and {other_name}:
 
 {objective_prompt}
 
-In {name}'s voice, generate their response to {other_name}'s last message in the convo above. The response should be such that the conversation is personalized for {other_name} based on the information provided about them in the scenario.
+In {name}'s voice, generate their response to {other_name}'s last message in the convo above.
+
+{other}
 """
 
 # scenario is the situation in which the conversation is taking place (e.g. gloucester trip)
 prompt = """
-Here is the scenario:
 {scenario}
+It's currently early December 2024.
 
 {action}
+
+{specific_instructions}
+
+{agent_style}
 """
 
 
@@ -121,6 +123,52 @@ def dump_message_list(
     messages: list[ChatMessage],
 ) -> str:
     return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-3:]])
+
+
+def get_scenario(
+    data: UserPersonalizationOptions, agent_name: str, personalize: bool
+) -> str:
+    if not personalize:
+        data = UserPersonalizationOptions(
+            name=data.name,
+            gender=data.gender,
+            age="26",
+            location=LocationOptions(city="Boston", country="USA"),
+            company="American Airlines",
+            occupation="Airline Pilot",
+            interests="Hiking on mountains, reading fiction books, barbecuing with "
+            "friends, playing multiplayer video games",
+            scenario=PlanVacationScenarioOptions(
+                vacation_destination="Hawaii",
+                vacation_explanation="World-famous beaches, surfing on clear blue "
+                "water, local cuisine, friendly locals",
+            ),
+            personality=["optimistic", "open-minded", "supportive", "friendly"],
+        )
+
+    scenario = (
+        f"{agent_name} wants to plan a trip with {data.name}. Both of "
+        f"them are colleagues at {data.company} where {data.name} "
+        f"works as a {data.occupation}. They are both new to the company and recently "
+        f"met each other. {data.name} is {data.age} years old and identifies as a "
+        f"{data.gender}. {data.name} is originally from {data.location.city}, "
+        f"{data.location.country}. {data.name}'s interests are: "
+        f"\"{data.interests}\". Here are {data.name}'s personality traits: "
+        f"{', '.join(data.personality)}. "
+    )
+
+    scenario += (
+        f"{data.name}'s dream vacation spot is {data.scenario.vacation_destination}. "
+        f'They say they like it because of "{data.scenario.vacation_explanation}". '
+        f"In this conversation, {agent_name} will float the idea of planning a trip to "
+        f"{data.scenario.vacation_destination}, discuss details/itinerary and convince "
+        f"{data.name} to join them. {agent_name} should use information about "
+        f"{data.name}'s interests and personality to make the conversation engaging "
+        f"and convincing but act natural and don't overdo it. {agent_name} will use a "
+        "casual tone."
+    )
+
+    return scenario
 
 
 class Message(BaseModel):
@@ -132,7 +180,9 @@ async def generate_message(
     agent_name: str,
     user_sent: bool,
     messages: list[ChatMessage | InChatFeedback],
+    personalize: bool,
     objective_prompt: str | None = None,
+    bypass_objective_prompt_check=False,
 ) -> str:
     assert user.name
     sender_name = user.name if user_sent else agent_name
@@ -156,17 +206,40 @@ async def generate_message(
             if objective_prompt
             else ""
         ),
+        other=(
+            "See the examples above to generate the response."
+            if (objective_prompt or bypass_objective_prompt_check)
+            else f"The response should be such that the conversation is engaging and enjoyable for {user.name}, based on all the information provided about them in the scenario."
+        ),
     )
 
-    assert user.scenario
+    assert user.personalization
+
+    scenario = get_scenario(user.personalization, agent_name, personalize)
+
+    print(scenario)
 
     prompt_data = prompt.format(
         name=sender_name,
         other_name=recipient_name,
         conversation=conversation_context,
-        scenario=user.scenario.format(user=user.name, agent=agent_name),
+        scenario=(
+            f"Here is the scenario: {scenario.format(user=user.name, agent=agent_name)}"
+            if not (objective_prompt or bypass_objective_prompt_check)
+            else ""
+        ),
         action=action,
-    )
+        specific_instructions=(
+            f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them."
+            if not user_sent
+            else ""
+        ),
+        agent_style=(
+            ""
+            if user_sent
+            else f"{agent_name} should use simple and straightforward language in their message. Avoid emojis unless necessary, only using very simple ones."
+        ),
+    ).strip()
 
     response = await llm.generate(
         schema=Message,
@@ -186,7 +259,7 @@ something important to say.
 
 Output format: Output a json of the following format:
 {{
-"send_message": <true if {name} would send a message, false otherwise>,
+"send_message": <true if {name} would send a message, false otherwise>
 }}
 """
 

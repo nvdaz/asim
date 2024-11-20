@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
@@ -24,6 +24,7 @@ class InChatFeedback(BaseModel):
     alternative: str | None = None
     alternative_feedback: str | None = None
     created_at: UTCDatetime
+    rating: int | None = None
 
 
 chat_message_list_adapter = TypeAdapter(list[ChatMessage | InChatFeedback])
@@ -63,6 +64,8 @@ class BaseChat(BaseModel):
     best_suggestion: Suggestion | None = None
     suggestions: list[Suggestion] | None = None
     events: list[ChatEvent] = []
+    checkpoint_rate: bool = False
+    suggestion_generation: Literal["content-inspired", "random"] = "content-inspired"
 
 
 class ChatData(BaseChat):
@@ -89,6 +92,7 @@ class ChatApi(BaseModel):
     generating_suggestions: int
     messages: list[ChatMessage | InChatFeedback]
     suggestions: list[Suggestion] | None
+    checkpoint_rate: bool
 
     @classmethod
     def from_data(cls, data: ChatData) -> "ChatApi":

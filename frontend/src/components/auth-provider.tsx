@@ -4,7 +4,7 @@ type User = {
   name: string | null;
   options: {
     feedback_mode: "on-submit" | "on-suggestion";
-    suggestion_generation: "random" | "inspired";
+    suggestion_generation: "random" | "content-inspired";
   };
 };
 

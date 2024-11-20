@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from api.auth.deps import CurrentInternalAuth, CurrentUser, CurrentUserID
 from api.schemas import user
-from api.schemas.user import User, user_from_data
+from api.schemas.user import User, UserPersonalizationOptions, user_from_data
 from api.services.auth import (
     AlreadyInitialized,
     InvalidMagicLink,
@@ -28,15 +28,12 @@ async def exchange(options: LoginOptions) -> LoginResult:
         raise HTTPException(status_code=401, detail="Invalid magic link") from e
 
 
-class SetupOptions(BaseModel):
-    name: str
-    scenario: str
-
-
 @router.post("/register", responses={400: {"description": "User already initialized"}})
-async def setup(current_user_id: CurrentUserID, options: SetupOptions) -> User:
+async def setup(
+    current_user_id: CurrentUserID, options: UserPersonalizationOptions
+) -> User:
     try:
-        user = await init_user(current_user_id, options.name, options.scenario)
+        user = await init_user(current_user_id, options)
         return user_from_data(user)
     except AlreadyInitialized as e:
         raise HTTPException(status_code=400, detail="User already initialized") from e

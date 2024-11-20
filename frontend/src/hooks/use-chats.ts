@@ -19,6 +19,7 @@ type Feedback = {
 type InChatFeedback = {
   feedback: Feedback;
   created_at: string;
+  rating: number | null;
 }
 
 type Suggestion = {
@@ -46,12 +47,17 @@ type ChatLoaded = {
   generating_suggestions: number;
   suggestions?: Suggestion[];
   unread: boolean;
+  checkpoint_rate: boolean;
 }
 
 export type Chat = ChatLoading | ChatLoaded;
 
 export function chatIsLoaded(chat: Chat): chat is ChatLoaded {
   return "messages" in chat;
+}
+
+export function isContentInChatFeedback(content: Message | InChatFeedback): content is InChatFeedback {
+  return "feedback" in content;
 }
 
 function useChatSocket<S, R>({
@@ -152,13 +158,28 @@ type SendViewSuggestion = {
   index: number;
 };
 
+type SendRateFeedback = {
+  type: "rate-feedback";
+  id: string;
+  index: number;
+  rating: number;
+}
+
+type SendCheckpointRate = {
+  type: "checkpoint-rating";
+  id: string;
+  ratings: { [key: string]: number };
+}
+
 type Send =
   | SendChatMessage
   | SendCreateChat
   | SendLoadChat
   | SendSuggestMessages
   | SendMarkRead
-  | SendViewSuggestion;
+  | SendViewSuggestion
+  | SendRateFeedback
+  | SendCheckpointRate;
 
 export function useChats({ onChatCreated }: { onChatCreated: (id: string) => void }) {
   const [chats, setChats] = useState<{ [key: string]: Chat }>({});
@@ -258,6 +279,22 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
     },
     [sendMessage]);
 
+  const handleRate = useCallback(
+    (id: string, index: number, rating: number) => {
+      setChats((chats) => {
+        const chat = chats[id];
+        invariant(chatIsLoaded(chat));
+        const feedback = chat.messages![index] as InChatFeedback;
+        feedback.rating = rating;
+        return { ...chats, [id]: chat };
+      })
+      sendMessage({ type: "rate-feedback", id, index, rating });
+    }, [sendMessage]);
+
+  const handleCheckpointRate = useCallback((id: string, ratings: { [key: string]: number }) => {
+    sendMessage({ type: "checkpoint-rating", id, ratings })
+
+  }, [sendMessage])
 
   return {
     isConnected,
@@ -269,5 +306,7 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
     suggestMessages,
     markRead,
     sendViewSuggestion,
+    handleRate,
+    handleCheckpointRate,
   };
 }

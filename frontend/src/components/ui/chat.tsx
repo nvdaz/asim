@@ -3,9 +3,12 @@ import { formatRelative } from "date-fns";
 import { motion } from "framer-motion";
 import { Fragment, useMemo } from "react";
 import { useAuth } from "../auth-provider";
+import { Button } from "./button";
 import { ScrollArea } from "./scroll-area";
+import { Separator } from "./separator";
 
 export interface Message {
+  index?: number;
   id?: number;
   content: string;
   sender: string;
@@ -15,12 +18,14 @@ export interface Message {
 }
 
 export interface InChatFeedback {
+  index?: number;
   feedback: {
     title: string;
     body: string;
   };
   alternative: string;
   alternative_feedback: string;
+  rating: number | null;
   created_at: string;
 }
 
@@ -36,15 +41,18 @@ export function ChatInterface({
   messages,
   typing,
   chatEnd,
+  handleRate,
 }: {
   messages: (Message | InChatFeedback)[];
   typing: boolean;
   chatEnd: React.RefObject<HTMLDivElement>;
+  handleRate: (index: number, rating: number) => void;
 }) {
   const { user } = useAuth();
 
   const groupedMessages = useMemo(() => {
-    const grouped = messages.reduce((acc, msg) => {
+    const grouped = messages.reduce((acc, msg, i) => {
+      msg.index = i;
       if (acc.length === 0) {
         return [[msg]];
       }
@@ -76,7 +84,12 @@ export function ChatInterface({
             </div>
             {group.map((msg, index) =>
               isFeedback(msg) ? (
-                <FeedbackBubble key={index} feedback={msg} />
+                <FeedbackBubble
+                  key={index}
+                  feedback={msg}
+                  handleRate={handleRate}
+                  index={msg.index!}
+                />
               ) : (
                 <ChatBubble
                   key={index}
@@ -137,10 +150,20 @@ function ChatBubble({ content: message, isOutgoing = false }: ChatBubbleProps) {
   );
 }
 
-function FeedbackBubble({ feedback }: { feedback: InChatFeedback }) {
+const FEEDBACK_RESPONSES = ["No", "Neutral", "Yes"];
+
+function FeedbackBubble({
+  feedback,
+  handleRate,
+  index,
+}: {
+  feedback: InChatFeedback;
+  handleRate: (index: number, rating: number) => void;
+  index: number;
+}) {
   return (
     <div className="w-full flex items-center justify-center">
-      <div className="max-w-screen-sm my-4">
+      <div className="max-w-screen-md my-4">
         <div className="flex items-end">
           <div className="mx-2 flex flex-col">
             <div className="bg-accent text-accent-foreground rounded-md p-3">
@@ -151,6 +174,27 @@ function FeedbackBubble({ feedback }: { feedback: InChatFeedback }) {
                 {feedback.alternative}
               </p>
               <p className="text-sm">{feedback.alternative_feedback}</p>
+              <Separator className="mt-4" />
+              <h3 className="mt-2 font-medium">
+                Does this feedback make sense to you?
+              </h3>
+              <div className="flex justify-center space-x-4 mt-2">
+                {[3, 2, 1].map((i) => (
+                  <Button
+                    key={i}
+                    onClick={() => handleRate(index, i)}
+                    className={cn(
+                      "h-8 p-2 w-[80px]",
+                      feedback.rating === i
+                        ? "bg-black text-white cursor-default hover:bg-black"
+                        : "bg-gray-100 text-black hover:bg-gray-100"
+                    )}
+                    variant={feedback.rating === i ? "default" : "outline"}
+                  >
+                    {FEEDBACK_RESPONSES[i - 1]}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

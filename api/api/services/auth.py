@@ -6,7 +6,14 @@ from pydantic import BaseModel
 from api.db import auth_tokens, magic_links
 from api.db import users as users
 from api.schemas import user
-from api.schemas.user import BaseUserData, User, UserData, user_from_data
+from api.schemas.user import (
+    BaseUserData,
+    User,
+    UserData,
+    UserPersonalizationOptions,
+    user_from_data,
+)
+from api.services import chat_service
 
 
 class LoginResult(BaseModel):
@@ -63,13 +70,25 @@ class AlreadyInitialized(Exception):
     pass
 
 
-async def init_user(user_id: ObjectId, name: str, scenario: str) -> UserData:
+async def init_user(
+    user_id: ObjectId, personalization: UserPersonalizationOptions
+) -> UserData:
     user = await users.get(user_id)
 
     if not user:
         raise ValueError("User not found")
 
-    user.name = name
-    user.scenario = scenario
+    user.name = personalization.name
+    user.personalization = personalization
 
-    return await users.update(user_id, user)
+    user = await users.update(user_id, user)
+
+    await chat_service.create_chat(user)
+    user.options.suggestion_generation = (
+        "content-inspired"
+        if user.options.suggestion_generation == "random"
+        else "random"
+    )
+    await chat_service.create_chat(user)
+
+    return user

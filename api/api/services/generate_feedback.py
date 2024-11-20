@@ -209,13 +209,10 @@ async def explain_message(
         last3 = "** Not given **"
     objective_prompts = {
         "yes-no-question": """
-{user} asked a yes-or-no question that could be interpreted as either a yes or no
-question or as a request for more information. {agent} responded with a yes or no
-answer, which is not what {user} is looking for. Instead, {user} should have asked a
-direct question to get the information they wanted from {agent}. Explain the specific
-phrasing of the question that was misinterpreted as simply a yes or no question,
-and explain that the correct interpretation is unclear. Briefly mention people have
-different communication styles and some may prefer direct language to avoid confusion.
+{user} asked a question that could be answered by a yes or no, or more detailed information. {agent} responded with a yes or no, which is not what {user} was looking for. Hence, {user} should have been more direct to get the information they wanted from {agent}. Explain the specific
+phrasing of the question that made {agent} answer with just a yes or no,
+and explain why the correct interpretation is unclear. Briefly mention people have
+different communication styles, and some people, like {agent}, may take things more literally than others, so it is better to not be vague.
 """,
         "non-literal-emoji": """
 {user} used an emoji in a non-literal way that was misinterpreted by {agent}.
@@ -259,25 +256,45 @@ John's reaction: I didn't mean I wouldn't help, Kyle. I thought you'd want to fi
     "feedback": "John was possibly just being straightforward and wanted to clarify that you should look for cheap hostels or Airbnbs as there is not a lot of time left until the trip. The phrase 'I thought you would have some suggestions ready' can come across as confrontational and show annoyance. John might have taken this as you being upset that he didn't have recommendations prepared. This might not have been clear, likely causing the misunderstanding."
 }}
 """,
-        "figurative": """
-At the end is a model output based on the following sample original message:
-"How about we find a place where we can dip our toes in the ocean right from our balcony?"
+        "non-literal-figurative": """
+At the end is a model output to help you out:
+Sample original message: "How about we find a place where we can dip our toes in the ocean right from our balcony?"
 
 {{
     "title": "Clarify Figurative Expressions 🗣️",
-    "feedback": "When you mentioned 'dip our toes in the ocean right from our balcony,' Stephanie took it literally, thinking you actually wanted to be able to dip your toes in the ocean from the balcony. It might have helped to clearly specify that you're looking for a place with an ocean view and easy beach access to avoid confusion! 😊"
+    "feedback": "When you mentioned 'dip our toes,' Stephanie took it literally, thinking you actually wanted to be able to dip your toes in the ocean from the balcony. It might have helped to clearly specify that you're looking for a place with an ocean view and easy beach access to avoid confusion! 😊"
+}}
+""",
+        "yes-no-question": """
+At the end is an example that you should use to model your output on:
+Sample message that caused confusion: "Do you know any good restaurants in NYC?"
+Sample response from confused recipient: "Are you just asking if i know any good restaurants in NYC or not, or do you want me to share names of my favorite restaurants with you?"
+
+{
+    "title": "Be Direct for Clear Communication 🎯",
+    "feedback": "The phrase 'Do you know' might not prompt Maria to give the restaurant recommendations you're seeking. She might simply confirm whether or not she knows restaurants in NYC, as the question invites a 'yes' or 'no' answer. To avoid confusion, it's better to directly ask for recommendations. Remember, some people may interpret questions more literally than others! 😊"
+}
+""",
+        "non-literal-emoji": """
+At the end is a model output to help you out:
+Sample original message with confusing emoji: "yeah, i'd be interested! 🙃"
+Sample reaction of the confused recipient: "cool! but why the upside down smiley? are you not really interested?"
+
+{{
+    "title": "Emoji Confusion Explanation 🙃",
+    "feedback": "When you wrote 'yeah!' with the upside-down smiley face 🙃, Nancy might have thought you were being sarcastic or not genuinely interested in the trip. That's why she asked, 'are you not really interested?'. It's important to remember that everyone has different communication styles, and some might find straightforward messages easier to understand. 😊"
 }}
 """,
     }
 
-    example = examples.get(objective, examples["figurative"])
+    example = examples.get(objective, examples["non-literal-figurative"])
 
     objective_prompt = objective_prompts[objective].format(
         user=user.name, agent=agent, last3=last3
     )
 
     system_prompt_template = """
-As a helpful communication guide, you are guiding {user} on their conversation with {agent}.
+As a helpful communication guide, you provide communication assistance and feedback.
 
 Respond with a JSON object with keys "title" and "feedback" containing your feedback.
 """
@@ -300,8 +317,8 @@ Here is the original message last sent by {user}:
 Here is {agent}'s response to {user}'s message above:
 {reaction}
 
-Now, explain to {user} why their original message was misinterpreted by {agent}.
-The problem might possibly be that {problem}. Base your feedback on {agent}'s likely thought process and response provided above.
+Now, based on {agent}'s response, explain to {user} why their original message was misinterpreted by {agent}.
+Use {agent}'s response to extract their likely thought process and ground your explanation in it.
 
 Make sure to:
 
@@ -314,6 +331,8 @@ Secondly, provide a title with less than 50 characters that accurately summarize
 
 Remember, explain to {user} what elements of the original message are confusing for {agent}.
 You MUST NEVER repeat the original message in your feedback.
+
+Your feedback should be so detailed and simple that it explains every bit step-by-step, such that a five-year-old could understand it.
 
 {example}
 """
@@ -416,7 +435,10 @@ At the end is a model output based on the following sample alternative message:
 """
 
     res = await llm.generate(
-        schema=FeedbackContentOnly, model=llm.Model.GPT_4o, system=system, prompt=prompt
+        schema=FeedbackContentOnly,
+        model=llm.Model.GPT_4o,
+        system=system,
+        prompt=prompt,
     )
 
     return res.feedback

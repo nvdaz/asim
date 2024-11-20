@@ -1,6 +1,7 @@
 import asyncio
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from api.schemas.chat import Suggestion
 from api.schemas.user import UserData
@@ -86,11 +87,11 @@ class MessageVariation(BaseModel):
 
 
 class MessageVariationOut(BaseModel):
-    variations: list[MessageVariation]
+    variations: Annotated[list[MessageVariation], Field(min_length=3, max_length=3)]
 
 
 class MessageVariationOutOk(BaseModel):
-    variations: list[str]
+    variations: Annotated[list[str], Field(min_length=3, max_length=3)]
 
 
 async def generate_message_variations(
@@ -191,8 +192,6 @@ meaning.
 
 2. The second and third variations will have an emoji that is not used in a literal sense. The emoji
 should be used figuratively to convey a different meaning or emotion than the original message.
-
-Even though the focus is on the emoji, the text content MUST also be different between each variation.
 """
         ),
         "non-literal-figurative": (
@@ -217,7 +216,6 @@ will be confrontational in a subtle way because the blunt language is interprete
     """
         ),
     }
-
 
     objective_prompt = objective_prompts[objective]
 
@@ -312,10 +310,6 @@ Message to generate variations for: Ok, will get the report done.
     objective_example_prompt = objective_example_prompts[objective]
 
     system_prompt = """
-Your task is to generate variations of a message in a conversation that fit the given objective.
-
-Remember, it is a casual conversation between humans.
-
 Respond with a JSON object containing the key "variations" and a list of the three
 objects representing the rephrased messages. Each object should have a key "problem"
 with a description of the problem that the rephrased message introduces, and a key "content" with
@@ -327,7 +321,7 @@ Given a message, you are required to come up with variations of it as follows:
 
 {objective_prompt}
 
-Here is the conversation history between {user.name} and {agent}:
+Here are the latest four messages in the conversation history between {user.name} and {agent}:
 
 {context}
 
@@ -338,7 +332,7 @@ Come up with variations for the following message, which is sent by {user.name} 
 Here is an example to guide you:
 {objective_example_prompt}
 
-Remember, you are generating VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
+You are generating VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
 """
 
     out = await llm.generate(
@@ -403,29 +397,20 @@ You are a message rephrasing generator. Your task is to generate realistic rephr
 of the message. Your top priority is to ensure that the message is rephrased to fit the
 context of the conversation.
 
-Remember, the two individuals are having a casual conversation. They talk like humans,
-so they may stumble over their words, repeat themselves, or change the subject abruptly.
-They are relaxed and casual, using incomplete thoughts, sentence fragments, hesitations,
-and random asides as they speak. They use everyday humor that is off-the-cuff, awkward,
-and imperfect. Never use witty jokes, metaphors, similies, or clever wordplay. Never use
-thought-out or planned humor. Use simple language, aiming for a Flesch reading score of
-80 or higher. Avoid jargon except where necessary. Generally avoid adjectives, adverbs,
-and emojis.
-
-Rrespond with a JSON object containing the key "variations" and a list of the three
+Respond with a JSON object containing the key "variations" and a list of the 3
 rephrasings as strings.
 """
 
     prompt = f"""
-Here is the conversation history between {user.name} and {agent}:
+Here are the latest four messages in the conversation history between {user.name} and {agent}:
 
 {context}
 
-Come up with variations for the following message, which is sent by {user.name} to {agent}'s last message in the conversation above:
+Come up with 3 variations for the following message, which is sent by {user.name} to {agent}'s last message in the conversation above:
 
 {message}
 
-Remember, you are generating VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
+Remember, you are generating 3 VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
 """
 
     out = await llm.generate(
@@ -440,7 +425,7 @@ Remember, you are generating VARIATIONS of {user.name}'s message, not responding
 
 def objective_misunderstand_reaction_prompt(objective: str, problem: str | None) -> str:
     prompts = {
-        "yes-no-question": """
+        "yes-no-question": f"""
 Note that in the conversation above, {{name}} received a yes-or-no question.
 {{name}} is not sure if they should simply answer the question literally with "yes" or "no", which wouldn't contribute to the conversation as much as elaborating themslves more.
 {{name}} will only ask for clarification, without assuming the intention behind the question because it is innapropriate to do so.
@@ -456,17 +441,12 @@ Sample Response 2: Do you want to know if I've thought about what to do or not, 
 Sample Message 3: Do you have any specific spots in mind for the trip?
 Sample Response 3: Are you just asking if I have any spots in my mind or not, or would you like me to suggest some spots?
 """,
-        "non-literal-emoji": """
-Note that in the conversation above, {{name}} received a message with a figurative emoji that is not used in a literal sense.
-Hence, {{name}} interprets the emoji literally and believes that the emoji is supposed to be
-interpreted as a literal representation of the message. {{name}} ignores the creative
-and imaginative language used in the answer and responds in a direct and literal manner.
-In this way, {{name}} will ask for clarification if needed, without acknowledging the figurative
-language.
+        "non-literal-emoji": f"""
+Note that in the conversation above, {{name}} received a message with an emoji. The emoji has been misinterpreted by {{name}}. {{name}} will ask for clarification.
 
 Examples:
 Sample Message 1: Let's just find the nearest pizza joint. Can't go wrong with pizza. 🧭
-Sample Response 1: I love pizza too! But I don't think we'll need a compass for the trip.
+Sample Response 1: I love pizza too! But why do you think we'll need a compass for the trip?
 
 Sample Message 2: I had a great day 🙃
 Sampe Response 2: Did you actually have a great day? The emoji's smiling but it's upside down, so I'm not really sure.
@@ -474,10 +454,12 @@ Sampe Response 2: Did you actually have a great day? The emoji's smiling but it'
 Sample Message 3: That sounds like a great time! 🚀
 Sampe Response 3: Yeah, I'm excited for the trip too! But I don't think they have any rocket ships at the beach if that's what you're thinking.
 
-IMPORTANT: {{name}} must interpret the figurative emoji literally. If they fail to do
+IMPORTANT: {{name}} must interpret the figurative emoji incorrectly. If they fail to do
 so, the response is incorrect.
+
+The problem may be: {problem}. But if you think of a more fitting problem, you can use that instead.
 """,
-        "non-literal-figurative": """
+        "non-literal-figurative": f"""
 Note that {{name}} received a message with figurative language that is not used in a literal
 sense. Hence, {{name}} interprets the language literally and believes that the language is
 supposed to be interpreted as a literal representation of the message. {{name}} ignores
@@ -498,22 +480,22 @@ by that. I'm not reading anything right now. Which page are you talking about?
 IMPORTANT: {{name}} must interpret the figurative language literally. If they fail to do
 so, the response is incorrect.
 """,
-        "blunt-initial": """
-Note that {{name}} will be blunt/direct in a subtle way in their response, causing the other
-person to interpret their message as seemingly rude. {{name}} does not consider that
+        "blunt-initial": f"""
+Note that {{name}} will subtly come off as blunt in their response, causing the other
+person to interpret the tone of their message as rude/blunt. {{name}} does not consider that
 the other person may be sensitive to direct language. Hence, uses blunt tone and language
-because it is the most efficient way to communicate.
+because it is the most efficient/straightforward way to communicate.
 
 Examples:
 1. I need you to get this done by the end of the day or we're going to have a problem.
 
 2. Are you going to finish that report today or not? I need to know now.
 
-3. I don't have time for this. Just get it done and let me know when it's finished.
+3. Just get it done and let me know when it's finished.
 
 IMPORTANT: {{name}} must come off as blunt/slightly rude/direct in their response. If their response is not like this, the response is incorrect.
 """,
-        "blunt-misinterpret": """
+        "blunt-misinterpret": f"""
 Note that {{name}} does not understand why the other person's message was confrontational and
 believes that the other person didn't understand their message. Hence, {{name}} tells the other
 person that they misunderstood their message and that they were not being rude.
@@ -533,7 +515,7 @@ IMPORTANT: {{name}} must be confrontational in their response, but don't overdo 
 """,
     }
 
-    res = prompts[objective].format(problem=problem)
+    res = prompts[objective]
     return res
 
 
@@ -549,11 +531,8 @@ directly to get the information they were looking for.
 {{name}} will address the following problem and take care to not repeat it: {problem}
 """,
         "non-literal-emoji": """
-{{name}} will clarify the figurative emoji they used and provide a more direct response.
-{{name}} will take responsibility and apologize for being unclear and provide a more
-straightforward response.
-
-{{name}} will address the following problem and take care to not repeat it: {problem}
+In the response you generate for {{name}}, they should provide a straighforward clarification, and take responsibility/apologize for being unclear.
+For your information, this is what caused the confusion about the message they sent: {problem}
 """,
         "non-literal-figurative": """
 {{name}} will clarify the figurative language they used and provide a more direct

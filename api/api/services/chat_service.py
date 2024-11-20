@@ -1,4 +1,5 @@
 import asyncio
+import json
 import random
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -30,13 +31,25 @@ _fake = faker.Faker()
 
 
 async def create_chat(user: UserData) -> ChatData:
-    chat = BaseChat(
+    base_chat = BaseChat(
         user_id=user.id,
         agent=_fake.first_name(),
         last_updated=datetime.now(timezone.utc),
+        suggestion_generation=user.options.suggestion_generation,
     )
 
-    return await chats.create(chat)
+    chat = await chats.create(base_chat)
+
+    if user.options.suggestion_generation == "random":
+        chat.suggestions = [
+            Suggestion(message="Hello!", objective=None),
+            Suggestion(message=f"Hi {chat.agent}, how are you?", objective=None),
+            Suggestion(message="Hey!", objective=None),
+        ]
+
+    await chats.update_chat(chat)
+
+    return chat
 
 
 async def get_chat(chat_id: ObjectId, user_id: ObjectId) -> ChatData | None:
@@ -61,12 +74,14 @@ class ChatState:
     async def wait_for_change(self):
         await self._changed.wait()
         self._changed.clear()
+        print("Changed cleared")
 
     def read(self) -> ChatData:
         return self._chat
 
     def mark_changed(self):
         self._changed.set()
+        print("Changed set")
 
     @asynccontextmanager
     async def transaction(
@@ -88,14 +103,17 @@ async def generate_agent_message(
         mark_changed()
 
         next_state = None
-
+        should_generate = False
         match (chat.state, user.options.feedback_mode):
             case ("no-objective", _):
-                next_state = (
-                    "objective"
-                    if len(generate_suggestions.objectives) > 0
-                    else "no-objective"
-                )
+                if len(chat.messages) > 4:
+                    next_state = (
+                        "objective"
+                        if len(generate_suggestions.objectives) > 0
+                        else "no-objective"
+                    )
+                else:
+                    next_state = "no-objective"
             case ("objective" | "objective-blunt", "on-suggestion"):
                 next_state = "no-objective"
             case ("objective" | "objective-blunt", "on-submit"):
@@ -105,16 +123,13 @@ async def generate_agent_message(
 
         assert next_state is not None
 
-        if len(chat.objectives_used) > len(generate_suggestions.objectives):
-            chat.objectives_used = []
-
         if (
             chat.state == "no-objective"
             and "blunt" not in chat.objectives_used
-            and len(chat.messages) > 1
+            and len(chat.messages) > 4
         ) and (
             len(chat.objectives_used) >= len(generate_suggestions.objectives)
-            or random.random() < 0.4
+            # or random.random() < 0.4
         ):
             objective = "blunt-initial"
             next_state = "objective-blunt"
@@ -125,6 +140,7 @@ async def generate_agent_message(
             state=next_state,
             objective=objective,
             problem=chat.current_problem,
+            bypass_objective_prompt_check=(objective == "blunt-initial"),
         )
 
         response = ChatMessage(
@@ -132,6 +148,12 @@ async def generate_agent_message(
             content=response_content,
             created_at=datetime.now(timezone.utc),
         )
+
+        if chat.state != "objective" and len(chat.objectives_used) > len(
+            generate_suggestions.objectives
+        ):
+            chat.checkpoint_rate = True
+            chat.objectives_used = []
 
         chat.messages.append(response)
         chat.last_updated = datetime.now(timezone.utc)
@@ -147,6 +169,8 @@ async def generate_agent_message(
             )
         )
         mark_changed()
+
+        print("GENERATION IS", chat.suggestion_generation)
 
         if chat.state == "react":
             if not objective:
@@ -167,6 +191,7 @@ async def generate_agent_message(
                         user=user,
                         user_sent=True,
                         agent_name=chat.agent,
+                        personalize=chat.suggestion_generation == "content-inspired",
                         messages=chat.messages,
                         objective_prompt=generate_suggestions.objective_misunderstand_follow_up_prompt(
                             objective, chat.current_problem
@@ -248,6 +273,10 @@ async def generate_agent_message(
                 chat.state = "react"
 
             return chat
+        elif chat.suggestion_generation == "random":
+            should_generate = True
+    if should_generate:
+        await suggest_messages(chat_state, user, response_content)
 
 
 async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message: str):
@@ -264,16 +293,13 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
         )
         mark_changed()
 
-        context = message_generation.format_messages_context_long(
-            chat.messages, chat.agent
-        )
-
         objective = None
 
-        if user.options.suggestion_generation == "random":
+        if chat.suggestion_generation == "random":
             base_message = await message_generation.generate_message(
                 user=user,
                 agent_name=chat.agent,
+                personalize=False,
                 user_sent=True,
                 messages=chat.messages,
             )
@@ -284,14 +310,11 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
             suggestions = await generate_suggestions.generate_message_variations_ok(
                 user,
                 chat.agent,
-                context,
+                message_generation.format_messages_context_m(chat.messages, chat.agent),
                 base_message,
                 user.options.feedback_mode == "on-suggestion",
             )
         elif chat.state == "objective":
-            if len(chat.objectives_used) >= len(generate_suggestions.objectives):
-                chat.objectives_used = []
-
             (
                 objective,
                 suggestions,
@@ -299,7 +322,7 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
                 user,
                 chat.agent,
                 chat.objectives_used,
-                context,
+                message_generation.format_messages_context_m(chat.messages, chat.agent),
                 base_message,
                 user.options.feedback_mode == "on-suggestion",
             )
@@ -313,7 +336,7 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
                 user,
                 chat.agent,
                 chat.objectives_used,
-                context,
+                message_generation.format_messages_context_m(chat.messages, chat.agent),
                 base_message,
                 user.options.feedback_mode == "on-suggestion",
             )
@@ -394,3 +417,35 @@ async def mark_view_suggestion(chat_state: ChatState, index: int):
 async def mark_read(chat_state: ChatState):
     async with chat_state.transaction() as (chat, _):
         chat.unread = False
+
+
+async def rate_feedback(chat_state: ChatState, index: int, rating: int):
+    async with chat_state.transaction() as (chat, mark_changed):
+        chat.events.append(
+            ChatEvent(
+                name="feedback-rated",
+                created_at=datetime.now(timezone.utc),
+                data={"index": index, "rating": rating},
+            )
+        )
+
+        feedback = chat.messages[index]
+        assert isinstance(feedback, InChatFeedback)
+
+        feedback.rating = rating
+
+        mark_changed()
+
+
+async def checkpoint_rating(chat_state: ChatState, ratings: dict[str, int]):
+    async with chat_state.transaction() as (chat, mark_changed):
+        chat.events.append(
+            ChatEvent(
+                name="overall-rating",
+                created_at=datetime.now(timezone.utc),
+                data=ratings,
+            )
+        )
+        chat.checkpoint_rate = False
+
+        mark_changed()

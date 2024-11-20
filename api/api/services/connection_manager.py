@@ -16,10 +16,12 @@ class ConnectionManager:
 
     def _add_listener(self, chat_state: ChatState):
         if chat_state.id not in self._listeners:
+            print("Adding listener for", chat_state.id)
 
             async def listen():
                 while True:
                     await chat_state.wait_for_change()
+                    print("Sending change to", chat_state.id)
                     for on_change_id in self._on_change:
                         self._on_change[on_change_id](chat_state)
 

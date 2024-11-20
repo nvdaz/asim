@@ -87,9 +87,24 @@ async def handle_connection(
 
         elif event["type"] == "mark-read":
             chat_state = await get_chat_state(ObjectId(event["id"]))
-            await chat_service.mark_read(chat_state)
+
+            connection.add_action(chat_state, chat_service.mark_read(chat_state))
+        elif event["type"] == "rate-feedback":
+            chat_state = await get_chat_state(ObjectId(event["id"]))
+            connection.add_action(
+                chat_state,
+                chat_service.rate_feedback(chat_state, event["index"], event["rating"]),
+            )
         elif event["type"] == "view-suggestion":
             chat_state = await get_chat_state(ObjectId(event["id"]))
-            await chat_service.mark_view_suggestion(chat_state, event["index"])
+            connection.add_action(
+                chat_state,
+                chat_service.mark_view_suggestion(chat_state, event["index"]),
+            )
+        elif event["type"] == "checkpoint-rating":
+            chat_state = await get_chat_state(ObjectId(event["id"]))
+            connection.add_action(
+                chat_state, chat_service.checkpoint_rating(chat_state, event["ratings"])
+            )
         else:
             raise ValueError(f"Unknown event type: {event['type']}")

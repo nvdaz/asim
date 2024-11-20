@@ -22,6 +22,8 @@ export function useCurrentChat() {
         suggestMessages: suggestMessagesRaw,
         sendViewSuggestion: sendViewSuggestionRaw,
         markRead,
+        handleRate: handleRateRaw,
+        handleCheckpointRate: handleCheckpointRateRaw
     } = useChats({ onChatCreated });
 
 
@@ -81,6 +83,18 @@ export function useCurrentChat() {
         }
     }, [currentChat, sendViewSuggestionRaw]);
 
+    const handleRate = useCallback((index: number, rating: number) => {
+        if (currentChat) {
+            handleRateRaw(currentChat.id, index, rating);
+        }
+    }, [currentChat, handleRateRaw]);
+
+    const handleCheckpointRate = useCallback((ratings: { [key: string]: number }) => {
+        if (currentChat) {
+            handleCheckpointRateRaw(currentChat.id, ratings);
+        }
+    }, [currentChat, handleCheckpointRateRaw]);
+
     return {
         isConnected,
         isError,
@@ -91,5 +105,7 @@ export function useCurrentChat() {
         createChat,
         sendViewSuggestion,
         setCurrentChatId,
+        handleRate,
+        handleCheckpointRate
     };
 }

@@ -39,12 +39,13 @@ class Model(str, Enum):
     GPT_3_5 = "gpt3-5"
     CLAUDE_3_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0"
     CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0"
+    CLAUDE_3p5_SONNET = "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
     def vendor(self) -> ModelVendor:
         match self:
             case Model.GPT_4 | Model.GPT_3_5 | Model.GPT_4o | Model.GPT_4o_mini:
                 return ModelVendor.OPENAI
-            case Model.CLAUDE_3_SONNET | Model.CLAUDE_3_HAIKU:
+            case Model.CLAUDE_3_SONNET | Model.CLAUDE_3_HAIKU | Model.CLAUDE_3p5_SONNET:
                 return ModelVendor.ANTHROPIC
 
 

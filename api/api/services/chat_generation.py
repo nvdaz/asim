@@ -9,6 +9,7 @@ async def generate_agent_message(
     state: str,
     objective: str | None,
     problem: str | None,
+    bypass_objective_prompt_check: bool = False,
 ):
     if state == "react" or state == "objective-blunt":
         objective_prompt = (
@@ -27,6 +28,8 @@ async def generate_agent_message(
         user=user,
         user_sent=False,
         agent_name=chat.agent,
+        personalize=chat.suggestion_generation == "content-inspired",
         messages=chat.messages,
         objective_prompt=objective_prompt,
+        bypass_objective_prompt_check=bypass_objective_prompt_check,
     )

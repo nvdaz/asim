@@ -1,24 +1,110 @@
+import { useAuth } from "@/components/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { ChatInterface, InChatFeedback, Message } from "@/components/ui/chat";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loading } from "@/components/ui/loading";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, ChevronLeft, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChatInterface, InChatFeedback, Message } from "./components/ui/chat";
-import { Loading } from "./components/ui/loading";
-import { Skeleton } from "./components/ui/skeleton";
-import { Textarea } from "./components/ui/textarea";
-import Contacts from "./contacts";
-
-import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "./components/auth-provider";
-import { chatIsLoaded } from "./hooks/use-chats";
+import invariant from "tiny-invariant";
+import { Label } from "./components/ui/label";
+import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
+import Contacts from "./contacts";
+import { chatIsLoaded, isContentInChatFeedback } from "./hooks/use-chats";
 import { useCurrentChat } from "./hooks/use-current-chat";
 import { cn } from "./lib/utils";
 
+function ChatFeedbackDialog({
+  isOpen,
+  onSubmit,
+}: {
+  isOpen: boolean;
+  onSubmit: (ratings: { [key: string]: number }) => void;
+}) {
+  const [rating1, setRating1] = useState<number | null>(null);
+  const [rating2, setRating2] = useState<number | null>(null);
+
+  const handleSubmit = useCallback(() => {
+    invariant(rating1 !== null && rating2 !== null);
+    onSubmit({ rating1, rating2 });
+  }, [onSubmit, rating1, rating2]);
+
+  return (
+    <Dialog open={isOpen}>
+      <DialogContent hideClose>
+        <DialogHeader>
+          <DialogTitle>Rate the Chat</DialogTitle>
+          <DialogDescription>Please rate.</DialogDescription>
+        </DialogHeader>
+        <div>
+          <div className="flex flex-row space-x-2">
+            <span>I am having a good experience.</span>
+            <RadioGroup
+              className="flex flex-row space-x-4 justify-center"
+              onValueChange={(value) => setRating1(parseInt(value))}
+            >
+              {Array.from({ length: 7 }, (_, i) => (
+                <div
+                  key={i + 1}
+                  className="flex flex-col space-y-1 items-center"
+                >
+                  <RadioGroupItem
+                    value={(i + 1).toString()}
+                    id={`option-${i + 1}`}
+                  />
+                  <Label htmlFor={`option-${i + 1}`}>{i + 1}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+          <Separator className="my-4" />
+          <div className="flex flex-row space-x-2">
+            <span>I am engaged by the conversation.</span>
+            <RadioGroup
+              className="flex flex-row space-x-4 justify-center"
+              onValueChange={(value) => setRating2(parseInt(value))}
+            >
+              {Array.from({ length: 7 }, (_, i) => (
+                <div
+                  key={i + 1}
+                  className="flex flex-col space-y-1 items-center"
+                >
+                  <RadioGroupItem
+                    value={(i + 1).toString()}
+                    id={`option-${i + 1}`}
+                  />
+                  <Label htmlFor={`option-${i + 1}`}>{i + 1}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+          <Button
+            onClick={handleSubmit}
+            disabled={rating1 === null || rating2 === null}
+            className="mt-4"
+          >
+            Submit
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Chat() {
-  const { token } = useAuth();
+  const { user, token } = useAuth();
   const {
     isConnected,
     isError,
@@ -29,16 +115,21 @@ function Chat() {
     suggestMessages,
     sendViewSuggestion,
     setCurrentChatId,
+    handleRate,
+    handleCheckpointRate,
   } = useCurrentChat();
   const { toast } = useToast();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [input, setInput] = useState("");
-  const { user } = useAuth();
   const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(
     null
   );
   const chatEnd = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const [latestMessageIndex, setLatestMessageIndex] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     if (!token) {
@@ -46,13 +137,57 @@ function Chat() {
     }
   }, [token]);
 
+  invariant(user, token);
+
   useEffect(() => {
-    chatEnd.current?.scrollIntoView({ behavior: "instant" });
-  }, [chatEnd.current, currentChat]);
+    if (
+      currentChat &&
+      chatIsLoaded(currentChat) &&
+      latestMessageIndex !== currentChat.messages.length
+    ) {
+      chatEnd.current?.scrollIntoView({ behavior: "instant" });
+      setLatestMessageIndex(currentChat.messages.length);
+    }
+  }, [chatEnd.current, currentChat, latestMessageIndex]);
+
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const [hasScrolledGenerated, setHasScrolledGenerated] = useState(false);
+
+  useEffect(() => {
+    if (currentChat && chatIsLoaded(currentChat)) {
+      if (Array.isArray(currentChat.suggestions)) {
+        if (!hasScrolledGenerated) {
+          chatEnd.current?.scrollIntoView({ behavior: "instant" });
+          setHasScrolledGenerated(true);
+        }
+      } else {
+        setHasScrolledGenerated(false);
+      }
+      if (currentChat.generating_suggestions > 0) {
+        if (!hasScrolled) {
+          chatEnd.current?.scrollIntoView({ behavior: "instant" });
+          setHasScrolled(true);
+        }
+      } else {
+        setHasScrolled(false);
+      }
+    }
+  }, [
+    chatEnd.current,
+    currentChat,
+    // @ts-ignore
+    currentChat?.generating_suggestions,
+    // @ts-ignore
+    currentChat?.suggestions,
+  ]);
 
   const handleSend = useCallback(() => {
     suggestMessages(input);
     setInput("");
+    setTimeout(
+      () => chatEnd.current?.scrollIntoView({ behavior: "instant" }),
+      1
+    );
   }, [input]);
 
   useEffect(() => {
@@ -86,6 +221,7 @@ function Chat() {
       chatIsLoaded(currentChat) &&
       selectedSuggestion !== null
     ) {
+      const prev = currentChat!.messages[currentChat!.messages.length - 1];
       if (
         !!currentChat.suggestions![selectedSuggestion].problem &&
         user!.options.feedback_mode == "on-suggestion"
@@ -94,6 +230,16 @@ function Chat() {
           variant: "destructive",
           description:
             "The message you selected needs improvement. Please read the feedback and try selecting another message.",
+        });
+      } else if (
+        currentChat.messages.length > 0 &&
+        isContentInChatFeedback(prev) &&
+        prev.rating === null
+      ) {
+        toast({
+          variant: "destructive",
+          description:
+            "Please provide feedback before sending the clarification message.",
         });
       } else {
         sendChatMessage(selectedSuggestion);
@@ -171,6 +317,11 @@ function Chat() {
 
   return (
     <div className="flex flex-row min-h-[200px] rounded-lg border w-full h-screen">
+      <ChatFeedbackDialog
+        isOpen={!!currentChat?.checkpoint_rate}
+        onSubmit={handleCheckpointRate}
+      />
+
       {currentChat?.loading_feedback && <Loading />}
       <div
         className={cn(
@@ -218,6 +369,7 @@ function Chat() {
                 ? (currentChat?.messages as (Message | InChatFeedback)[]) || []
                 : []
             }
+            handleRate={handleRate}
             typing={!!currentChat?.agent_typing}
             chatEnd={chatEnd}
           />
@@ -232,8 +384,13 @@ function Chat() {
                       <div className="flex flex-col gap-2 w-full">
                         {currentChat.suggestions.length == 1 && (
                           <p className="text-secondary-foreground font-medium">
-                            Send this message to clarify and continue the
-                            conversation.
+                            {(
+                              currentChat?.messages[
+                                currentChat?.messages.length - 1
+                              ] as never as InChatFeedback
+                            ).rating !== null
+                              ? "Send this message to clarify and continue the conversation."
+                              : "Provide feedback and then send this message to clarify and continue the conversation."}
                           </p>
                         )}
                         {currentChat.suggestions[selectedSuggestion]
