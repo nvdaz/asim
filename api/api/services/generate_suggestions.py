@@ -11,8 +11,8 @@ from . import llm
 
 objectives = [
     "non-literal-emoji",
-    "non-literal-figurative",
-    "yes-no-question",
+    # "non-literal-figurative",
+    # "yes-no-question",
 ]
 
 
@@ -260,7 +260,7 @@ will be confrontational in a subtle way because the blunt language is interprete
     ]
 }
 
-Remember, the variations should have different text from each other and the original message! The emoji and text for variations 2 and 3 should be crafted such that together they may cause the receiver to misunderstand the message.
+IMPORTANT NOTE: Remember, as in the examples above, the variations MUST have significantly different text phrasing from each other as well as the original message! The emoji and text for variations 2 and 3 should be crafted such that together they may cause the receiver to misunderstand the message.
 """,
         "non-literal-figurative": """
 Message to rephrase: It's hard to understand the instructions.
@@ -337,7 +337,9 @@ You are generating VARIATIONS of {user.name}'s message, not responding to it. Do
 
     out = await llm.generate(
         schema=MessageVariationOut,
-        model=llm.Model.GPT_4o,
+        model=llm.Model.CLAUDE_3p5_SONNET
+        if objective == "non-literal-emoji"
+        else llm.Model.GPT_4o,
         system=system_prompt,
         prompt=prompt,
         temperature=0.5,

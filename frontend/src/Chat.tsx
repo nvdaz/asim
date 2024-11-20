@@ -150,6 +150,10 @@ function Chat() {
     }
   }, [chatEnd.current, currentChat, latestMessageIndex]);
 
+  useEffect(() => {
+    setSelectedSuggestion(null);
+  }, [currentChat?.id]);
+
   const [hasScrolled, setHasScrolled] = useState(false);
   const [hasScrolledGenerated, setHasScrolledGenerated] = useState(false);
 
@@ -189,6 +193,19 @@ function Chat() {
       1
     );
   }, [input]);
+
+  const [didAutoScrollTyping, setDidAutoScrollTyping] = useState(false);
+
+  useEffect(() => {
+    if (currentChat?.agent_typing) {
+      if (!didAutoScrollTyping) {
+        chatEnd.current?.scrollIntoView({ behavior: "instant" });
+        setDidAutoScrollTyping(true);
+      }
+    } else {
+      setDidAutoScrollTyping(false);
+    }
+  }, [currentChat?.agent_typing]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -487,7 +504,7 @@ function Chat() {
                     <Textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder="Message"
+                      placeholder="Write your message here"
                       ref={inputRef}
                       rows={1}
                       className="min-h-[30px] max-h-[120px] resize-none"

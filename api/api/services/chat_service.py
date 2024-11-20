@@ -1,6 +1,4 @@
 import asyncio
-import json
-import random
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Callable
@@ -127,9 +125,7 @@ async def generate_agent_message(
             chat.state == "no-objective"
             and "blunt" not in chat.objectives_used
             and len(chat.messages) > 4
-        ) and (
-            len(chat.objectives_used) >= len(generate_suggestions.objectives)
-            # or random.random() < 0.4
+            and len(chat.objectives_used) >= len(generate_suggestions.objectives)
         ):
             objective = "blunt-initial"
             next_state = "objective-blunt"
@@ -143,17 +139,13 @@ async def generate_agent_message(
             bypass_objective_prompt_check=(objective == "blunt-initial"),
         )
 
+        await asyncio.sleep(3)
+
         response = ChatMessage(
             sender=chat.agent,
             content=response_content,
             created_at=datetime.now(timezone.utc),
         )
-
-        if chat.state != "objective" and len(chat.objectives_used) > len(
-            generate_suggestions.objectives
-        ):
-            chat.checkpoint_rate = True
-            chat.objectives_used = []
 
         chat.messages.append(response)
         chat.last_updated = datetime.now(timezone.utc)
@@ -169,8 +161,6 @@ async def generate_agent_message(
             )
         )
         mark_changed()
-
-        print("GENERATION IS", chat.suggestion_generation)
 
         if chat.state == "react":
             if not objective:
@@ -376,6 +366,14 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
             )
             else "react"
         )
+
+        if (
+            suggestion.problem is None
+            and chat.state != "objective"
+            and len(chat.objectives_used) > len(generate_suggestions.objectives)
+        ):
+            chat.checkpoint_rate = True
+            chat.objectives_used = []
 
         chat.messages.append(
             ChatMessage(
