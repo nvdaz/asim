@@ -11,8 +11,8 @@ from . import llm
 
 objectives = [
     "non-literal-emoji",
-    # "non-literal-figurative",
-    # "yes-no-question",
+    "non-literal-figurative",
+    "yes-no-question",
 ]
 
 
