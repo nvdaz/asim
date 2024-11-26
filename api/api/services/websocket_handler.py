@@ -77,13 +77,9 @@ async def handle_connection(
         elif event["type"] == "send-message":
             chat_state = await get_chat_state(ObjectId(event["id"]))
 
-            async def send_message_inner(chat_state):
-                objective = await chat_service.send_message(
-                    chat_state, user, event["index"]
-                )
-                await chat_service.generate_agent_message(chat_state, user, objective)
-
-            connection.add_action(chat_state, send_message_inner(chat_state))
+            connection.add_action(
+                chat_state, chat_service.send_message(chat_state, user, event["index"])
+            )
 
         elif event["type"] == "mark-read":
             chat_state = await get_chat_state(ObjectId(event["id"]))

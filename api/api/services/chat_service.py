@@ -1,7 +1,8 @@
 import asyncio
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import AsyncGenerator, Callable
+from typing import Callable
 
 import faker
 from bson import ObjectId
@@ -72,14 +73,12 @@ class ChatState:
     async def wait_for_change(self):
         await self._changed.wait()
         self._changed.clear()
-        print("Changed cleared")
 
     def read(self) -> ChatData:
         return self._chat
 
     def mark_changed(self):
         self._changed.set()
-        print("Changed set")
 
     @asynccontextmanager
     async def transaction(
@@ -90,10 +89,12 @@ class ChatState:
                 yield self._chat, self.mark_changed
         finally:
             self.mark_changed()
-            await update_chat(self._chat)
+
+    async def commit(self):
+        await update_chat(self._chat)
 
 
-async def generate_agent_message(
+async def _generate_agent_message(
     chat_state: ChatState, user: UserData, objective: str | None = None
 ):
     async with chat_state.transaction() as (chat, mark_changed):
@@ -101,7 +102,6 @@ async def generate_agent_message(
         mark_changed()
 
         next_state = None
-        should_generate = False
         match (chat.state, user.options.feedback_mode):
             case ("no-objective", _):
                 if len(chat.messages) > 4:
@@ -263,13 +263,12 @@ async def generate_agent_message(
                 chat.state = "react"
 
             return chat
-        elif chat.suggestion_generation == "random":
-            should_generate = True
-    if should_generate:
-        await suggest_messages(chat_state, user, response_content)
+
+    if chat.suggestion_generation == "random":
+        await _suggest_messages(chat_state, user, response_content)
 
 
-async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message: str):
+async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_message: str):
     async with chat_state.transaction() as (chat, mark_changed):
         chat.generating_suggestions = 3
         chat.events.append(
@@ -296,15 +295,7 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
         else:
             base_message = prompt_message
 
-        if chat.state == "no-objective":
-            suggestions = await generate_suggestions.generate_message_variations_ok(
-                user,
-                chat.agent,
-                message_generation.format_messages_context_m(chat.messages, chat.agent),
-                base_message,
-                user.options.feedback_mode == "on-suggestion",
-            )
-        elif chat.state == "objective":
+        if chat.state == "objective":
             (
                 objective,
                 suggestions,
@@ -333,7 +324,13 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
 
             chat.objectives_used.append("blunt")
         else:
-            raise ValueError(f"Invalid chat state: {chat.state}")
+            suggestions = await generate_suggestions.generate_message_variations_ok(
+                user,
+                chat.agent,
+                message_generation.format_messages_context_m(chat.messages, chat.agent),
+                base_message,
+                user.options.feedback_mode == "on-suggestion",
+            )
 
         chat.suggestions = suggestions
         chat.generating_suggestions = 0
@@ -351,7 +348,13 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
     return suggestions
 
 
-async def send_message(chat_state: ChatState, user: UserData, index: int):
+async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message: str):
+    suggestions = await _suggest_messages(chat_state, user, prompt_message)
+    await chat_state.commit()
+    return suggestions
+
+
+async def _send_message(chat_state: ChatState, user: UserData, index: int):
     assert user.name
     async with chat_state.transaction() as (chat, _):
         assert chat.suggestions is not None
@@ -397,6 +400,12 @@ async def send_message(chat_state: ChatState, user: UserData, index: int):
     return suggestion.objective
 
 
+async def send_message(chat_state: ChatState, user: UserData, index: int):
+    objective = await _send_message(chat_state, user, index)
+    await _generate_agent_message(chat_state, user, objective)
+    await chat_state.commit()
+
+
 async def mark_view_suggestion(chat_state: ChatState, index: int):
     async with chat_state.transaction() as (chat, _):
         assert chat.suggestions is not None
@@ -415,6 +424,7 @@ async def mark_view_suggestion(chat_state: ChatState, index: int):
 async def mark_read(chat_state: ChatState):
     async with chat_state.transaction() as (chat, _):
         chat.unread = False
+    await chat_state.commit()
 
 
 async def rate_feedback(chat_state: ChatState, index: int, rating: int):
@@ -431,8 +441,7 @@ async def rate_feedback(chat_state: ChatState, index: int, rating: int):
         assert isinstance(feedback, InChatFeedback)
 
         feedback.rating = rating
-
-        mark_changed()
+    await chat_state.commit()
 
 
 async def checkpoint_rating(chat_state: ChatState, ratings: dict[str, int]):
@@ -447,3 +456,4 @@ async def checkpoint_rating(chat_state: ChatState, ratings: dict[str, int]):
         chat.checkpoint_rate = False
 
         mark_changed()
+    await chat_state.commit()
