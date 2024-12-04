@@ -176,7 +176,7 @@ function FeedbackBubble({
               <p className="text-sm">{feedback.alternative_feedback}</p>
               <Separator className="mt-4" />
               <h3 className="mt-2 font-medium">
-                Does this feedback make sense to you?
+                Do you understand the explanation provided above?
               </h3>
               <div className="flex justify-center space-x-4 mt-2">
                 {[3, 2, 1].map((i) => (

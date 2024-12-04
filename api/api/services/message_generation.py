@@ -130,18 +130,20 @@ def get_scenario(
 ) -> str:
     if not personalize:
         data = UserPersonalizationOptions(
-            name=data.name,
-            gender=data.gender,
-            age="26",
-            location=LocationOptions(city="Boston", country="USA"),
+            name="Frank",
+            gender="Male",
+            age="30",
+            location=LocationOptions(city="Phoenix", country="USA"),
             company="American Airlines",
             occupation="Airline Pilot",
             interests="Hiking on mountains, reading fiction books, barbecuing with "
-            "friends, playing multiplayer video games",
+            "friends, playing multiplayer video games, watching stand-up comedy, going "
+            "to the beach, trying new foods, learning about history",
             scenario=PlanVacationScenarioOptions(
-                vacation_destination="Hawaii",
+                vacation_destination="Gloucester, Massachusetts",
                 vacation_explanation="World-famous beaches, surfing on clear blue "
-                "water, local cuisine, friendly locals",
+                "water, local cuisine, friendly locals, fishing, historic buildings, "
+                "whale watching, seafood",
             ),
             personality=["optimistic", "open-minded", "supportive", "friendly"],
         )

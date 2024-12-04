@@ -41,16 +41,29 @@ function ChatFeedbackDialog({
     onSubmit({ rating1, rating2 });
   }, [onSubmit, rating1, rating2]);
 
+  const LABELS = [
+    "Not at all",
+    "Very slightly",
+    "Slightly",
+    "Moderately",
+    "Quite",
+    "Very",
+    "Extremely",
+  ];
+
   return (
     <Dialog open={isOpen}>
-      <DialogContent hideClose>
+      <DialogContent hideClose className="min-w-fit">
         <DialogHeader>
           <DialogTitle>Rate the Chat</DialogTitle>
           <DialogDescription>Please rate.</DialogDescription>
         </DialogHeader>
         <div>
-          <div className="flex flex-row space-x-2">
-            <span>I am having a good experience.</span>
+          <div className="flex flex-col space-y-2">
+            <span>
+              So far, how engaging do you find this conversation by this point
+              in the dialogue?
+            </span>
             <RadioGroup
               className="flex flex-row space-x-4 justify-center"
               onValueChange={(value) => setRating1(parseInt(value))}
@@ -58,20 +71,25 @@ function ChatFeedbackDialog({
               {Array.from({ length: 7 }, (_, i) => (
                 <div
                   key={i + 1}
-                  className="flex flex-col space-y-1 items-center"
+                  className="flex flex-col space-y-1 items-center text-center w-[60px]"
                 >
                   <RadioGroupItem
                     value={(i + 1).toString()}
                     id={`option-${i + 1}`}
                   />
-                  <Label htmlFor={`option-${i + 1}`}>{i + 1}</Label>
+                  <Label className="text-wrap" htmlFor={`option-${i + 1}`}>
+                    {LABELS[i]}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
           </div>
           <Separator className="my-4" />
-          <div className="flex flex-row space-x-2">
-            <span>I am engaged by the conversation.</span>
+          <div className="flex flex-col space-y-2">
+            <span>
+              So far, how realistic do you find this conversation by this point
+              in the dialogue?
+            </span>
             <RadioGroup
               className="flex flex-row space-x-4 justify-center"
               onValueChange={(value) => setRating2(parseInt(value))}
@@ -79,13 +97,15 @@ function ChatFeedbackDialog({
               {Array.from({ length: 7 }, (_, i) => (
                 <div
                   key={i + 1}
-                  className="flex flex-col space-y-1 items-center"
+                  className="flex flex-col space-y-1 items-center text-center w-[60px]"
                 >
                   <RadioGroupItem
                     value={(i + 1).toString()}
                     id={`option-${i + 1}`}
                   />
-                  <Label htmlFor={`option-${i + 1}`}>{i + 1}</Label>
+                  <Label className="text-wrap" htmlFor={`option-${i + 1}`}>
+                    {LABELS[i]}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>

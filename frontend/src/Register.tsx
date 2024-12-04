@@ -46,8 +46,8 @@ const formSchema = z.object({
   occupation: z
     .string()
     .min(2, { message: "Occupation must be at least 2 characters." }),
-  interests: z.string().regex(/^([^,]+,){3,}[^,]+$/, {
-    message: "Interests must be a comma-separated list of at least four items.",
+  interests: z.string().regex(/^([^,]+,){7,}[^,]+$/, {
+    message: "Interests must be a comma-separated list of at least 8 items.",
   }),
   scenario: z
     .object({
@@ -70,7 +70,38 @@ const formSchema = z.object({
           "Please fill out the required fields for the selected scenario.",
         path: ["scenario.type"],
       }
-    ),
+    )
+    .superRefine((data, ctx) => {
+      if (data.type === "plan-vacation") {
+        if (!data.vacation_destination) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Vacation destination is required.",
+            path: ["vacation_destination"],
+          });
+        }
+        if (!data.vacation_explanation) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Vacation explanation is required.",
+            path: ["vacation_explanation"],
+          });
+        } else if (data.vacation_explanation.split(",").length < 8) {
+          ctx.addIssue({
+            code: "custom",
+            message:
+              "Vacation explanation must be a comma-separated list of at least 8 items.",
+            path: ["vacation_explanation"],
+          });
+        }
+      } else if (data.type === "custom" && !data.description) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Description is required.",
+          path: ["description"],
+        });
+      }
+    }),
   personality: z.array(z.string()),
 });
 
@@ -223,26 +254,6 @@ function Register() {
             <h2>Where you're from</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                {/* Location Field */}
-                <FormField
-                  control={form.control}
-                  name="location.city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City</FormLabel>
-                      <FormDescription>
-                        The city you're originally from
-                      </FormDescription>
-                      <FormControl>
-                        <Input placeholder="New York City" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div>
-                {/* Occupation Field */}
                 <FormField
                   control={form.control}
                   name="location.country"
@@ -260,6 +271,24 @@ function Register() {
                   )}
                 />
               </div>
+              <div>
+                <FormField
+                  control={form.control}
+                  name="location.city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormDescription>
+                        The city you're originally from
+                      </FormDescription>
+                      <FormControl>
+                        <Input placeholder="New York City" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
             <h2>Occupation</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -270,9 +299,10 @@ function Register() {
                   name="company"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Copmany</FormLabel>
+                      <FormLabel>Company</FormLabel>
                       <FormDescription>
-                        The employer you work for or would most like to work for
+                        The employer you currently work for, or, if you’re a
+                        student, the employer you aspire to work for
                       </FormDescription>
                       <FormControl>
                         <Input placeholder="JetBlue" {...field} />
@@ -291,7 +321,8 @@ function Register() {
                     <FormItem>
                       <FormLabel>Occupation</FormLabel>
                       <FormDescription>
-                        The job you work or would most like to have
+                        The job you currently hold, or, if you’re a student, the
+                        job you aspire to have
                       </FormDescription>
                       <FormControl>
                         <Input placeholder="Airline Pilot" {...field} />
@@ -311,12 +342,12 @@ function Register() {
                   <FormLabel>Interests</FormLabel>
                   <FormDescription>
                     A comma-separated list of at least{" "}
-                    <span className="font-bold">four</span> things you enjoy
-                    (but the more the better)
+                    <span className="font-bold">8</span> things you enjoy (but
+                    the more the better)
                   </FormDescription>
                   <FormControl>
                     <Textarea
-                      placeholder="Hiking on mountains, reading fiction books, barbecuing with friends, playing multiplayer video games"
+                      placeholder="Hiking on mountains, reading fiction books, barbecuing with friends, playing multiplayer video games, watching stand-up comedy, going to the beach, trying new foods, learning about history"
                       {...field}
                     />
                   </FormControl>
@@ -366,7 +397,7 @@ function Register() {
                     <FormItem>
                       <FormLabel>Vacation Destination</FormLabel>
                       <FormDescription>
-                        A place you'd like to visit
+                        A place you'd really like to visit
                       </FormDescription>
                       <FormControl>
                         <Input placeholder="Hawaii" {...field} />
@@ -382,7 +413,7 @@ function Register() {
                     <FormItem>
                       <FormLabel>Vacation Explanation</FormLabel>
                       <FormDescription>
-                        Provide at least <span className="font-bold">four</span>{" "}
+                        Provide at least <span className="font-bold">8</span>{" "}
                         comma-separated reasons why you'd like to visit the
                         destination you chose (but the more the better)
                       </FormDescription>
