@@ -419,7 +419,7 @@ function Register() {
                       </FormDescription>
                       <FormControl>
                         <Textarea
-                          placeholder="World-famous beaches, surfing on clear blue water, local cuisine, friendly locals"
+                          placeholder="World-famous beaches, surfing on clear blue water, local cuisine, friendly locals, fishing, historic buildings, whale watching, seafood"
                           {...field}
                         />
                       </FormControl>
