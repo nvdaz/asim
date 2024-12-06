@@ -1,10 +1,10 @@
 from api.schemas.chat import ChatData
-from api.schemas.user import UserData
+from api.schemas.user import UserPersonalizationOptions
 from api.services import generate_suggestions, message_generation
 
 
 async def generate_agent_message(
-    user: UserData,
+    pers: UserPersonalizationOptions,
     chat: ChatData,
     state: str,
     objective: str | None,
@@ -25,7 +25,7 @@ async def generate_agent_message(
         objective_prompt = None
 
     return await message_generation.generate_message(
-        user=user,
+        pers=pers,
         user_sent=False,
         agent_name=chat.agent,
         personalize=chat.suggestion_generation == "content-inspired",

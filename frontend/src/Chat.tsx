@@ -408,6 +408,7 @@ function Chat() {
             }
             handleRate={handleRate}
             typing={!!currentChat?.agent_typing}
+            otherUser={currentChat?.agent || ""}
             chatEnd={chatEnd}
           />
           <Separator />
@@ -448,7 +449,7 @@ function Chat() {
                           </div>
                         )}
                         <div className="flex flex-row gap-2 w-full">
-                          <div className="rounded-md border border-input bg-transparent pl-3 text-sm shadow-sm flex flex-row gap-2 items-center w-full">
+                          <div className="rounded-md border border-input bg-transparent px-3 text-sm shadow-sm flex flex-row gap-2 items-center w-full">
                             <div className="w-full py-2">
                               {
                                 currentChat.suggestions[selectedSuggestion]

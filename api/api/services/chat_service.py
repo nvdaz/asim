@@ -98,6 +98,10 @@ async def _generate_agent_message(
     chat_state: ChatState, user: UserData, objective: str | None = None
 ):
     async with chat_state.transaction() as (chat, mark_changed):
+        assert user.personalization
+        pers = message_generation.get_personalization_options(
+            user.personalization, chat.suggestion_generation == "content-inspired"
+        )
         chat.agent_typing = True
         mark_changed()
 
@@ -131,7 +135,7 @@ async def _generate_agent_message(
             next_state = "objective-blunt"
 
         response_content = await chat_generation.generate_agent_message(
-            user=user,
+            pers=pers,
             chat=chat,
             state=next_state,
             objective=objective,
@@ -178,7 +182,7 @@ async def _generate_agent_message(
 
                 async def generate_feedback_suggestions():
                     follow_up = await message_generation.generate_message(
-                        user=user,
+                        pers=pers,
                         user_sent=True,
                         agent_name=chat.agent,
                         personalize=chat.suggestion_generation == "content-inspired",
@@ -205,7 +209,7 @@ async def _generate_agent_message(
                     suggestions,
                 ) = await asyncio.gather(
                     generate_feedback.explain_message(
-                        user,
+                        pers,
                         chat.agent,
                         objective,
                         chat.current_problem,
@@ -222,7 +226,7 @@ async def _generate_agent_message(
 
                 feedback_alternative = (
                     await generate_feedback.explain_message_alternative(
-                        user,
+                        pers,
                         chat.agent,
                         objective,
                         alternative_message,
@@ -270,6 +274,10 @@ async def _generate_agent_message(
 
 async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_message: str):
     async with chat_state.transaction() as (chat, mark_changed):
+        assert user.personalization
+        pers = message_generation.get_personalization_options(
+            user.personalization, chat.suggestion_generation == "content-inspired"
+        )
         chat.generating_suggestions = 3
         chat.events.append(
             ChatEvent(
@@ -286,7 +294,7 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
 
         if chat.suggestion_generation == "random":
             base_message = await message_generation.generate_message(
-                user=user,
+                pers=pers,
                 agent_name=chat.agent,
                 personalize=False,
                 user_sent=True,
@@ -300,7 +308,7 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
                 objective,
                 suggestions,
             ) = await generate_suggestions.generate_message_variations(
-                user,
+                pers,
                 chat.agent,
                 chat.objectives_used,
                 message_generation.format_messages_context_m(chat.messages, chat.agent),
@@ -314,7 +322,7 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
                 objective,
                 suggestions,
             ) = await generate_suggestions.generate_message_variations_blunt(
-                user,
+                pers,
                 chat.agent,
                 chat.objectives_used,
                 message_generation.format_messages_context_m(chat.messages, chat.agent),
@@ -325,7 +333,7 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
             chat.objectives_used.append("blunt")
         else:
             suggestions = await generate_suggestions.generate_message_variations_ok(
-                user,
+                pers,
                 chat.agent,
                 message_generation.format_messages_context_m(chat.messages, chat.agent),
                 base_message,
@@ -355,9 +363,13 @@ async def suggest_messages(chat_state: ChatState, user: UserData, prompt_message
 
 
 async def _send_message(chat_state: ChatState, user: UserData, index: int):
-    assert user.name
+    assert user.personalization
     async with chat_state.transaction() as (chat, _):
         assert chat.suggestions is not None
+
+        pers = message_generation.get_personalization_options(
+            user.personalization, chat.suggestion_generation == "content-inspired"
+        )
 
         suggestion = chat.suggestions[index]
 
@@ -380,7 +392,7 @@ async def _send_message(chat_state: ChatState, user: UserData, index: int):
 
         chat.messages.append(
             ChatMessage(
-                sender=user.name,
+                sender=pers.name,
                 content=suggestion.message,
                 created_at=datetime.now(timezone.utc),
             )

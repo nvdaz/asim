@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 import { formatRelative } from "date-fns";
 import { motion } from "framer-motion";
 import { Fragment, useMemo } from "react";
-import { useAuth } from "../auth-provider";
 import { Button } from "./button";
 import { ScrollArea } from "./scroll-area";
 import { Separator } from "./separator";
@@ -41,15 +40,15 @@ export function ChatInterface({
   messages,
   typing,
   chatEnd,
+  otherUser,
   handleRate,
 }: {
   messages: (Message | InChatFeedback)[];
   typing: boolean;
   chatEnd: React.RefObject<HTMLDivElement>;
+  otherUser: string;
   handleRate: (index: number, rating: number) => void;
 }) {
-  const { user } = useAuth();
-
   const groupedMessages = useMemo(() => {
     const grouped = messages.reduce((acc, msg, i) => {
       msg.index = i;
@@ -96,7 +95,7 @@ export function ChatInterface({
                   content={msg.content}
                   sender={msg.sender}
                   avatarUrl={msg.avatarUrl}
-                  isOutgoing={msg.sender === user!.name}
+                  isOutgoing={msg.sender !== otherUser}
                 />
               )
             )}

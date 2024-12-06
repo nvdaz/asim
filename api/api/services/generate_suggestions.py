@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from api.schemas.chat import Suggestion
-from api.schemas.user import UserData
+from api.schemas.user import UserPersonalizationOptions
 from api.services.generate_feedback import explain_suggestion
 
 from . import llm
@@ -21,7 +21,7 @@ class ObjectiveOut(BaseModel):
 
 
 async def detect_most_compatible_objective(
-    user: UserData,
+    pers: UserPersonalizationOptions,
     agent: str,
     conversation_history: str,
     objectives_used: list[str],
@@ -61,9 +61,9 @@ async def detect_most_compatible_objective(
     original message itself. You MUST provide a category for the message.
     """
 
-    prompt = f"""Here is the conversation history between {user.name} and {agent}: {conversation_history}
+    prompt = f"""Here is the conversation history between {pers.name} and {agent}: {conversation_history}
 
-    The next message by {user.name} is: {message}.
+    The next message by {pers.name} is: {message}.
 
     Classify this message into one of the following categories: {objectives_consider_str}.
 
@@ -95,7 +95,7 @@ class MessageVariationOutOk(BaseModel):
 
 
 async def generate_message_variations(
-    user: UserData,
+    pers: UserPersonalizationOptions,
     agent: str,
     objectives_used: list[str],
     context: str,
@@ -104,18 +104,18 @@ async def generate_message_variations(
 ) -> tuple[str, list[Suggestion]]:
     messages = []
     classification = await detect_most_compatible_objective(
-        user, agent, context, objectives_used, message
+        pers, agent, context, objectives_used, message
     )
 
     messages = await _generate_message_variations(
-        user, agent, classification, context, message
+        pers, agent, classification, context, message
     )
 
     if feedback:
         explanations = await asyncio.gather(
             *[
                 explain_suggestion(
-                    user,
+                    pers,
                     agent,
                     classification,
                     variation.problem,
@@ -149,7 +149,7 @@ async def generate_message_variations(
 
 
 async def _generate_message_variations(
-    user: UserData, agent, objective: str, context: str, message: str
+    pers: UserPersonalizationOptions, agent, objective: str, context: str, message: str
 ) -> list[MessageVariation]:
     objective_prompts = {
         "yes-no-question": (
@@ -321,18 +321,18 @@ Given a message, you are required to come up with variations of it as follows:
 
 {objective_prompt}
 
-Here are the latest four messages in the conversation history between {user.name} and {agent}:
+Here are the latest four messages in the conversation history between {pers.name} and {agent}:
 
 {context}
 
-Come up with variations for the following message, which is sent by {user.name} to {agent}'s last message in the conversation above:
+Come up with variations for the following message, which is sent by {pers.name} to {agent}'s last message in the conversation above:
 
 {message}
 
 Here is an example to guide you:
 {objective_example_prompt}
 
-You are generating VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
+You are generating VARIATIONS of {pers.name}'s message, not responding to it. Don't get confused here.
 """
 
     out = await llm.generate(
@@ -352,20 +352,17 @@ You are generating VARIATIONS of {user.name}'s message, not responding to it. Do
 
 
 async def generate_message_variations_ok(
-    user: UserData, agent: str, context: str, message: str, feedback: bool
+    pers: UserPersonalizationOptions,
+    agent: str,
+    context: str,
+    message: str,
+    feedback: bool,
 ) -> list[Suggestion]:
-    messages = await _generate_message_variations_ok(user, agent, context, message)
+    messages = await _generate_message_variations_ok(pers, agent, context, message)
     if feedback:
         explanations = await asyncio.gather(
             *[
-                explain_suggestion(
-                    user,
-                    agent,
-                    "generic",
-                    None,
-                    context,
-                    message,
-                )
+                explain_suggestion(pers, agent, "generic", None, context, message)
                 for message in messages
             ]
         )
@@ -392,7 +389,7 @@ async def generate_message_variations_ok(
 
 
 async def _generate_message_variations_ok(
-    user: UserData, agent: str, context: str, message: str
+    pers: UserPersonalizationOptions, agent: str, context: str, message: str
 ) -> list[str]:
     system_prompt = """
 You are a message rephrasing generator. Your task is to generate realistic rephrasings
@@ -404,15 +401,15 @@ rephrasings as strings.
 """
 
     prompt = f"""
-Here are the latest four messages in the conversation history between {user.name} and {agent}:
+Here are the latest four messages in the conversation history between {pers.name} and {agent}:
 
 {context}
 
-Come up with 3 variations for the following message, which is sent by {user.name} to {agent}'s last message in the conversation above:
+Come up with 3 variations for the following message, which is sent by {pers.name} to {agent}'s last message in the conversation above:
 
 {message}
 
-Remember, you are generating 3 VARIATIONS of {user.name}'s message, not responding to it. Don't get confused here.
+Remember, you are generating 3 VARIATIONS of {pers.name}'s message, not responding to it. Don't get confused here.
 """
 
     out = await llm.generate(
@@ -556,7 +553,7 @@ and not confrontational.
 
 
 async def generate_message_variations_blunt(
-    user: UserData,
+    pers: UserPersonalizationOptions,
     agent: str,
     objectives_used: list[str],
     context: str,
@@ -566,14 +563,14 @@ async def generate_message_variations_blunt(
     messages = []
 
     messages = await _generate_message_variations(
-        user, agent, "blunt-misinterpret", context, message
+        pers, agent, "blunt-misinterpret", context, message
     )
 
     if feedback:
         explanations = await asyncio.gather(
             *[
                 explain_suggestion(
-                    user,
+                    pers,
                     agent,
                     "blunt-misinterpret",
                     variant.problem,

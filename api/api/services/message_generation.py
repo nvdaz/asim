@@ -125,11 +125,11 @@ def dump_message_list(
     return "\n".join([f"{msg.sender}: {msg.content}" for msg in messages[-3:]])
 
 
-def get_scenario(
-    data: UserPersonalizationOptions, agent_name: str, personalize: bool
-) -> str:
+def get_personalization_options(
+    input_data: UserPersonalizationOptions, personalize: bool
+):
     if not personalize:
-        data = UserPersonalizationOptions(
+        return UserPersonalizationOptions(
             name="Frank",
             gender="Male",
             age="30",
@@ -147,7 +147,11 @@ def get_scenario(
             ),
             personality=["optimistic", "open-minded", "supportive", "friendly"],
         )
+    else:
+        return input_data
 
+
+def get_scenario(data: UserPersonalizationOptions, agent_name: str) -> str:
     scenario = (
         f"{agent_name} wants to plan a trip with {data.name}. Both of "
         f"them are colleagues at {data.company} where {data.name} "
@@ -178,7 +182,7 @@ class Message(BaseModel):
 
 
 async def generate_message(
-    user: UserData,
+    pers: UserPersonalizationOptions,
     agent_name: str,
     user_sent: bool,
     messages: list[ChatMessage | InChatFeedback],
@@ -186,9 +190,8 @@ async def generate_message(
     objective_prompt: str | None = None,
     bypass_objective_prompt_check=False,
 ) -> str:
-    assert user.name
-    sender_name = user.name if user_sent else agent_name
-    recipient_name = agent_name if user_sent else user.name
+    sender_name = pers.name if user_sent else agent_name
+    recipient_name = agent_name if user_sent else pers.name
 
     conversation_context = format_messages_context_long(messages, recipient_name)
 
@@ -211,22 +214,18 @@ async def generate_message(
         other=(
             "See the examples above to generate the response."
             if (objective_prompt or bypass_objective_prompt_check)
-            else f"The response should be such that the conversation is engaging and enjoyable for {user.name}, based on all the information provided about them in the scenario."
+            else f"The response should be such that the conversation is engaging and enjoyable for {pers.name}, based on all the information provided about them in the scenario."
         ),
     )
 
-    assert user.personalization
-
-    scenario = get_scenario(user.personalization, agent_name, personalize)
-
-    print(scenario)
+    scenario = get_scenario(pers, agent_name)
 
     prompt_data = prompt.format(
         name=sender_name,
         other_name=recipient_name,
         conversation=conversation_context,
         scenario=(
-            f"Here is the scenario: {scenario.format(user=user.name, agent=agent_name)}"
+            f"Here is the scenario: {scenario.format(user=pers.name, agent=agent_name)}"
             if not (objective_prompt or bypass_objective_prompt_check)
             else ""
         ),

@@ -1,13 +1,13 @@
 from pydantic import BaseModel
 
 from api.schemas.chat import Feedback
-from api.schemas.user import UserData
+from api.schemas.user import UserPersonalizationOptions
 
 from . import llm
 
 
 async def explain_suggestion(
-    user: UserData,
+    pers: UserPersonalizationOptions,
     agent: str,
     objective: str,
     problem: str | None,
@@ -82,7 +82,7 @@ interpret {user}'s emotional tone and intent from their message.
 """,
     }
     objective_prompt = objective_prompts[(objective, problem is not None)].format(
-        user=user.name, agent=agent
+        user=pers.name, agent=agent
     )
 
     action = (
@@ -151,7 +151,7 @@ At the end is a model output based on the following sample original message:
     )
 
     action = action.format(
-        user=user.name, agent=agent, problem=problem, objective_prompt=objective_prompt
+        user=pers.name, agent=agent, problem=problem, objective_prompt=objective_prompt
     )
 
     system_prompt_template = """
@@ -162,7 +162,7 @@ Respond with a JSON object with keys "title" and "feedback" containing your feed
 
     system = system_prompt_template.format(
         objective_prompt=objective_prompt,
-        user=user.name,
+        user=pers.name,
         agent=agent,
     )
 
@@ -177,7 +177,7 @@ Here is the original message last sent by {user}:
 """
 
     prompt = prompt_template.format(
-        user=user.name, agent=agent, context=context, original=message, action=action
+        user=pers.name, agent=agent, context=context, original=message, action=action
     )
 
     out = await llm.generate(
@@ -196,7 +196,7 @@ class FeedbackOutput(BaseModel):
 
 
 async def explain_message(
-    user: UserData,
+    pers: UserPersonalizationOptions,
     agent: str,
     objective: str,
     problem: str,
@@ -290,7 +290,7 @@ Sample reaction of the confused recipient: "cool! but why the upside down smiley
     example = examples.get(objective, examples["non-literal-figurative"])
 
     objective_prompt = objective_prompts[objective].format(
-        user=user.name, agent=agent, last3=last3
+        user=pers.name, agent=agent, last3=last3
     )
 
     system_prompt_template = """
@@ -301,7 +301,7 @@ Respond with a JSON object with keys "title" and "feedback" containing your feed
 
     system = system_prompt_template.format(
         objective_prompt=objective_prompt,
-        user=user.name,
+        user=pers.name,
         agent=agent,
     )
 
@@ -338,7 +338,7 @@ Your feedback should be so detailed and simple that it explains every bit step-b
 """
 
     prompt = prompt_template.format(
-        user=user.name,
+        user=pers.name,
         agent=agent,
         context=context,
         original=message,
@@ -363,7 +363,7 @@ class FeedbackContentOnly(BaseModel):
 
 
 async def explain_message_alternative(
-    user: UserData,
+    pers: UserPersonalizationOptions,
     agent: str,
     objective: str,
     message: str,
@@ -394,29 +394,29 @@ use blunt language and that {agent} did not intend to be rude. Instead, {user} s
 consider that {agent} did not intend to be rude, and resond in a more understanding way.
 """,
     }
-    objective_prompt = objective_prompts[objective].format(user=user.name, agent=agent)
+    objective_prompt = objective_prompts[objective].format(user=pers.name, agent=agent)
 
     system = f"""
-As a helpful communication guide, you are guiding {user.name} on their conversation with {agent}.
+As a helpful communication guide, you are guiding {pers.name} on their conversation with {agent}.
 
 {objective_prompt}
 
 Respond with a JSON object with key "feedback" containing your feedback.
 """
     prompt = f"""
-Here is the conversation history between {user.name} and {agent}:
+Here is the conversation history between {pers.name} and {agent}:
 {context}
 
-Here is the original message last sent by {user.name}:
+Here is the original message last sent by {pers.name}:
 {original}
 
 Here is the alternative message for the message above:
 {message}
 
-{user.name} received the following feedback on their original message:
+{pers.name} received the following feedback on their original message:
 {feedback_original}
 
-Now, explain to {user.name} why the alternative message is better than their original message.
+Now, explain to {pers.name} why the alternative message is better than their original message.
 
 Make sure to:
 
@@ -425,7 +425,7 @@ Make sure to:
 3. Limit your answer to less than 100 words.
 4. NEVER repeat the alternative messages in your feedback, only provide feedback.
 
-Remember, explain to {user.name} why the alternative is better and NEVER repeat the message.
+Remember, explain to {pers.name} why the alternative is better and NEVER repeat the message.
 
 At the end is a model output based on the following sample alternative message:
 "I think we should reserve our spots for whale watching ahead of time to ensure we don't miss it."
