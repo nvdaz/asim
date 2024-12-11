@@ -33,7 +33,7 @@ import { useToast } from "./hooks/use-toast";
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   age: z.string().regex(/^\d+$/, { message: "Age must be a number." }),
-  gender: z.string().min(1, { message: "Gender is required." }),
+  gender: z.string().min(1, { message: "Gender identity is required." }),
   location: z.object({
     city: z.string().min(2, { message: "City must be at least 2 characters." }),
     country: z
@@ -42,12 +42,32 @@ const formSchema = z.object({
   }),
   company: z
     .string()
-    .min(2, { message: "Company must be at least 2 characters." }),
+    .min(2, { message: "Company must be at least 2 characters." })
+    .superRefine((value, ctx) => {
+      if (value.toLowerCase() === "student") {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "If you're a student, please pick a company you'd like to work for in the future.",
+          path: [],
+        });
+      }
+    }),
   occupation: z
     .string()
-    .min(2, { message: "Occupation must be at least 2 characters." }),
-  interests: z.string().regex(/^([^,]+,){7,}[^,]+$/, {
-    message: "Interests must be a comma-separated list of at least 8 items.",
+    .min(2, { message: "Occupation must be at least 2 characters." })
+    .superRefine((value, ctx) => {
+      if (value.toLowerCase() === "student") {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "If you're a student, please pick an occupation you'd like to have in the future.",
+          path: [],
+        });
+      }
+    }),
+  interests: z.string().regex(/^([^,]+,){3,}[^,]+$/, {
+    message: "Interests must be a comma-separated list of at least 4 items.",
   }),
   scenario: z
     .object({
@@ -86,11 +106,11 @@ const formSchema = z.object({
             message: "Vacation explanation is required.",
             path: ["vacation_explanation"],
           });
-        } else if (data.vacation_explanation.split(",").length < 8) {
+        } else if (data.vacation_explanation.split(",").length < 4) {
           ctx.addIssue({
             code: "custom",
             message:
-              "Vacation explanation must be a comma-separated list of at least 8 items.",
+              "Vacation explanation must be a comma-separated list of at least 4 items.",
             path: ["vacation_explanation"],
           });
         }
@@ -225,7 +245,7 @@ function Register() {
                   name="gender"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Gender</FormLabel>
+                      <FormLabel>Gender Identity</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -251,86 +271,85 @@ function Register() {
               </div>
             </div>
 
-            <h2>Where you're from</h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <FormField
-                  control={form.control}
-                  name="location.country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country</FormLabel>
-                      <FormDescription>
-                        The country you're originally from
-                      </FormDescription>
-                      <FormControl>
-                        <Input placeholder="USA" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div>
-                <FormField
-                  control={form.control}
-                  name="location.city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City</FormLabel>
-                      <FormDescription>
-                        The city you're originally from
-                      </FormDescription>
-                      <FormControl>
-                        <Input placeholder="New York City" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <div>
+              <h2>Where you're from</h2>
+              <p className="text-sm text-gray-400 m-0 py-2">
+                Tell us the location you're{" "}
+                <span className="font-bold">originally</span> from
+              </p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <FormField
+                    control={form.control}
+                    name="location.country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <FormControl>
+                          <Input placeholder="USA" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div>
+                  <FormField
+                    control={form.control}
+                    name="location.city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input placeholder="New York City" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             </div>
-            <h2>Occupation</h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                {/* Company Field */}
-                <FormField
-                  control={form.control}
-                  name="company"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company</FormLabel>
-                      <FormDescription>
-                        The employer you currently work for, or, if you’re a
-                        student, the employer you aspire to work for
-                      </FormDescription>
-                      <FormControl>
-                        <Input placeholder="JetBlue" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div>
-                {/* Occupation Field */}
-                <FormField
-                  control={form.control}
-                  name="occupation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Occupation</FormLabel>
-                      <FormDescription>
-                        The job you currently hold, or, if you’re a student, the
-                        job you aspire to have
-                      </FormDescription>
-                      <FormControl>
-                        <Input placeholder="Airline Pilot" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <div>
+              <h2>Occupation</h2>
+              <p className="text-sm text-gray-400 m-0 py-2">
+                If you're a student, tell us about your{" "}
+                <span className="font-bold">dream</span> job and employer. If
+                not, tell us about your current job and employer.
+              </p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  {/* Company Field */}
+                  <FormField
+                    control={form.control}
+                    name="company"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company</FormLabel>
+                        <FormControl>
+                          <Input placeholder="JetBlue" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div>
+                  {/* Occupation Field */}
+                  <FormField
+                    control={form.control}
+                    name="occupation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Occupation</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Airline Pilot" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             </div>
             {/* Interests Field */}
@@ -342,7 +361,7 @@ function Register() {
                   <FormLabel>Interests</FormLabel>
                   <FormDescription>
                     A comma-separated list of at least{" "}
-                    <span className="font-bold">8</span> things you enjoy (but
+                    <span className="font-bold">4</span> things you enjoy (but
                     the more the better)
                   </FormDescription>
                   <FormControl>
@@ -413,7 +432,7 @@ function Register() {
                     <FormItem>
                       <FormLabel>Vacation Explanation</FormLabel>
                       <FormDescription>
-                        Provide at least <span className="font-bold">8</span>{" "}
+                        Provide at least <span className="font-bold">4</span>{" "}
                         comma-separated reasons why you'd like to visit the
                         destination you chose (but the more the better)
                       </FormDescription>
