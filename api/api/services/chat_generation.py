@@ -18,7 +18,7 @@ async def generate_agent_message(
                     objective, problem
                 )
             )
-            if objective
+            if (objective and problem is not None) or objective == "blunt-initial"
             else None
         )
     else:
@@ -28,7 +28,6 @@ async def generate_agent_message(
         pers=pers,
         user_sent=False,
         agent_name=chat.agent,
-        personalize=chat.suggestion_generation == "content-inspired",
         messages=chat.messages,
         objective_prompt=objective_prompt,
         bypass_objective_prompt_check=bypass_objective_prompt_check,

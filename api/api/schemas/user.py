@@ -7,7 +7,7 @@ from .objectid import PyObjectId
 
 
 class Options(BaseModel):
-    feedback_mode: Literal["on-suggestion", "on-submit"]
+    feedback_mode: Literal["on-suggestion", "on-submit"] = "on-submit"
     suggestion_generation: Literal["content-inspired", "random"]
 
 

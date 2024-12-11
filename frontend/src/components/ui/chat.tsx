@@ -22,7 +22,7 @@ export interface InChatFeedback {
     title: string;
     body: string;
   };
-  alternative: string;
+  alternative: string | null;
   alternative_feedback: string;
   rating: number | null;
   created_at: string;
@@ -168,10 +168,16 @@ function FeedbackBubble({
             <div className="bg-accent text-accent-foreground rounded-md p-3">
               <h2 className="font-semibold">{feedback.feedback.title}</h2>
               <p className="text-sm">{feedback.feedback.body}</p>
-              <h2 className="mt-4 font-semibold">Instead, You Could Say:</h2>
-              <p className="text-sm rounded-md bg-gray-300 p-2 my-1">
-                {feedback.alternative}
-              </p>
+              {feedback.alternative && (
+                <>
+                  <h2 className="mt-4 font-semibold">
+                    As An Alternative, You Could Try:
+                  </h2>
+                  <p className="text-sm rounded-md bg-gray-300 p-2 my-1">
+                    {feedback.alternative}
+                  </p>
+                </>
+              )}
               <p className="text-sm">{feedback.alternative_feedback}</p>
               <Separator className="mt-4" />
               <h3 className="mt-2 font-medium">

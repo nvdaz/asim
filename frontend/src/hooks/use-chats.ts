@@ -292,6 +292,12 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
     }, [sendMessage]);
 
   const handleCheckpointRate = useCallback((id: string, ratings: { [key: string]: number }) => {
+    setChats((chats) => {
+      const chat = chats[id];
+      invariant(chatIsLoaded(chat));
+      chat.checkpoint_rate = false;
+      return { ...chats, [id]: chat };
+    });
     sendMessage({ type: "checkpoint-rating", id, ratings })
 
   }, [sendMessage])

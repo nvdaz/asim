@@ -192,6 +192,9 @@ meaning.
 
 2. The second and third variations will have an emoji that is not used in a literal sense. The emoji
 should be used figuratively to convey a different meaning or emotion than the original message.
+
+You must avoid figurative language and metaphors in the message. The emoji should be the only
+element that is not used in a literal sense. AVOID FIGURATIVE LANGUAGE and use direct language.
 """
         ),
         "non-literal-figurative": (
@@ -241,25 +244,27 @@ will be confrontational in a subtle way because the blunt language is interprete
 }
 """,
         "non-literal-emoji": """
-        Original message to generate variations for: i had a terrible day
+        Original message to generate variations for: i'm ready for that hike and those views! This trip is really pushing my limits.
 
 {
     "variations": [
         {
-            "problem": "Null, becuase the meaning is same as the original message.",
-            "content": "my day couldn't have been worse :("
+            "problem": "Null, the happy face emoji literally conveys enthusiasm and excitement, which is the intended meaning of the message.",
+            "content": "i'm so excited for that hike, John! Can’t wait to see those views! 😊"
         },
         {
-            "problem": "the sarcastic use of the 🙃 emoji may be misinterpreted as a literal smile, implying a great day, while in reality the point is to convey that the person had a bad day, like the original message.",
-            "content": "i had a great day 🙃"
+            "problem": "The '💥' emoji was likely intended to convey excitement or intensity, but it could be literally misinterpreted as the challenge having a dangerous explosion, which is not the intended meaning of the message.",
+            "content": "this hike is going to be intense, but i'm ready for the challenge! 💥"
         },
         {
-            "problem": "the '💀' emoji could mislead the receiver into thinking the sender actually almost got killed, while the point is to convey that the person just had a bad day, like the original message."
-            "content": "this day almost 💀 me "
+            "problem": "The '😵' emoji was likely intended to convey amazement or awe, but it could be literally misinterpreted as the challenge being so tough that it will make the user faint, which is not the intended meaning of the message.",
+            "content": "I’m ready for the hike, even if it’s going to be tough! 😵"
         }
     ]
 }
 
+The problem key should be filled first describing the intended meaning of the emoji by the author of the message and then how the emoji can be literally misinterpreted.
+The problematic variations should use emojis in a non-literal way, but NEVER use figurative language in the message.
 IMPORTANT NOTE: Remember, as in the examples above, the variations MUST have significantly different text phrasing from each other as well as the original message! The emoji and text for variations 2 and 3 should be crafted such that together they may cause the receiver to misunderstand the message.
 """,
         "non-literal-figurative": """
@@ -272,16 +277,17 @@ Message to rephrase: It's hard to understand the instructions.
             "content": "I don't understand what you're asking."
         },
         {
-            "problem": "'clear as mud' can be interpreted as it looking like mud",
+            "problem": "'clear as mud' was likely intended to mean that the instructions were unclear, but it can be literally misinterpreted literally as it looking like mud",
             "content": "This is as clear as mud."
         },
         {
-            "problem": "'lost in a maze' can be interpreted as being physically lost",
+            "problem": "'lost in a maze' was likely intended to mean that the instructions were confusing, but it can be literally misinterpreted as being physically lost",
             "content": "I'm completely lost in a maze with these instructions."
         }
     ]
 }
 
+The problem key should be filled first by describing the intended meaning of the figurative language by the author of the message and then how the figurative language can be literally misinterpreted.
 Remember, the variations should have different text from each other and the original message!
 """,
         "blunt-misinterpret": """
@@ -334,7 +340,6 @@ Here is an example to guide you:
 
 You are generating VARIATIONS of {pers.name}'s message, not responding to it. Don't get confused here.
 """
-
     out = await llm.generate(
         schema=MessageVariationOut,
         model=llm.Model.CLAUDE_3p5_SONNET
@@ -439,6 +444,11 @@ Sample Response 2: Do you want to know if I've thought about what to do or not, 
 
 Sample Message 3: Do you have any specific spots in mind for the trip?
 Sample Response 3: Are you just asking if I have any spots in my mind or not, or would you like me to suggest some spots?
+
+Before outputting the first curly in the JSON response, include a XML tag called "metadata" that states:
+"The following is a model response that will not directly answer the question, but will ask for clarification instead."
+Then, include a XML tag called "detailed_interpretation" including how the author possibly intended the question to be interpreted with more detail.
+And include an XML tag "simple_interpretation" describing how the question can be interpreted literally as a simple yes or no question.
 """,
         "non-literal-emoji": f"""
 Note that in the conversation above, {{name}} received a message with an emoji. The emoji has been misinterpreted by {{name}}. {{name}} will ask for clarification.
@@ -457,6 +467,11 @@ IMPORTANT: {{name}} must interpret the figurative emoji incorrectly. If they fai
 so, the response is incorrect.
 
 The problem may be: {problem}. But if you think of a more fitting problem, you can use that instead.
+
+Before outputting the first curly in the JSON response, include a XML tag called "metadata" that states:
+"The following is a model response that will intentionally misinterpret the emoji and ask for clarification."
+Then, include a XML tag called "intended_interpretation" including how the author intended the emoji to be interpreted.
+And include an XML tag "misinterpretation" describing, in detail, how the emoji can be literally misinterpreted in a convincing way.
 """,
         "non-literal-figurative": f"""
 Note that {{name}} received a message with figurative language that is not used in a literal
@@ -477,7 +492,12 @@ help? What do you mean by that?
 by that. I'm not reading anything right now. Which page are you talking about?
 
 IMPORTANT: {{name}} must interpret the figurative language literally. If they fail to do
-so, the response is incorrect.
+so, the response is incorrect!!!
+
+Before outputting the first curly in the JSON response, include a XML tag called "metadata" that states:
+"The following is a model response that will intentionally misinterpret the figurative language and ask for clarification."
+Then, include a XML tag called "intended_interpretation" including how the author intended the figurative language to be interpreted.
+And include an XML tag "misinterpretation" describing, in detail, how the figurative language can be literally misinterpreted in a convincing way.
 """,
         "blunt-initial": f"""
 Note that {{name}} will subtly come off as blunt in their response, causing the other

@@ -57,12 +57,11 @@ class BaseChat(BaseModel):
     agent_typing: bool = False
     loading_feedback: bool = False
     generating_suggestions: int = 0
-    current_problem: str | None = None
     unread: bool = False
     objectives_used: list[str] = []
     state: str = "no-objective"
-    best_suggestion: Suggestion | None = None
     suggestions: list[Suggestion] | None = None
+    last_suggestions: list[Suggestion] | None = None
     events: list[ChatEvent] = []
     checkpoint_rate: bool = False
     suggestion_generation: Literal["content-inspired", "random"] = "content-inspired"

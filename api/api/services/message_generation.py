@@ -186,7 +186,6 @@ async def generate_message(
     agent_name: str,
     user_sent: bool,
     messages: list[ChatMessage | InChatFeedback],
-    personalize: bool,
     objective_prompt: str | None = None,
     bypass_objective_prompt_check=False,
 ) -> str:
@@ -231,7 +230,7 @@ async def generate_message(
         ),
         action=action,
         specific_instructions=(
-            f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them."
+            f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them. 4. Use direct language and avoid figurative language and non-literal emojis."
             if not user_sent
             else ""
         ),
