@@ -213,7 +213,7 @@ async def generate_message(
         other=(
             "See the examples above to generate the response."
             if (objective_prompt or bypass_objective_prompt_check)
-            else f"The response should be such that the conversation is engaging and enjoyable for {pers.name}, based on all the information provided about them in the scenario."
+            else f"The response should be such that the conversation is engaging for {pers.name}, based on all the information provided about them in the scenario."
         ),
     )
 
@@ -230,14 +230,14 @@ async def generate_message(
         ),
         action=action,
         specific_instructions=(
-            f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them. 4. Use direct language and avoid figurative language and non-literal emojis."
+            f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them."
             if not user_sent
             else ""
         ),
         agent_style=(
             ""
             if user_sent
-            else f"{agent_name} should use simple and straightforward language in their message. Avoid emojis unless necessary, only using very simple ones."
+            else f"{agent_name} uses direct, straightforward language while avoiding pleasantries. {agent_name} isn't very expressive and is not overly friendly. avoid over-optimism. Do not use figurative languages or emojis."
         ),
     ).strip()
 

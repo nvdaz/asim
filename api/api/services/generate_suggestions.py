@@ -10,8 +10,8 @@ from api.services.generate_feedback import explain_suggestion
 from . import llm
 
 objectives = [
-    "non-literal-emoji",
-    "non-literal-figurative",
+    # "non-literal-emoji",
+    # "non-literal-figurative",
     "yes-no-question",
 ]
 
@@ -213,9 +213,13 @@ interpretation.
 1. The first variation will interpret the blunt and direct message empathetically.
 This messsage variation should be clear and concise, addressing the blunt message.
 
-2. The second and third variations will interpret the blunt and direct message as rude or unkind.
-The variations should show that the blunt message caused confusion. These message variations
-will be confrontational in a subtle way because the blunt language is interpreted as rude.
+2. The second variation will interpret the blunt message as rude. This variation should directly
+confront the perceived rudeness by questioning the other person’s tone or intent, expressing
+discomfortor frustration about how the message was communicated.
+
+3. The third variation will interpret the blunt message as rude. This variation should
+ubtly confront the perceived rudeness, using a passive or indirect response that still
+indicates the message came across as too direct or harsh.
     """
         ),
     }
@@ -301,12 +305,12 @@ Message to generate variations for: Ok, will get the report done.
             "content": "Sure, I'll finish the report by tomorrow."
         },
         {
-            "problem": "The word 'fine!' and the subsequent phrase shows annoyance and a confrontational tone.",
-            "content": "Fine I'll do it! I didn’t know it was so urgent!"
+            "problem": "The phrase shows that the user was likely offended and wants to confront their friend.",
+            "content": "Why are you being so demanding? I'll get it done."
         },
         {
             "problem": "The phrase shows that the user was likely offended and wants to confront their friend.",
-            "content": "I’ll get it done. But you don’t have to be so demanding!"
+            "content": "I’ll get it done. There's no need to rush me.
         }
     ]
 }
@@ -503,7 +507,7 @@ And include an XML tag "misinterpretation" describing, in detail, how the figura
 Note that {{name}} will subtly come off as blunt in their response, causing the other
 person to interpret the tone of their message as rude/blunt. {{name}} does not consider that
 the other person may be sensitive to direct language. Hence, uses blunt tone and language
-because it is the most efficient/straightforward way to communicate.
+because it is the most straightforward way to communicate.
 
 Examples:
 1. I need you to get this done by the end of the day or we're going to have a problem.
@@ -512,7 +516,13 @@ Examples:
 
 3. Just get it done and let me know when it's finished.
 
-IMPORTANT: {{name}} must come off as blunt/slightly rude/direct in their response. If their response is not like this, the response is incorrect.
+Before outputting the first curly in the JSON response, include a XML tag called "metadata" that states:
+"The following is a model response that is intentionally blunt and direct."
+Then, include a XML tag called "intended_objective" describing a specific thing that {{name}} needs the other person to do or understand now.
+And include an XML tag "rude_interpretation" describing how the objective can be interpreted as rude if it is mentioned in a certain way.
+The blunt phrase should come off as rude to someone who isn't familiar with autistic communication styles, but it is not intentionally rude.
+Keep {{name}}'s response to the point and avoid adding softening language and pleasantries. {{name}} should be firm but not rude--task-oriented and straightforward.
+IMPORTANT: {{name}} must come off as blunt/direct in their response. If their response is not like this, the response is incorrect.
 """,
         "blunt-misinterpret": f"""
 Note that {{name}} does not understand why the other person's message was confrontational and
