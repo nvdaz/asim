@@ -8,7 +8,7 @@ from typing import Callable
 import faker
 from bson import ObjectId
 
-from api.db import chats
+from api.db import chats, users
 from api.schemas.chat import (
     BaseChat,
     ChatData,
@@ -48,6 +48,14 @@ async def create_chat(user: UserData) -> ChatData:
         ]
 
     await chats.update_chat(chat)
+
+    user.options.suggestion_generation = (
+        "content-inspired"
+        if user.options.suggestion_generation == "random"
+        else "random"
+    )
+
+    await users.update(user.id, user)
 
     return chat
 
@@ -196,6 +204,7 @@ async def _generate_agent_message(
                     if len(chat.messages) > 2
                     and isinstance(chat.messages[-3], ChatMessage)
                     else None,
+                    chat.last_suggestions,
                 )
 
                 chat.messages.append(
@@ -254,6 +263,7 @@ async def _generate_agent_message(
                         if len(chat.messages) > 2
                         and isinstance(chat.messages[-3], ChatMessage)
                         else None,
+                        chat.last_suggestions,
                     ),
                     generate_feedback_suggestions(),
                 )

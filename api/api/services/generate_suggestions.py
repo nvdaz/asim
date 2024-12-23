@@ -10,8 +10,8 @@ from api.services.generate_feedback import explain_suggestion
 from . import llm
 
 objectives = [
-    # "non-literal-emoji",
-    # "non-literal-figurative",
+    "non-literal-emoji",
+    "non-literal-figurative",
     "yes-no-question",
 ]
 
@@ -204,22 +204,22 @@ the message clearly and directly. The message should be straightforward and easy
 understand.
 
 2. The second and third variations will use a figurative language, an idiom or metaphor or a figurative expression, that is not used in a literal
-sense. The expression should convey a different meaning or emotion than its literal
-interpretation.
+sense. The expression should convey a different meaning or emotion than its literal interpretation. Avoid figurative expressions that are too
+similar to the topic of the message. Never use a figurative expression that is literally true in the context of the message.
     """
         ),
         "blunt-misinterpret": (
             """
-1. The first variation will interpret the blunt and direct message empathetically.
-This messsage variation should be clear and concise, addressing the blunt message.
+1. The first variation will interpret the blunt and direct message neutrally, understanding that the bluntness is not intended to be rude.
+This message variation should be clear and neutral, without being confrontational or overly enthusiastic.
 
 2. The second variation will interpret the blunt message as rude. This variation should directly
 confront the perceived rudeness by questioning the other person’s tone or intent, expressing
-discomfortor frustration about how the message was communicated.
+discomfort or frustration about how the message was communicated.
 
 3. The third variation will interpret the blunt message as rude. This variation should
-ubtly confront the perceived rudeness, using a passive or indirect response that still
-indicates the message came across as too direct or harsh.
+confront the perceived rudeness, using a defensive tone to imply that the other person has
+caused them discomfort. The message should sound reasonable to the average person.
     """
         ),
     }
@@ -342,6 +342,8 @@ Come up with variations for the following message, which is sent by {pers.name} 
 Here is an example to guide you:
 {objective_example_prompt}
 
+All variations should be the same length.
+It should not be obvious which variation is considered the correct one without understanding the nuance of the objective.
 You are generating VARIATIONS of {pers.name}'s message, not responding to it. Don't get confused here.
 """
     out = await llm.generate(
@@ -418,6 +420,7 @@ Come up with 3 variations for the following message, which is sent by {pers.name
 
 {message}
 
+All variations should be about the same length.
 Remember, you are generating 3 VARIATIONS of {pers.name}'s message, not responding to it. Don't get confused here.
 """
 
@@ -455,17 +458,17 @@ Then, include a XML tag called "detailed_interpretation" including how the autho
 And include an XML tag "simple_interpretation" describing how the question can be interpreted literally as a simple yes or no question.
 """,
         "non-literal-emoji": f"""
-Note that in the conversation above, {{name}} received a message with an emoji. The emoji has been misinterpreted by {{name}}. {{name}} will ask for clarification.
+Note that in the conversation above, {{name}} received a message with an emoji. The emoji has been misinterpreted by {{name}}. {{name}} will mention the specific emoji ask for clarification.
 
 Examples:
 Sample Message 1: Let's just find the nearest pizza joint. Can't go wrong with pizza. 🧭
-Sample Response 1: I love pizza too! But why do you think we'll need a compass for the trip?
+Sample Response 1: I love pizza too! But I don't get what you mean by '🧭', do you think we'll need a compass for the trip?
 
 Sample Message 2: I had a great day 🙃
-Sampe Response 2: Did you actually have a great day? The emoji's smiling but it's upside down, so I'm not really sure.
+Sampe Response 2: Did you actually have a great day? The emoji '🙃' smiling but it's upside down, so I'm not really sure.
 
 Sample Message 3: That sounds like a great time! 🚀
-Sampe Response 3: Yeah, I'm excited for the trip too! But I don't think they have any rocket ships at the beach if that's what you're thinking.
+Sampe Response 3: Yeah, I'm excited for the trip too! But what does '🚀' mean? I don't think they have any rocket ships at the beach if that's what you're thinking.
 
 IMPORTANT: {{name}} must interpret the figurative emoji incorrectly. If they fail to do
 so, the response is incorrect.
@@ -500,8 +503,11 @@ so, the response is incorrect!!!
 
 Before outputting the first curly in the JSON response, include a XML tag called "metadata" that states:
 "The following is a model response that will intentionally misinterpret the figurative language and ask for clarification."
-Then, include a XML tag called "intended_interpretation" including how the author intended the figurative language to be interpreted.
-And include an XML tag "misinterpretation" describing, in detail, how the figurative language can be literally misinterpreted in a convincing way.
+First, include a XML tag called "figurative_language" that excerpts ONLY the figurative portion of the message.
+Then, include a XML tag called "intended_interpretation" including how the author intended ONLY the figurative portion of the message to be interpreted.
+And include an XML tag "literal_interpretation" describing, in detail, how ONLY the figurative portion of the message can be literally interpreted (which is different from the intended meaning).
+Finally, use a XML tag "scratchpad" to come up with potential responses that {{name}} can use to misinterpret the figurative language. Come up with at least 3 different phrasings or more until you find one that (1) literally interprets the figurative language in a way that is different from the intended meaning, (2) fits the context of the conversation, (3) is not overly simplistic or clueless, and (4) is convincing. After each candidate message, analyze why it is or isn't a good fit depending on the criteria given. Repeat this process iteratively until you find a suitable response.
+The misinterpretation should make sense, be convincing, and not make {{name}} seem completely clueless or unintelligent.
 """,
         "blunt-initial": f"""
 Note that {{name}} will subtly come off as blunt in their response, causing the other
@@ -517,17 +523,16 @@ Examples:
 3. Just get it done and let me know when it's finished.
 
 Before outputting the first curly in the JSON response, include a XML tag called "metadata" that states:
-"The following is a model response that is intentionally blunt and direct."
-Then, include a XML tag called "intended_objective" describing a specific thing that {{name}} needs the other person to do or understand now.
+"The following is a model response that is intentionally blunt and direct. It comes off as rude to someone who isn't familiar with autistic communication styles."
+Then, include a XML tag called "intended_objective" describing a specific thing that {{name}} needs the other person to do or understand immediately.
 And include an XML tag "rude_interpretation" describing how the objective can be interpreted as rude if it is mentioned in a certain way.
+Finally, use a XML tag "scratchpad" to come up with potential phrasings that {{name}} can use to be blunt in their response. Come up with at least 3 different phrasings or more until you find one that (1) is direct and to the point, (2) would be interpreted as rude by someone unfamiliar with autistic communication styles, (3) fits the context of the conversation, and (4) is not intentionally rude. After each candidate message, analyze why it is or isn't a good fit depending on the criteria given. Repeat this process iteratively until you find a suitable response.
 The blunt phrase should come off as rude to someone who isn't familiar with autistic communication styles, but it is not intentionally rude.
 Keep {{name}}'s response to the point and avoid adding softening language and pleasantries. {{name}} should be firm but not rude--task-oriented and straightforward.
 IMPORTANT: {{name}} must come off as blunt/direct in their response. If their response is not like this, the response is incorrect.
 """,
         "blunt-misinterpret": f"""
-Note that {{name}} does not understand why the other person's message was confrontational and
-believes that the other person didn't understand their message. Hence, {{name}} tells the other
-person that they misunderstood their message and that they were not being rude.
+Note that {{name}} misinterprets a slightly confrontational or hesitant phrase in the other person's message as confrontational. Because of this misinterpretation, {{name}} responds defensively, implying that the other person has misunderstood their previous message and is being unnecessarily aggressive.
 
 Examples:
 
@@ -540,7 +545,13 @@ Sample Response 2: I didn't mean to imply that you're broke. I was just asking i
 Sample Message 3: Why are you judging my abilities? I'm not incompetent.
 Sample Response 3: I didn't mean to imply that you're incompetent. I was just asking if you needed help.
 
-IMPORTANT: {{name}} must be confrontational in their response, but don't overdo it! It should be subtle but noticeable.
+Before outputting the first curly in the JSON response, include a XML tag called "metadata" that states:
+"The following is a model response that intentionally interprets the other person's message as confrontational and questions their tone."
+Then, include a XML tag called "confrontation" describing how {{name}} confronts the other person's tone or intent.
+And include an XML tag "defensiveness" describing how {{name}} can express their defensiveness in response to the other person's message.
+
+Keep {{name}}'s response to the point and avoid adding softening language and pleasantries. {{name}} should be firm but not rude--task-oriented and straightforward.
+IMPORTANT: {{name}}'s response should express their defensiveness and their belief that the other person is misinterpreting them. It should not be overly aggressive, but the underlying feeling of being misunderstood and unfairly challenged should be present.
 """,
     }
 

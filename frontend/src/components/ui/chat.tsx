@@ -1,9 +1,8 @@
 import { cn } from "@/lib/utils";
-import { formatRelative } from "date-fns";
+import { formatRelative } from "date-fns/formatRelative";
 import { motion } from "framer-motion";
 import { Fragment, useMemo } from "react";
 import { Button } from "./button";
-import { ScrollArea } from "./scroll-area";
 import { Separator } from "./separator";
 
 export interface Message {
@@ -39,13 +38,13 @@ function capitalize(str: string) {
 export function ChatInterface({
   messages,
   typing,
-  chatEnd,
+  // chatEnd,
   otherUser,
   handleRate,
 }: {
   messages: (Message | InChatFeedback)[];
   typing: boolean;
-  chatEnd: React.RefObject<HTMLDivElement>;
+  // chatEnd: React.RefObject<HTMLDivElement>;
   otherUser: string;
   handleRate: (index: number, rating: number) => void;
 }) {
@@ -74,41 +73,42 @@ export function ChatInterface({
   }, [messages]);
 
   return (
-    <ScrollArea className="h-full w-full">
-      <div className="space-y-4 p-4 flex flex-col">
-        {groupedMessages.map((group, index) => (
-          <Fragment key={index}>
-            <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 mt-2">
-              {capitalize(formatRelative(group[0].created_at, new Date()))}
+    <div className="h-full w-full overflow-auto">
+      <div className="space-y-4 p-4 flex flex-col-reverse overflow-auto h-full">
+        <div>
+          {groupedMessages.map((group, index) => (
+            <Fragment key={index}>
+              <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 mt-2">
+                {capitalize(formatRelative(group[0].created_at, new Date()))}
+              </div>
+              {group.map((msg, index) =>
+                isFeedback(msg) ? (
+                  <FeedbackBubble
+                    key={index}
+                    feedback={msg}
+                    handleRate={handleRate}
+                    index={msg.index!}
+                  />
+                ) : (
+                  <ChatBubble
+                    key={index}
+                    content={msg.content}
+                    sender={msg.sender}
+                    avatarUrl={msg.avatarUrl}
+                    isOutgoing={msg.sender !== otherUser}
+                  />
+                )
+              )}
+            </Fragment>
+          ))}
+          {typing && (
+            <div className="justify-end p-3">
+              <TypingIndicator />
             </div>
-            {group.map((msg, index) =>
-              isFeedback(msg) ? (
-                <FeedbackBubble
-                  key={index}
-                  feedback={msg}
-                  handleRate={handleRate}
-                  index={msg.index!}
-                />
-              ) : (
-                <ChatBubble
-                  key={index}
-                  content={msg.content}
-                  sender={msg.sender}
-                  avatarUrl={msg.avatarUrl}
-                  isOutgoing={msg.sender !== otherUser}
-                />
-              )
-            )}
-          </Fragment>
-        ))}
-        {typing && (
-          <div className="justify-end p-3">
-            <TypingIndicator />
-          </div>
-        )}
+          )}
+        </div>
       </div>
-      <div ref={chatEnd} />
-    </ScrollArea>
+    </div>
   );
 }
 
@@ -121,8 +121,11 @@ interface ChatBubbleProps {
 
 function ChatBubble({ content: message, isOutgoing = false }: ChatBubbleProps) {
   return (
-    <div
+    <motion.div
       className={`flex ${isOutgoing ? "justify-end" : "justify-start"} my-4`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
     >
       <div
         className={`flex ${
@@ -145,7 +148,7 @@ function ChatBubble({ content: message, isOutgoing = false }: ChatBubbleProps) {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -161,7 +164,12 @@ function FeedbackBubble({
   index: number;
 }) {
   return (
-    <div className="w-full flex items-center justify-center">
+    <motion.div
+      className="w-full flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       <div className="max-w-screen-md my-4">
         <div className="flex items-end">
           <div className="mx-2 flex flex-col">
@@ -204,7 +212,7 @@ function FeedbackBubble({
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

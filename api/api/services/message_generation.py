@@ -232,10 +232,10 @@ async def generate_message(
         specific_instructions=(
             f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them."
             if not user_sent
-            else ""
+            else f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. "
         ),
         agent_style=(
-            ""
+            f"{pers.name} is personable and friendly without being overly enthusiastic. They speak naturally and human-like."
             if user_sent
             else f"{agent_name} uses direct, straightforward language while avoiding pleasantries. {agent_name} isn't very expressive and is not overly friendly. avoid over-optimism. Do not use figurative languages or emojis."
         ),

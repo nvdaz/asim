@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from api.schemas.chat import Feedback
+from api.schemas.chat import Feedback, Suggestion
 from api.schemas.user import UserPersonalizationOptions
 
 from . import llm
@@ -95,7 +95,7 @@ Here are some guidelines to help you provide feedback:
 
 Make sure to:
 
-1. In your explanation, refer to specific phrase(s) using quotation marks from the original message that make it confusing.
+1. In your explanation, refer to specific aspect(s) using quotation marks from the original message that make it confusing.
 2. Use simple, friendly, and straightforward language.
 3. Limit your answer to less than 100 words.
 4. Provide feedback, but NEVER provide alternative messages.
@@ -118,7 +118,7 @@ At the end is a model output based on the following sample original message:
         if problem is not None
         else (
             """
-Now, explain to {user} why their original message is likely to be interpreted correctly by {agent}.
+Now, explain to {user} why their original message is likely to be interpreted in the intended way by {agent}.
 Base your feedback on {agent}'s likely thought process, their understanding of the tone and intent of {user}'s message, and their likely response.
 
 Here are some guidelines to help you provide feedback:
@@ -126,7 +126,7 @@ Here are some guidelines to help you provide feedback:
 
 Make sure to:
 
-1. In your explanation, refer to specific phrase(s) using quotation marks from the original message that make it clear.
+1. In your explanation, refer to specific aspect(s) using quotation marks from the original message that make it clear.
 2. Use simple, friendly, and straightforward language.
 3. Limit your answer to less than 100 words.
 
@@ -201,6 +201,7 @@ async def explain_message(
     context: str,
     reaction: str,
     last3: str | None,
+    suggestions: list[Suggestion] | None,
 ) -> Feedback:
     if not last3:
         last3 = "** Not given **"
@@ -261,10 +262,11 @@ to be understood as intended. Briefly mention people have different communicatio
 and some may prefer straightforward language to avoid confusion.
 """,
         ("blunt-misinterpret", True): """
-{user} perceived {agent}’s blunt and direct language as rude, possibly due to
-differences in communication styles. Consider the possibility that {agent} was simply
-being straightforward, as this might be their natural way of expressing themselves.
-Explain the meaning of {agent}’s blunt message from this perspective:
+Begin by mentioning how {user}'s latest message was confrontational towards {agent}.
+This was possibly because they misinterpreted {agent}'s blunt language as rude. Consider
+that {agent} might naturally express themselves in a straightforward manner, which could
+be perceived as blunt by {user}. Explain why {user} might have found {agent}'s message
+rude and how {agent}’s blunt language could have been misinterpreted from their message:
 
 {last3}
 
@@ -273,15 +275,15 @@ that people communicate differently. What may seem rude to one person could simp
 directness from another.
 """,
         ("blunt-misinterpret", False): """
-{user} responded appropriately to {agent}'s blunt language, considering that their blunt
-language was not intended to be rude. {user}'s message is clear and direct, and it is
-not confrontational to blunt language. Briefly mention that {user} should consider
+{user} responded empathetically to {agent}'s blunt language, considering that their
+blunt language was not intended to be rude. {user}'s message is clear and direct, and it
+is not confrontational to blunt language. Briefly mention that {user} should consider
 resonding in a more neutral way since people may have different communication styles,
 and some may naturally sound blunt.
 """,
     }
 
-    examples = {
+    examples_problem = {
         "blunt-misinterpret": """
 At the end is a model output to help you out:
 Blunt message by John: Kyle, we already talked about finding budget-friendly places. How about you just search for some cheap hostels or Airbnbs? We don't have time to go back and forth on this.
@@ -323,10 +325,51 @@ Sample reaction of the confused recipient: "sounds great, frank! but i noticed t
 }
 """,
     }
+
+    examples_good = {
+        "yes-no-question": """
+At the end is a model output to help you out:
+Sample original message that was clear: "What books would you recommend, Joseph?"
+
+{
+    "title": "Clear and Direct 🎯",
+    "feedback": "Frank, your question worked well because it directly asked Joseph for book recommendations, making your intent clear. In comparison, asking "Is there a good book you know of?" could be interpreted as asking for confirmation with a response like "Yes, there is," OR as a request for specific recommendations. Similarly, "Have you read any good books lately?" could prompt a response like "I have," OR lead Joseph to share book titles. Both interpretations are valid for these suggestions, but your clear and direct question avoided potential ambiguity and encouraged useful recommendations. Keep using straightforward language for effective communication!"
+}
+""",
+        "non-literal-emoji": """
+At the end is a model output to help you out:
+Sample original message that was clear: "Great idea, Joseph! Let's explore more seafood places in Gloucester. 🦞 We have beach barbecue, whale watching, and fresh seafood on our list. I want to visit some historical sites too. This trip will be amazing!"
+
+{
+    "title": "Good Emoji Usage 🎨",
+    "feedback": "Frank, your choice of '🦞' fit the context of exploring seafood spots, adding clarity without causing confusion. Unlike '🚀,' which might suggest space-related activities, or '️‍🔥,' which could imply an actual fire, your message stayed focused and relevant. This thoughtful approach aligned well with Joseph's expectations, resulting in a positive and engaging response."
+}
+""",
+        "non-literal-figurative": """
+At the end is a model output to help you out:
+Sample original message that was clear: "Let's meet there at 6pm, and we can enjoy the sunset after dinner 🌅"
+
+{
+    "title": "Clear Invitation to Enjoy Sunset 🌅",
+    "feedback": "Frank, your message was clear and straightforward. Kaitlin responded with a relevant question about whale watching, showing she understood your plan to meet at 6pm and enjoy the sunset. The other suggestions like 'paint the sky' and 'chase the sun' might have confused Kaitlin, making her think of actual activities like painting or running. Your choice avoided these potential misunderstandings, making your plan clear and easy to follow."
+}
+        """,
+        "blunt-misinterpret": """
+At the end is a model output to help you out:
+Sample blunt message: "We need to book the whale tour now. Check your schedule."
+Sample constructive response: "I understand the urgency. I'll check my calendar right away and get back to you."
+
+{
+    "title": "Positive Response to Direct Communication 🤝",
+    "feedback": "Your response acknowledged the urgency while maintaining a cooperative tone. Remember that some people naturally communicate in a direct, blunt way without intending to be rude. Unlike responses like 'Why are you being so pushy?' which can escalate tension, you focused on the task while understanding different communication styles. This approach helped maintain a positive interaction and showed your willingness to cooperate. Keep up the good work!"
+}
+""",
+    }
+
     example = (
-        examples.get(objective, examples["non-literal-figurative"])
+        examples_problem.get(objective, examples_problem["non-literal-figurative"])
         if problem is not None
-        else ""
+        else examples_good.get(objective, examples_good["non-literal-figurative"])
     )
 
     objective_prompt = objective_prompts[(objective, problem is not None)].format(
@@ -340,37 +383,54 @@ Respond with a JSON object with keys "title" and "feedback" containing your feed
 """
 
     system = system_prompt_template.format(
-        objective_prompt=objective_prompt,
         user=pers.name,
         agent=agent,
     )
 
+    if problem is None:
+        assert suggestions is not None
+        suggestions_str = "\n".join(
+            [
+                f"Message: {s.message} | Problem: {s.problem}"
+                for s in suggestions
+                if s.problem is not None
+            ]
+        )
+    else:
+        suggestions_str = ""
+
     action = (
         f"""
-Now, based on {agent}'s response, explain to {pers.name} why their original message was confusing for {agent}.
+Now, based on {agent}'s response, explain to {pers.name} why their original message was {"confrontational towards" if objective == "blunt-misinterpret" else "confusing for"} {agent}.
 Use {agent}'s response to extract their likely thought process and ground your explanation in it.
+{f"Some people naturally use blunt language, so {agent} might not have intended to be rude." if objective == "blunt-misinterpret" else ""}
 
 Make sure to:
 
-1. In your explanation, refer to specific phrase(s) using quotation marks from the original message that make it unclear.
+1. In your explanation, refer to specific aspect(s) using quotation marks from the original message that make it {"confrontational" if objective == "blunt-misinterpret" else "unclear"}.
 2. Use simple, friendly, and straightforward language.
 3. Limit your answer to less than 100 words.
 4. Provide feedback, but NEVER provide alternative messages.
 
 Secondly, provide a title with less than 50 characters that accurately summarizes your feedback alongside an emoji.
 
-Remember, explain to {pers.name} what elements of the original message are confusing for {agent}.
+Remember, explain to {pers.name} what elements of the original message are {"confrontational" if objective == "blunt-misinterpret" else "confusing"} for {agent}.
 """
         if problem is not None
         else f"""
-Now, based on {agent}'s response, explain to {pers.name} why their original message was interpreted correctly by {agent}.
+Now, based on {agent}'s response, explain to {pers.name} why their original message was interpreted in the intened way by {agent}.
 Use {agent}'s response to extract their likely thought process and ground your explanation in it.
 
+Compare it to the following suggestions, which were problematic:
+{suggestions_str}
+
 Make sure to:
-1. In your explanation, refer to specific phrase(s) using quotation marks from the original message that make it clear.
-2. Use simple, friendly, and straightforward language.
-3. Limit your answer to less than 100 words.
-4. Provide feedback, but NEVER provide alternative messages.
+1. In your explanation, refer to the key aspect from each problematic suggestion using quotation marks.
+2. Explain, in detail, why the problematic suggestions (refer to them as the other suggestions) were {"confrontational" if objective == "blunt-misinterpret" else "confusing"} and how {agent} might have interpreted them.
+3. Briefly say that the message {pers.name} selected was a good choice because they avoided the issues present in the other suggestions.
+4. Use simple, friendly, and straightforward language.
+5. Limit your answer to less than 100 words.
+6. Provide feedback, but NEVER provide alternative messages.
 
 Secondly, provide a title with less than 50 characters that accurately summarizes your feedback alongside an emoji.
 
@@ -488,7 +548,7 @@ Now, explain to {pers.name} how the alternative message differs from the origina
 
 Make sure to:
 
-1. Focus on the specific phrase(s) in the alternative that could make it more clear.
+1. Focus on the specific aspect(s) in the alternative that could make it more clear.
 2. Use simple, specific and straightforward language.
 3. Limit your answer to less than 100 words.
 4. NEVER repeat the alternative messages in your feedback, only provide feedback.

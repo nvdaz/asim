@@ -75,7 +75,7 @@ function ChatFeedbackDialog({
                 >
                   <RadioGroupItem
                     value={(i + 1).toString()}
-                    id={`option-${i + 1}`}
+                    id={`option-1-${i + 1}`}
                   />
                   <Label className="text-wrap" htmlFor={`option-${i + 1}`}>
                     {LABELS[i]}
@@ -101,7 +101,7 @@ function ChatFeedbackDialog({
                 >
                   <RadioGroupItem
                     value={(i + 1).toString()}
-                    id={`option-${i + 1}`}
+                    id={`option-2-${i + 1}`}
                   />
                   <Label className="text-wrap" htmlFor={`option-${i + 1}`}>
                     {LABELS[i]}
@@ -144,8 +144,8 @@ function Chat() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(
     null
   );
-  const chatEnd = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const toastDismiss = useRef<() => void>(() => {});
 
   const [latestMessageIndex, setLatestMessageIndex] = useState<number | null>(
     null
@@ -165,10 +165,9 @@ function Chat() {
       chatIsLoaded(currentChat) &&
       latestMessageIndex !== currentChat.messages.length
     ) {
-      chatEnd.current?.scrollIntoView({ behavior: "instant" });
       setLatestMessageIndex(currentChat.messages.length);
     }
-  }, [chatEnd.current, currentChat, latestMessageIndex]);
+  }, [currentChat, latestMessageIndex]);
 
   useEffect(() => {
     setSelectedSuggestion(null);
@@ -181,7 +180,6 @@ function Chat() {
     if (currentChat && chatIsLoaded(currentChat)) {
       if (Array.isArray(currentChat.suggestions)) {
         if (!hasScrolledGenerated) {
-          chatEnd.current?.scrollIntoView({ behavior: "instant" });
           setHasScrolledGenerated(true);
         }
       } else {
@@ -189,7 +187,6 @@ function Chat() {
       }
       if (currentChat.generating_suggestions > 0) {
         if (!hasScrolled) {
-          chatEnd.current?.scrollIntoView({ behavior: "instant" });
           setHasScrolled(true);
         }
       } else {
@@ -197,7 +194,6 @@ function Chat() {
       }
     }
   }, [
-    chatEnd.current,
     currentChat,
     // @ts-ignore
     currentChat?.generating_suggestions,
@@ -208,10 +204,6 @@ function Chat() {
   const handleSend = useCallback(() => {
     suggestMessages(input);
     setInput("");
-    setTimeout(
-      () => chatEnd.current?.scrollIntoView({ behavior: "instant" }),
-      1
-    );
   }, [input]);
 
   const [didAutoScrollTyping, setDidAutoScrollTyping] = useState(false);
@@ -219,7 +211,6 @@ function Chat() {
   useEffect(() => {
     if (currentChat?.agent_typing) {
       if (!didAutoScrollTyping) {
-        chatEnd.current?.scrollIntoView({ behavior: "instant" });
         setDidAutoScrollTyping(true);
       }
     } else {
@@ -273,14 +264,17 @@ function Chat() {
         isContentInChatFeedback(prev) &&
         prev.rating === null
       ) {
-        toast({
+        const { dismiss } = toast({
           variant: "destructive",
           description:
             "Please provide feedback before sending the clarification message.",
         });
+
+        toastDismiss.current = dismiss;
       } else {
         sendChatMessage(selectedSuggestion);
         setSelectedSuggestion(null);
+        toastDismiss.current();
       }
     }
   }, [currentChat, selectedSuggestion]);
@@ -353,7 +347,7 @@ function Chat() {
   }
 
   return (
-    <div className="flex flex-row min-h-[200px] rounded-lg border w-full h-screen">
+    <div className="flex flex-row min-h-[200px] rounded-lg border w-screen max-w-screen-2xl justify-self-center h-screen">
       <ChatFeedbackDialog
         isOpen={!!currentChat?.checkpoint_rate}
         onSubmit={handleCheckpointRate}
@@ -409,7 +403,6 @@ function Chat() {
             handleRate={handleRate}
             typing={!!currentChat?.agent_typing}
             otherUser={currentChat?.agent || ""}
-            chatEnd={chatEnd}
           />
           <Separator />
           <div className="flex flex-col gap-2 p-4">
@@ -482,16 +475,20 @@ function Chat() {
                           conversation.
                         </p>
                         {currentChat.suggestions.map(({ message }, i) => (
-                          <button
+                          <motion.button
                             key={i}
                             onClick={() => {
                               sendViewSuggestion(i);
                               setSelectedSuggestion(i);
                             }}
                             className="border rounded-md px-4 py-2 w-full text-left min-h-10"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.4 }}
                           >
                             {message}
-                          </button>
+                          </motion.button>
                         ))}
                         <Textarea
                           value=""
@@ -504,7 +501,13 @@ function Chat() {
                       </div>
                     )
                   ) : (
-                    <div className="flex flex-col gap-2 w-full">
+                    <motion.div
+                      className="flex flex-col gap-2 w-full"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
                       {Array(currentChat.generating_suggestions)
                         .fill("")
                         .map((_, i) => (
@@ -518,7 +521,7 @@ function Chat() {
                         className="min-h-[30px] max-h-[120px] resize-none"
                         disabled
                       />
-                    </div>
+                    </motion.div>
                   )
                 ) : (
                   <div className="flex flex-row gap-2 w-full align-end">

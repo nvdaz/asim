@@ -510,7 +510,6 @@ function Register() {
                 </FormItem>
               )}
             />
-
             {/* Submit Button */}
             <div className="flex justify-center">
               <Button type="submit" className="w-full py-3 rounded-lg">
