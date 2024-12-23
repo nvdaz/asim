@@ -20,34 +20,16 @@ assert _LLM_URI != "", "LLM_URI environment variable must be set"
 assert _LLM_KEY != "", "LLM_KEY environment variable must be set"
 
 
-class ModelVendor(str, Enum):
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-
-    def concurrency_limit(self) -> int:
-        match self:
-            case ModelVendor.OPENAI:
-                return 3
-            case ModelVendor.ANTHROPIC:
-                return 32
-
 
 class Model(str, Enum):
     GPT_4 = "gpt4-new"
     GPT_4o = "gpt-4o"
     GPT_4o_mini = "4o-mini"
     GPT_3_5 = "gpt3-5"
+    
     CLAUDE_3_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0"
     CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0"
     CLAUDE_3p5_SONNET = "anthropic.claude-3-5-sonnet-20240620-v1:0"
-
-    def vendor(self) -> ModelVendor:
-        match self:
-            case Model.GPT_4 | Model.GPT_3_5 | Model.GPT_4o | Model.GPT_4o_mini:
-                return ModelVendor.OPENAI
-            case Model.CLAUDE_3_SONNET | Model.CLAUDE_3_HAIKU | Model.CLAUDE_3p5_SONNET:
-                return ModelVendor.ANTHROPIC
-
 
 async def _generate_unchecked(
     model: Model, prompt: str, system: str, temperature: float | None = None
@@ -56,7 +38,7 @@ async def _generate_unchecked(
         "model": model.value,
         "system": system,
         "query": prompt,
-        "lastk": 1,
+        "lastk": 0,
         "temperature": temperature,
         "cache_match_thresh": 1.1,
     }

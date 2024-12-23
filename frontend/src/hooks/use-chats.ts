@@ -217,7 +217,7 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
   const sendChatMessage = useCallback(
     (id: string, index: number) => {
       setChats((chats) => {
-        const chat = chats[id];
+        const chat = { ...chats[id] };
         invariant(chatIsLoaded(chat));
         const content = chat.suggestions![index].message;
         if (!chat.messages) {

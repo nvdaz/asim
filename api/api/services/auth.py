@@ -84,11 +84,6 @@ async def init_user(
     user = await users.update(user_id, user)
 
     await chat_service.create_chat(user)
-    user.options.suggestion_generation = (
-        "content-inspired"
-        if user.options.suggestion_generation == "random"
-        else "random"
-    )
     await chat_service.create_chat(user)
 
     return user
