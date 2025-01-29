@@ -14,7 +14,7 @@ auth_scheme = HTTPBearer()
 
 
 async def get_current_user_id(
-    authorization: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)]
+    authorization: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)],
 ) -> ObjectId:
     token = await auth_tokens.get(authorization.credentials)
 
@@ -28,7 +28,7 @@ CurrentUserID = Annotated[ObjectId, Depends(get_current_user_id)]
 
 
 async def get_current_user(
-    authorization: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)]
+    authorization: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)],
 ) -> UserData:
     token = await auth_tokens.get(authorization.credentials)
 
@@ -49,7 +49,7 @@ CurrentUser = Annotated[UserData, Depends(get_current_user)]
 
 
 async def get_internal_auth(
-    authorization: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)]
+    authorization: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)],
 ) -> Literal[True]:
     if not authorization.credentials:
         raise HTTPException(status_code=401, detail="API key not found")

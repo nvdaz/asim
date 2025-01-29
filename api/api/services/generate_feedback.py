@@ -311,7 +311,7 @@ Sample response from confused recipient: "Are you just asking if i know any good
 
 {
     "title": "Be Direct for Clear Communication 🎯",
-    "feedback": "The phrase 'Do you know' might prompt Maria interpret the question literally and respond with just a 'yes' or 'no' but it could also be seen a request for Maria to elaborate and provide recommendations for specific good restaurants in NYC. Maria's response shows she was unsure if you were asking for information or recommendations. If you want specific recommendations, it's best to ask directly for them to avoid confusion. 😊
+    "feedback": "The phrase 'Do you know' might prompt Maria to interpret the question literally and respond with just a 'yes' or 'no' but it could also be seen as a request for Maria to elaborate and provide recommendations for specific good restaurants in NYC. Maria's response shows she was unsure if you were asking for information or recommendations. If you want specific recommendations, it's best to ask directly for them to avoid confusion. 😊"
 }
 """,
         "non-literal-emoji": """

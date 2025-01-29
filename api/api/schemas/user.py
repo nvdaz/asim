@@ -16,26 +16,12 @@ default_options = Options(
 )
 
 
-class LocationOptions(BaseModel):
-    city: str
-    country: str
-
-
-class PlanVacationScenarioOptions(BaseModel):
-    vacation_destination: str
-    vacation_explanation: str
-
-
 class UserPersonalizationOptions(BaseModel):
     name: str
-    age: str
-    gender: str
-    location: LocationOptions
-    company: str
-    occupation: str
-    interests: str
-    scenario: PlanVacationScenarioOptions
-    personality: list[str]
+    pronouns: str
+    education_level: str
+    undergraduate_major: str
+    topic: str
 
 
 class BaseUserData(BaseModel):

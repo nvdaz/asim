@@ -2,9 +2,6 @@ from pydantic import BaseModel
 
 from api.schemas.chat import ChatMessage, InChatFeedback
 from api.schemas.user import (
-    LocationOptions,
-    PlanVacationScenarioOptions,
-    UserData,
     UserPersonalizationOptions,
 )
 
@@ -131,21 +128,10 @@ def get_personalization_options(
     if not personalize:
         return UserPersonalizationOptions(
             name="Frank",
-            gender="Male",
-            age="30",
-            location=LocationOptions(city="Phoenix", country="USA"),
-            company="American Airlines",
-            occupation="Airline Pilot",
-            interests="Hiking on mountains, reading fiction books, barbecuing with "
-            "friends, playing multiplayer video games, watching stand-up comedy, going "
-            "to the beach, trying new foods, learning about history",
-            scenario=PlanVacationScenarioOptions(
-                vacation_destination="Gloucester, Massachusetts",
-                vacation_explanation="World-famous beaches, surfing on clear blue "
-                "water, local cuisine, friendly locals, fishing, historic buildings, "
-                "whale watching, seafood",
-            ),
-            personality=["optimistic", "open-minded", "supportive", "friendly"],
+            pronouns="he/him",
+            undergraduate_major="Biology",
+            education_level="Bachelor's",
+            topic="astronomy",
         )
     else:
         return input_data
@@ -153,27 +139,11 @@ def get_personalization_options(
 
 def get_scenario(data: UserPersonalizationOptions, agent_name: str) -> str:
     scenario = (
-        f"{agent_name} wants to plan a trip with {data.name}. Both of "
-        f"them are colleagues at {data.company} where {data.name} "
-        f"works as a {data.occupation}. They are both new to the company and recently "
-        f"met each other. {data.name} is {data.age} years old and identifies as a "
-        f"{data.gender}. {data.name} is originally from {data.location.city}, "
-        f"{data.location.country}. {data.name}'s interests are: "
-        f"\"{data.interests}\". Here are {data.name}'s personality traits: "
-        f"{', '.join(data.personality)}. "
+        f"{data.name} is eager to dive deeper into {data.topic}. "
+        f"{agent_name} is an enthusiast in {data.topic} and {data.name}'s "
+        f"friend. In this conversation, {data.name} will talk to {agent_name} about "
+        f"{data.topic}."
     )
-
-    scenario += (
-        f"{data.name}'s dream vacation spot is {data.scenario.vacation_destination}. "
-        f'They say they like it because of "{data.scenario.vacation_explanation}". '
-        f"In this conversation, {agent_name} will float the idea of planning a trip to "
-        f"{data.scenario.vacation_destination}, discuss details/itinerary and convince "
-        f"{data.name} to join them. {agent_name} should use information about "
-        f"{data.name}'s interests and personality to make the conversation engaging "
-        f"and convincing but act natural and don't overdo it. {agent_name} will use a "
-        "casual tone."
-    )
-
     return scenario
 
 
@@ -230,9 +200,9 @@ async def generate_message(
         ),
         action=action,
         specific_instructions=(
-            f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them."
+            f"Make sure to: 1. Keep {sender_name}'s response short (1-4 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them."
             if not user_sent
-            else f"Make sure to: 1. Keep {sender_name}'s response short (1-2 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. "
+            else f"Make sure to: 1. Keep {sender_name}'s response short (1-4 lines) natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. "
         ),
         agent_style=(
             f"{pers.name} is personable and friendly without being overly enthusiastic. They speak naturally and human-like."
