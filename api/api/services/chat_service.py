@@ -36,6 +36,11 @@ async def create_chat(user: UserData) -> ChatData:
         agent=_fake.first_name(),
         last_updated=datetime.now(timezone.utc),
         suggestion_generation=user.options.suggestion_generation,
+        objectives_used=[
+            objective
+            for objective in generate_suggestions.ALL_OBJECTIVES + ["blunt"]
+            if objective not in user.options.enabled_objectives
+        ],
     )
 
     chat = await chats.create(base_chat)
@@ -120,14 +125,12 @@ async def _generate_agent_message(
         next_state = None
         match (chat.state, user.options.feedback_mode):
             case ("no-objective", _):
-                if len(chat.messages) > 3:
-                    next_state = (
-                        "objective"
-                        if len(generate_suggestions.objectives) > 0
-                        else "no-objective"
-                    )
-                else:
-                    next_state = "no-objective"
+                next_state = (
+                    "objective"
+                    if len(chat.messages) > 2
+                    and len(generate_suggestions.ALL_OBJECTIVES) > 0
+                    else "no-objective"
+                )
             case ("objective" | "objective-blunt", "on-suggestion"):
                 next_state = "no-objective"
             case ("objective" | "objective-blunt", "on-submit"):
@@ -141,7 +144,7 @@ async def _generate_agent_message(
             chat.state == "no-objective"
             and "blunt" not in chat.objectives_used
             and len(chat.messages) > 3
-            and len(chat.objectives_used) >= len(generate_suggestions.objectives)
+            and len(chat.objectives_used) >= len(generate_suggestions.ALL_OBJECTIVES)
         ):
             objective = "blunt-initial"
             next_state = "objective-blunt"
@@ -422,10 +425,14 @@ async def _send_message(chat_state: ChatState, user: UserData, index: int):
         if (
             suggestion.problem is None
             and chat.state != "objective"
-            and len(chat.objectives_used) > len(generate_suggestions.objectives)
+            and len(chat.objectives_used) > len(generate_suggestions.ALL_OBJECTIVES)
         ):
             chat.checkpoint_rate = True
-            chat.objectives_used = []
+            chat.objectives_used = [
+                objective
+                for objective in generate_suggestions.ALL_OBJECTIVES + ["blunt"]
+                if objective not in user.options.enabled_objectives
+            ]
 
         chat.messages.append(
             ChatMessage(

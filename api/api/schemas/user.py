@@ -9,6 +9,17 @@ from .objectid import PyObjectId
 class Options(BaseModel):
     feedback_mode: Literal["on-suggestion", "on-submit"] = "on-submit"
     suggestion_generation: Literal["content-inspired", "random"]
+    enabled_objectives: Annotated[
+        list[
+            Literal[
+                "non-literal-emoji",
+                "non-literal-figurative",
+                "yes-no-question",
+                "blunt",
+            ]
+        ],
+        Field(min_length=1, max_length=4),
+    ] = ["non-literal-emoji", "non-literal-figurative", "yes-no-question", "blunt"]
 
 
 default_options = Options(

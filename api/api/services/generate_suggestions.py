@@ -9,7 +9,7 @@ from api.services.generate_feedback import explain_suggestion
 
 from . import llm
 
-objectives = [
+ALL_OBJECTIVES = [
     "non-literal-emoji",
     "non-literal-figurative",
     "yes-no-question",
@@ -38,7 +38,7 @@ async def detect_most_compatible_objective(
     }
 
     objectives_to_consider = [
-        objective for objective in objectives if objective not in objectives_used
+        objective for objective in ALL_OBJECTIVES if objective not in objectives_used
     ]
 
     objectives_consider_str = "\n".join(
