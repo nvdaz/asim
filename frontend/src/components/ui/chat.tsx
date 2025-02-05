@@ -38,13 +38,11 @@ function capitalize(str: string) {
 export function ChatInterface({
   messages,
   typing,
-  // chatEnd,
   otherUser,
   handleRate,
 }: {
   messages: (Message | InChatFeedback)[];
   typing: boolean;
-  // chatEnd: React.RefObject<HTMLDivElement>;
   otherUser: string;
   handleRate: (index: number, rating: number) => void;
 }) {

@@ -48,6 +48,8 @@ type ChatLoaded = {
   suggestions?: Suggestion[];
   unread: boolean;
   checkpoint_rate: boolean;
+  introduction: string;
+  introduction_seen: boolean;
 }
 
 export type Chat = ChatLoading | ChatLoaded;
@@ -171,6 +173,11 @@ type SendCheckpointRate = {
   ratings: { [key: string]: number };
 }
 
+type SendIntroductionSeen = {
+  type: "introduction-seen";
+  id: string;
+}
+
 type Send =
   | SendChatMessage
   | SendCreateChat
@@ -179,7 +186,8 @@ type Send =
   | SendMarkRead
   | SendViewSuggestion
   | SendRateFeedback
-  | SendCheckpointRate;
+  | SendCheckpointRate
+  | SendIntroductionSeen;
 
 export function useChats({ onChatCreated }: { onChatCreated: (id: string) => void }) {
   const [chats, setChats] = useState<{ [key: string]: Chat }>({});
@@ -300,7 +308,17 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
     });
     sendMessage({ type: "checkpoint-rating", id, ratings })
 
-  }, [sendMessage])
+  }, [sendMessage]);
+
+  const handleIntroductionSeen = useCallback((id: string) => {
+    setChats((chats) => {
+      const chat = chats[id];
+      invariant(chatIsLoaded(chat));
+      chat.introduction_seen = true;
+      return { ...chats, [id]: chat };
+    });
+    sendMessage({ type: "introduction-seen", id });
+  }, [sendMessage]);
 
   return {
     isConnected,
@@ -314,5 +332,6 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
     sendViewSuggestion,
     handleRate,
     handleCheckpointRate,
+    handleIntroductionSeen,
   };
 }

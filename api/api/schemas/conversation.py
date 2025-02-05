@@ -1,4 +1,5 @@
-from typing import Annotated, Generic, Literal, Sequence, TypeVar
+from collections.abc import Sequence
+from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import (
     AfterValidator,

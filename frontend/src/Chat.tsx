@@ -137,6 +137,7 @@ function Chat() {
     setCurrentChatId,
     handleRate,
     handleCheckpointRate,
+    handleIntroductionSeen,
   } = useCurrentChat();
   const { toast } = useToast();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -394,165 +395,185 @@ function Chat() {
           </div>
           <Separator />
           {!(currentChat && "messages" in currentChat) && <Loading />}
-          <ChatInterface
-            messages={
-              currentChat
-                ? (currentChat?.messages as (Message | InChatFeedback)[]) || []
-                : []
-            }
-            handleRate={handleRate}
-            typing={!!currentChat?.agent_typing}
-            otherUser={currentChat?.agent || ""}
-          />
-          <Separator />
-          <div className="flex flex-col gap-2 p-4">
-            <div className="flex flex-col gap-2 w-full">
-              <div className="flex flex-col gap-2 items-center">
-                {currentChat?.suggestions ||
-                currentChat?.generating_suggestions ? (
-                  currentChat?.suggestions ? (
-                    selectedSuggestion !== null ? (
-                      <div className="flex flex-col gap-2 w-full">
-                        {currentChat.suggestions.length == 1 && (
-                          <p className="text-secondary-foreground font-medium">
-                            {(
-                              currentChat?.messages[
-                                currentChat?.messages.length - 1
-                              ] as never as InChatFeedback
-                            ).rating !== null
-                              ? "Send this message to clarify and continue the conversation."
-                              : "Provide feedback and then send this message to clarify and continue the conversation."}
-                          </p>
-                        )}
-                        {currentChat.suggestions[selectedSuggestion]
-                          .feedback && (
-                          <div className="flex flex-col gap-2 w-full bg-secondary p-4 rounded-md">
-                            <div className="font-semibold">
-                              {
-                                currentChat.suggestions[selectedSuggestion]
-                                  .feedback.title
-                              }
-                            </div>
-                            <div>
-                              {
-                                currentChat.suggestions[selectedSuggestion]
-                                  .feedback.body
-                              }
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex flex-row gap-2 w-full">
-                          <div className="rounded-md border border-input bg-transparent px-3 text-sm shadow-sm flex flex-row gap-2 items-center w-full">
-                            <div className="w-full py-2">
-                              {
-                                currentChat.suggestions[selectedSuggestion]
-                                  .message
-                              }
-                            </div>
-                            {currentChat.suggestions.length > 1 && (
-                              <Button
-                                size="icon"
-                                className="bg-transparent min-w-8 hover:bg-transparent self-end text-black dark:text-white hover:text-red-500 dark:hover:text-red-500 shadow-none"
-                                onClick={() => setSelectedSuggestion(null)}
-                              >
-                                <X />
-                              </Button>
+
+          {!currentChat?.introduction_seen ? (
+            <div className="flex flex-col items-center justify-center p-4 h-full">
+              <div className="flex flex-col gap-2 p-8 max-w-lg items-center">
+                <p>{currentChat?.introduction}</p>
+                <Button
+                  className="m-4"
+                  onClick={() => {
+                    handleIntroductionSeen();
+                  }}
+                >
+                  Start Chat
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <ChatInterface
+                messages={
+                  currentChat
+                    ? (currentChat?.messages as (Message | InChatFeedback)[]) ||
+                      []
+                    : []
+                }
+                handleRate={handleRate}
+                typing={!!currentChat?.agent_typing}
+                otherUser={currentChat?.agent || ""}
+              />
+              <Separator />
+              <div className="flex flex-col gap-2 p-4">
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex flex-col gap-2 items-center">
+                    {currentChat?.suggestions ||
+                    currentChat?.generating_suggestions ? (
+                      currentChat?.suggestions ? (
+                        selectedSuggestion !== null ? (
+                          <div className="flex flex-col gap-2 w-full">
+                            {currentChat.suggestions.length == 1 && (
+                              <p className="text-secondary-foreground font-medium">
+                                {(
+                                  currentChat?.messages[
+                                    currentChat?.messages.length - 1
+                                  ] as never as InChatFeedback
+                                ).rating !== null
+                                  ? "Send this message to clarify and continue the conversation."
+                                  : "Provide feedback and then send this message to clarify and continue the conversation."}
+                              </p>
                             )}
+                            {currentChat.suggestions[selectedSuggestion]
+                              .feedback && (
+                              <div className="flex flex-col gap-2 w-full bg-secondary p-4 rounded-md">
+                                <div className="font-semibold">
+                                  {
+                                    currentChat.suggestions[selectedSuggestion]
+                                      .feedback.title
+                                  }
+                                </div>
+                                <div>
+                                  {
+                                    currentChat.suggestions[selectedSuggestion]
+                                      .feedback.body
+                                  }
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex flex-row gap-2 w-full">
+                              <div className="rounded-md border border-input bg-transparent px-3 text-sm shadow-sm flex flex-row gap-2 items-center w-full">
+                                <div className="w-full py-2">
+                                  {
+                                    currentChat.suggestions[selectedSuggestion]
+                                      .message
+                                  }
+                                </div>
+                                {currentChat.suggestions.length > 1 && (
+                                  <Button
+                                    size="icon"
+                                    className="bg-transparent min-w-8 hover:bg-transparent self-end text-black dark:text-white hover:text-red-500 dark:hover:text-red-500 shadow-none"
+                                    onClick={() => setSelectedSuggestion(null)}
+                                  >
+                                    <X />
+                                  </Button>
+                                )}
+                              </div>
+                              <Button
+                                onClick={sendSuggestion}
+                                size="icon"
+                                className="min-w-8 self-end"
+                              >
+                                <ArrowUp />
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            onClick={sendSuggestion}
-                            size="icon"
-                            className="min-w-8 self-end"
-                          >
-                            <ArrowUp />
-                          </Button>
-                        </div>
-                      </div>
+                        ) : (
+                          <div className="div flex flex-col gap-2 w-full align-end">
+                            <p className="text-secondary-foreground font-medium">
+                              Select the best message to send and continue the
+                              conversation.
+                            </p>
+                            {currentChat.suggestions.map(({ message }, i) => (
+                              <motion.button
+                                key={i}
+                                onClick={() => {
+                                  sendViewSuggestion(i);
+                                  setSelectedSuggestion(i);
+                                }}
+                                className="border rounded-md px-4 py-2 w-full text-left min-h-10"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.4 }}
+                              >
+                                {message}
+                              </motion.button>
+                            ))}
+                            <Textarea
+                              value=""
+                              placeholder="Select an option"
+                              ref={inputRef}
+                              rows={1}
+                              className="min-h-[30px] max-h-[120px] resize-none"
+                              disabled
+                            />
+                          </div>
+                        )
+                      ) : (
+                        <motion.div
+                          className="flex flex-col gap-2 w-full"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.4 }}
+                        >
+                          {Array(currentChat.generating_suggestions)
+                            .fill("")
+                            .map((_, i) => (
+                              <Skeleton key={i} className="h-10 w-full" />
+                            ))}
+                          <Textarea
+                            value=""
+                            placeholder="Select an option"
+                            ref={inputRef}
+                            rows={1}
+                            className="min-h-[30px] max-h-[120px] resize-none"
+                            disabled
+                          />
+                        </motion.div>
+                      )
                     ) : (
-                      <div className="div flex flex-col gap-2 w-full align-end">
-                        <p className="text-secondary-foreground font-medium">
-                          Select the best message to send and continue the
-                          conversation.
-                        </p>
-                        {currentChat.suggestions.map(({ message }, i) => (
-                          <motion.button
-                            key={i}
-                            onClick={() => {
-                              sendViewSuggestion(i);
-                              setSelectedSuggestion(i);
-                            }}
-                            className="border rounded-md px-4 py-2 w-full text-left min-h-10"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.4 }}
-                          >
-                            {message}
-                          </motion.button>
-                        ))}
+                      <div className="flex flex-row gap-2 w-full align-end">
                         <Textarea
-                          value=""
-                          placeholder="Select an option"
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          placeholder="Write your message here"
                           ref={inputRef}
                           rows={1}
                           className="min-h-[30px] max-h-[120px] resize-none"
-                          disabled
+                          disabled={
+                            !currentChat ||
+                            currentChat.agent_typing ||
+                            currentChat.loading_feedback ||
+                            currentChat.generating_suggestions > 0
+                          }
                         />
+                        {input.trim() && (
+                          <Button
+                            onClick={handleSend}
+                            size="icon"
+                            className="self-end"
+                          >
+                            <ArrowUp />
+                          </Button>
+                        )}
                       </div>
-                    )
-                  ) : (
-                    <motion.div
-                      className="flex flex-col gap-2 w-full"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.4 }}
-                    >
-                      {Array(currentChat.generating_suggestions)
-                        .fill("")
-                        .map((_, i) => (
-                          <Skeleton key={i} className="h-10 w-full" />
-                        ))}
-                      <Textarea
-                        value=""
-                        placeholder="Select an option"
-                        ref={inputRef}
-                        rows={1}
-                        className="min-h-[30px] max-h-[120px] resize-none"
-                        disabled
-                      />
-                    </motion.div>
-                  )
-                ) : (
-                  <div className="flex flex-row gap-2 w-full align-end">
-                    <Textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder="Write your message here"
-                      ref={inputRef}
-                      rows={1}
-                      className="min-h-[30px] max-h-[120px] resize-none"
-                      disabled={
-                        !currentChat ||
-                        currentChat.agent_typing ||
-                        currentChat.loading_feedback ||
-                        currentChat.generating_suggestions > 0
-                      }
-                    />
-                    {input.trim() && (
-                      <Button
-                        onClick={handleSend}
-                        size="icon"
-                        className="self-end"
-                      >
-                        <ArrowUp />
-                      </Button>
                     )}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

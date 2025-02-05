@@ -26,14 +26,26 @@ from api.services import (
     generate_suggestions,
     message_generation,
 )
+from api.services.topic_generation import generate_topic_message
 
 _fake = faker.Faker()
 
 
 async def create_chat(user: UserData) -> ChatData:
+    topic = (
+        user.personalization.topic
+        if user.options.suggestion_generation == "content-inspired"
+        and user.personalization
+        else "astronomy"
+    )
+
+    agent = _fake.first_name()
+
+    introduction = await generate_topic_message(agent, topic)
+
     base_chat = BaseChat(
         user_id=user.id,
-        agent=_fake.first_name(),
+        agent=agent,
         last_updated=datetime.now(timezone.utc),
         suggestion_generation=user.options.suggestion_generation,
         objectives_used=[
@@ -41,6 +53,7 @@ async def create_chat(user: UserData) -> ChatData:
             for objective in generate_suggestions.ALL_OBJECTIVES + ["blunt"]
             if objective not in user.options.enabled_objectives
         ],
+        introduction=introduction,
     )
 
     chat = await chats.create(base_chat)
@@ -132,17 +145,16 @@ async def _generate_agent_message(
                     else "no-objective"
                 )
             case ("objective" | "objective-blunt", "on-suggestion"):
-                next_state = "no-objective"
+                next_state = "objective"
             case ("objective" | "objective-blunt", "on-submit"):
                 next_state = "react"
             case ("react", _):
-                next_state = "no-objective"
+                next_state = "objective"
 
         assert next_state is not None
 
         if (
-            chat.state == "no-objective"
-            and "blunt" not in chat.objectives_used
+            "blunt" not in chat.objectives_used
             and len(chat.messages) > 3
             and len(chat.objectives_used) >= len(generate_suggestions.ALL_OBJECTIVES)
         ):
@@ -509,6 +521,22 @@ async def checkpoint_rating(chat_state: ChatState, ratings: dict[str, int]):
             )
         )
         chat.checkpoint_rate = False
+
+        mark_changed()
+    await chat_state.commit()
+
+
+async def introduction_seen(chat_state: ChatState):
+    async with chat_state.transaction() as (chat, mark_changed):
+        chat.events.append(
+            ChatEvent(
+                name="introduction-seen",
+                created_at=datetime.now(timezone.utc),
+                data=None,
+            )
+        )
+
+        chat.introduction_seen = True
 
         mark_changed()
     await chat_state.commit()

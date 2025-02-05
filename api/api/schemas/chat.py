@@ -65,6 +65,8 @@ class BaseChat(BaseModel):
     events: list[ChatEvent] = []
     checkpoint_rate: bool = False
     suggestion_generation: Literal["content-inspired", "random"] = "content-inspired"
+    introduction: str = "**NO INTRODUCTION GENERATED**"
+    introduction_seen: bool = False
 
 
 class ChatData(BaseChat):
@@ -92,6 +94,8 @@ class ChatApi(BaseModel):
     messages: list[ChatMessage | InChatFeedback]
     suggestions: list[Suggestion] | None
     checkpoint_rate: bool
+    introduction: str
+    introduction_seen: bool
 
     @classmethod
     def from_data(cls, data: ChatData) -> "ChatApi":
