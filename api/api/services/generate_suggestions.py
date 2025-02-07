@@ -582,6 +582,8 @@ def objective_misunderstand_follow_up_prompt(
 directly to get the information they were looking for.
 
 {{name}} will address the following problem and take care to not repeat it: {problem}
+
+DO NOT use language like 'Can' or 'Could'.
 """,
         "non-literal-emoji": """
 In the response you generate for {{name}}, they should provide a straighforward clarification, and take responsibility/apologize for being unclear.
