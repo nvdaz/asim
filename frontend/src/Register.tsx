@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import invariant from "tiny-invariant";
 import { useAuth } from "./components/auth-provider";
@@ -37,6 +37,7 @@ function Register() {
   const { token, setAuth } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [didSubmit, setDidSubmit] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -56,6 +57,8 @@ function Register() {
   });
 
   const onSubmit = (data: FormValues) => {
+    setDidSubmit(true);
+    
     fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
       method: "POST",
       headers: {
@@ -68,11 +71,21 @@ function Register() {
         if (res.ok) {
           return res.json();
         }
-        throw new Error("Failed to register");
+
+        throw new Error("Failed to register.");
       })
       .then((user) => {
         setAuth({ token: token!, user });
         navigate("/chat");
+      })
+      .catch(() => {
+        setDidSubmit(false);
+        toast({
+          variant: "destructive",
+          description: "An error occurred. Please try again.",
+        });
+
+        setDidSubmit(false);
       });
   };
 
@@ -152,7 +165,11 @@ function Register() {
 
             {/* Submit Button */}
             <div className="flex justify-center">
-              <Button type="submit" className="w-full py-3 rounded-lg">
+              <Button
+                type="submit"
+                className="w-full py-3 rounded-lg"
+                disabled={didSubmit}
+              >
                 Complete Registration
               </Button>
             </div>
