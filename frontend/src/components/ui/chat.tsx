@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { formatRelative } from "date-fns/formatRelative";
 import { motion } from "framer-motion";
-import { Fragment, useMemo } from "react";
+import { ArrowDownIcon } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./button";
 import { Separator } from "./separator";
 
@@ -70,10 +71,88 @@ export function ChatInterface({
     return grouped;
   }, [messages]);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (Math.abs(container.scrollTop) > 50) {
+        setShowScrollButton(true);
+      } else {
+        setShowScrollButton(false);
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    handleScroll();
+
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const [containerPosition, setContainerPosition] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerPosition({
+          top: rect.bottom,
+          left: rect.right,
+        });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    return () => window.removeEventListener("resize", updatePosition);
+  }, []);
+
   return (
     <div className="h-full w-full overflow-auto">
-      <div className="space-y-4 p-4 flex flex-col-reverse overflow-auto h-full">
-        <div>
+      <div
+        className="space-y-4 p-4 flex flex-col-reverse overflow-auto h-full"
+        ref={containerRef}
+      >
+        <div className="relative">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: showScrollButton ? 1 : 0,
+              y: showScrollButton ? 0 : 20,
+            }}
+            transition={{
+              duration: 0.3,
+              ease: "easeOut",
+            }}
+            className="fixed bottom-6 right-6 z-50"
+            style={{
+              top: `calc(${containerPosition.top}px - 4rem)`,
+              left: `calc(${containerPosition.left}px - 4rem)`,
+              position: "fixed",
+              marginRight: "1.5rem",
+              pointerEvents: showScrollButton ? "auto" : "none",
+            }}
+          >
+            <Button
+              size="icon"
+              className="rounded-full h-8 w-8"
+              onClick={() => {
+                const container = containerRef.current;
+                container?.scrollTo({
+                  top: container.scrollHeight,
+                  behavior: "smooth",
+                });
+              }}
+            >
+              <ArrowDownIcon />
+            </Button>
+          </motion.div>
           {groupedMessages.map((group, index) => (
             <Fragment key={index}>
               <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 mt-2">
