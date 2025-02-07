@@ -19,13 +19,6 @@ import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import invariant from "tiny-invariant";
 import { useAuth } from "./components/auth-provider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./components/ui/select";
 import { useToast } from "./hooks/use-toast";
 
 const formSchema = z.object({
@@ -33,12 +26,6 @@ const formSchema = z.object({
   pronouns: z
     .string()
     .min(2, { message: "Pronouns must be at least 2 characters." }),
-  education_level: z
-    .string()
-    .min(2, { message: "Education level must be selected." }),
-  undergraduate_major: z
-    .string()
-    .min(2, { message: "Major must be at least 2 characters." }),
   topic: z
     .string()
     .min(2, { message: "Topic chosen must be at least 2 characters." }),
@@ -64,8 +51,6 @@ function Register() {
     defaultValues: {
       name: "",
       pronouns: "",
-      education_level: "",
-      undergraduate_major: "",
       topic: "",
     },
   });
@@ -142,68 +127,6 @@ function Register() {
                     </FormItem>
                   )}
                 />
-              </div>
-            </div>
-
-            <div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <FormField
-                    control={form.control}
-                    name="education_level"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Education Level</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormDescription>
-                            The highest level of education you've completed or
-                            are currently pursuing.
-                          </FormDescription>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {[
-                              "High school diploma",
-                              "Bachelor's",
-                              "Master's",
-                              "Doctorate",
-                            ].map((level) => (
-                              <SelectItem key={level} value={level}>
-                                {level}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div>
-                  <FormField
-                    control={form.control}
-                    name="undergraduate_major"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Undergraduate Major</FormLabel>
-                        <FormDescription>
-                          Your current, planned, or completed undergraduate
-                          field of study.
-                        </FormDescription>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
               </div>
             </div>
 

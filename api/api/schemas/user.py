@@ -1,43 +1,22 @@
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.fields import Field
 
+from api.schemas.chat import Options
+
 from .objectid import PyObjectId
-
-
-class Options(BaseModel):
-    feedback_mode: Literal["on-suggestion", "on-submit"] = "on-submit"
-    suggestion_generation: Literal["content-inspired", "random"]
-    enabled_objectives: Annotated[
-        list[
-            Literal[
-                "non-literal-emoji",
-                "non-literal-figurative",
-                "yes-no-question",
-                "blunt",
-            ]
-        ],
-        Field(min_length=1, max_length=4),
-    ] = ["non-literal-emoji", "non-literal-figurative", "yes-no-question", "blunt"]
-
-
-default_options = Options(
-    feedback_mode="on-suggestion", suggestion_generation="content-inspired"
-)
 
 
 class UserPersonalizationOptions(BaseModel):
     name: str
     pronouns: str
-    education_level: str
-    undergraduate_major: str
     topic: str
 
 
 class BaseUserData(BaseModel):
     name: str | None = None
-    options: Options = default_options
+    init_chats: list[Options] = []
     personalization: UserPersonalizationOptions | None = None
 
 
@@ -55,5 +34,5 @@ def user_from_data(data: UserData) -> User:
     return User(
         id=data.id,
         name=data.name,
-        options=data.options,
+        init_chats=data.init_chats,
     )

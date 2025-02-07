@@ -16,6 +16,7 @@ from api.schemas.chat import (
     ChatInfo,
     ChatMessage,
     InChatFeedback,
+    Options,
     Suggestion,
     suggestion_list_adapter,
 )
@@ -31,11 +32,13 @@ from api.services.topic_generation import generate_topic_message
 _fake = faker.Faker()
 
 
-async def create_chat(user: UserData) -> ChatData:
+async def create_chat(user: UserData, options: Options | None = None) -> ChatData:
+    if options is None:
+        options = Options()
+
     topic = (
         user.personalization.topic
-        if user.options.suggestion_generation == "content-inspired"
-        and user.personalization
+        if options.suggestion_generation == "content-inspired" and user.personalization
         else "astronomy"
     )
 
@@ -47,18 +50,18 @@ async def create_chat(user: UserData) -> ChatData:
         user_id=user.id,
         agent=agent,
         last_updated=datetime.now(timezone.utc),
-        suggestion_generation=user.options.suggestion_generation,
+        options=options,
         objectives_used=[
             objective
             for objective in generate_suggestions.ALL_OBJECTIVES + ["blunt"]
-            if objective not in user.options.enabled_objectives
+            if objective not in options.enabled_objectives
         ],
         introduction=introduction,
     )
 
     chat = await chats.create(base_chat)
 
-    if user.options.suggestion_generation == "random":
+    if options.suggestion_generation == "random":
         chat.suggestions = [
             Suggestion(message="Hello!", objective=None),
             Suggestion(message=f"Hi {chat.agent}, how are you?", objective=None),
@@ -67,10 +70,8 @@ async def create_chat(user: UserData) -> ChatData:
 
     await chats.update_chat(chat)
 
-    user.options.suggestion_generation = (
-        "content-inspired"
-        if user.options.suggestion_generation == "random"
-        else "random"
+    options.suggestion_generation = (
+        "content-inspired" if options.suggestion_generation == "random" else "random"
     )
 
     await users.update(user.id, user)
@@ -130,13 +131,16 @@ async def _generate_agent_message(
     async with chat_state.transaction() as (chat, mark_changed):
         assert user.personalization
         pers = message_generation.get_personalization_options(
-            user.personalization, chat.suggestion_generation == "content-inspired"
+            user.personalization,
+            chat.options.suggestion_generation == "content-inspired",
         )
         chat.agent_typing = True
         mark_changed()
 
+        print("CURRENT STATE", chat.state)
+
         next_state = None
-        match (chat.state, user.options.feedback_mode):
+        match (chat.state, chat.options.feedback_mode):
             case ("no-objective", _):
                 next_state = (
                     "objective"
@@ -145,11 +149,13 @@ async def _generate_agent_message(
                     else "no-objective"
                 )
             case ("objective" | "objective-blunt", "on-suggestion"):
-                next_state = "objective"
+                next_state = "no-objective" if chat.options.gap else "objective"
             case ("objective" | "objective-blunt", "on-submit"):
                 next_state = "react"
             case ("react", _):
-                next_state = "objective"
+                next_state = "no-objective" if chat.options.gap else "objective"
+
+        print("NEXT STATE", next_state)
 
         assert next_state is not None
 
@@ -205,7 +211,7 @@ async def _generate_agent_message(
             )
 
             if not problem:
-                chat.state = "objective"
+                chat.state = "no-objective" if chat.options.gap else "objective"
 
                 feedback = await generate_feedback.explain_message(
                     pers,
@@ -236,7 +242,7 @@ async def _generate_agent_message(
                     )
                 )
                 chat.loading_feedback = False
-                chat.state = "react"
+
                 mark_changed()
             else:
                 alternative = next(
@@ -329,7 +335,16 @@ async def _generate_agent_message(
 
                 return
 
-    if chat.suggestion_generation == "random":
+    async with chat_state.transaction() as (chat, mark_changed):
+        if len(chat.objectives_used) > len(generate_suggestions.ALL_OBJECTIVES):
+            chat.checkpoint_rate = True
+            chat.objectives_used = [
+                objective
+                for objective in generate_suggestions.ALL_OBJECTIVES + ["blunt"]
+                if objective not in chat.options.enabled_objectives
+            ]
+
+    if chat.options.suggestion_generation == "random":
         await _suggest_messages(chat_state, user, response_content)
 
 
@@ -337,7 +352,8 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
     async with chat_state.transaction() as (chat, mark_changed):
         assert user.personalization
         pers = message_generation.get_personalization_options(
-            user.personalization, chat.suggestion_generation == "content-inspired"
+            user.personalization,
+            chat.options.suggestion_generation == "content-inspired",
         )
         chat.generating_suggestions = 3
         chat.events.append(
@@ -353,7 +369,7 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
 
         objective = None
 
-        if chat.suggestion_generation == "random":
+        if chat.options.suggestion_generation == "random":
             base_message = await message_generation.generate_message(
                 pers=pers,
                 agent_name=chat.agent,
@@ -373,7 +389,7 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
                 chat.objectives_used,
                 message_generation.format_messages_context_m(chat.messages, chat.agent),
                 base_message,
-                user.options.feedback_mode == "on-suggestion",
+                chat.options.feedback_mode == "on-suggestion",
             )
 
             chat.objectives_used.append(objective)
@@ -387,7 +403,7 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
                 chat.objectives_used,
                 message_generation.format_messages_context_m(chat.messages, chat.agent),
                 base_message,
-                user.options.feedback_mode == "on-suggestion",
+                chat.options.feedback_mode == "on-suggestion",
             )
 
             chat.objectives_used.append("blunt")
@@ -397,8 +413,16 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
                 chat.agent,
                 message_generation.format_messages_context_m(chat.messages, chat.agent),
                 base_message,
-                user.options.feedback_mode == "on-suggestion",
+                chat.options.feedback_mode == "on-suggestion",
             )
+
+        # if len(chat.objectives_used) > len(generate_suggestions.ALL_OBJECTIVES):
+        #     chat.checkpoint_rate = True
+        #     chat.objectives_used = [
+        #         objective
+        #         for objective in generate_suggestions.ALL_OBJECTIVES + ["blunt"]
+        #         if objective not in chat.options.enabled_objectives
+        #     ]
 
         random.shuffle(suggestions)
         chat.suggestions = suggestions
@@ -429,22 +453,11 @@ async def _send_message(chat_state: ChatState, user: UserData, index: int):
         assert chat.suggestions is not None
 
         pers = message_generation.get_personalization_options(
-            user.personalization, chat.suggestion_generation == "content-inspired"
+            user.personalization,
+            chat.options.suggestion_generation == "content-inspired",
         )
 
         suggestion = chat.suggestions[index]
-
-        if (
-            suggestion.problem is None
-            and chat.state != "objective"
-            and len(chat.objectives_used) > len(generate_suggestions.ALL_OBJECTIVES)
-        ):
-            chat.checkpoint_rate = True
-            chat.objectives_used = [
-                objective
-                for objective in generate_suggestions.ALL_OBJECTIVES + ["blunt"]
-                if objective not in user.options.enabled_objectives
-            ]
 
         chat.messages.append(
             ChatMessage(

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from api.auth.deps import CurrentInternalAuth, CurrentUser, CurrentUserID
-from api.schemas import user
+from api.schemas.chat import Options
 from api.schemas.user import User, UserPersonalizationOptions, user_from_data
 from api.services.auth import (
     AlreadyInitialized,
@@ -46,6 +46,6 @@ async def me(current_user: CurrentUser) -> User:
 
 @router.post("/internal-create-magic-link")
 async def internal_create_magic_link(
-    _: CurrentInternalAuth, options: user.Options
+    _: CurrentInternalAuth, init_chats: list[Options]
 ) -> str:
-    return await create_magic_link(options)
+    return await create_magic_link(init_chats)

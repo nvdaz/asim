@@ -129,8 +129,6 @@ def get_personalization_options(
         return UserPersonalizationOptions(
             name="Frank",
             pronouns="he/him",
-            undergraduate_major="Biology",
-            education_level="Bachelor's",
             topic="astronomy",
         )
     else:

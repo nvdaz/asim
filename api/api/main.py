@@ -14,7 +14,7 @@ origins = [
     "https://dev.autsim.pages.dev",
 ]
 
-app = FastAPI(title="Autism Simulator API", version="0.0.1", debug=True)
+app = FastAPI(title="Autsim API", version="0.0.1", debug=True)
 
 
 app.add_middleware(

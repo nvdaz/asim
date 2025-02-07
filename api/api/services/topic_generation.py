@@ -17,11 +17,17 @@ async def generate_topic_message(agent: str, topic: str):
         "user. Respond with a JSON object with a key 'introduction' and a value that "
         "is the introduction to the conversation.",
         prompt=f"The person will have the opportunity to chat with {agent}, who is an "
-        f"expert on {topic}. Example for topic 'anything space': "
+        f"expert on {topic}. "
+        + "\nExample for topic 'anything space': "
         + GeneratedTopic(
-            introduction=f"{agent} is passionate about astronomy. Ask them anything "
-            "you want to know about black holes, the solar system, cosmic events, or "
-            "any other fascinating aspects of the universe."
+            introduction="Tufts University is hosting an event where you can ask "
+            f"anything about space to {agent}, who is an expert in the field. "
+            f"Feel free to ask {agent} anything you want to know about space."
+        ).model_dump_json()
+        + "\nExample for topic 'sports': "
+        + GeneratedTopic(
+            introduction=f"As part of an event, {agent} is on campus at Tufts "
+            f"University. You can ask {agent} anything you want to know about sports."
         ).model_dump_json(),
     )
 

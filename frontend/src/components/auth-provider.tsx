@@ -2,10 +2,6 @@ import { createContext, useContext, useState } from "react";
 
 type User = {
   name: string | null;
-  options: {
-    feedback_mode: "on-submit" | "on-suggestion";
-    suggestion_generation: "random" | "content-inspired";
-  };
 };
 
 type Auth = {

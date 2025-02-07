@@ -253,7 +253,7 @@ function Chat() {
       const prev = currentChat!.messages[currentChat!.messages.length - 1];
       if (
         !!currentChat.suggestions![selectedSuggestion].problem &&
-        user!.options.feedback_mode == "on-suggestion"
+        currentChat!.options.feedback_mode == "on-suggestion"
       ) {
         toast({
           variant: "destructive",

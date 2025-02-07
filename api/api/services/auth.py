@@ -55,10 +55,10 @@ async def login_user(secret: str) -> LoginResult:
     return LoginResult(user=user_from_data(user), token=token)
 
 
-async def create_magic_link(options: user.Options) -> str:
+async def create_magic_link(init_chats: list[user.Options]) -> str:
     secret = secrets.token_urlsafe(16)
 
-    user = await users.create(BaseUserData(options=options))
+    user = await users.create(BaseUserData(init_chats=init_chats))
 
     link = magic_links.MagicLink(secret=secret, user_id=user.id)
     await magic_links.create(link)
@@ -83,7 +83,7 @@ async def init_user(
 
     user = await users.update(user_id, user)
 
-    await chat_service.create_chat(user)
-    await chat_service.create_chat(user)
+    for options in user.init_chats:
+        await chat_service.create_chat(user, options)
 
     return user

@@ -50,6 +50,10 @@ type ChatLoaded = {
   checkpoint_rate: boolean;
   introduction: string;
   introduction_seen: boolean;
+  options: {
+    feedback_mode: "on-submit" | "on-suggestion";
+    suggestion_generation: "random" | "content-inspired";
+  };
 }
 
 export type Chat = ChatLoading | ChatLoaded;

@@ -8,6 +8,28 @@ from api.schemas.utc_datetime import UTCDatetime
 from .objectid import PyObjectId
 
 
+class Options(BaseModel):
+    feedback_mode: Literal["on-suggestion", "on-submit"] = "on-submit"
+    suggestion_generation: Literal["content-inspired", "random"] = "content-inspired"
+    enabled_objectives: Annotated[
+        list[
+            Literal[
+                "non-literal-emoji",
+                "non-literal-figurative",
+                "yes-no-question",
+                "blunt",
+            ]
+        ],
+        Field(min_length=1, max_length=4),
+    ] = ["non-literal-emoji", "non-literal-figurative", "yes-no-question", "blunt"]
+    gap: bool = False
+
+
+default_options = Options(
+    feedback_mode="on-suggestion", suggestion_generation="content-inspired"
+)
+
+
 class Feedback(BaseModel):
     title: str
     body: str
@@ -51,6 +73,7 @@ chat_event_list_adapter = TypeAdapter(list[ChatEvent])
 
 class BaseChat(BaseModel):
     user_id: PyObjectId
+    options: Options = default_options
     messages: list[ChatMessage | InChatFeedback] = []
     agent: str
     last_updated: UTCDatetime
@@ -64,7 +87,6 @@ class BaseChat(BaseModel):
     last_suggestions: list[Suggestion] | None = None
     events: list[ChatEvent] = []
     checkpoint_rate: bool = False
-    suggestion_generation: Literal["content-inspired", "random"] = "content-inspired"
     introduction: str = "**NO INTRODUCTION GENERATED**"
     introduction_seen: bool = False
 
@@ -96,6 +118,7 @@ class ChatApi(BaseModel):
     checkpoint_rate: bool
     introduction: str
     introduction_seen: bool
+    options: Options
 
     @classmethod
     def from_data(cls, data: ChatData) -> "ChatApi":
