@@ -152,6 +152,8 @@ function Chat() {
     null
   );
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!token) {
       navigate("/");
@@ -205,6 +207,12 @@ function Chat() {
   const handleSend = useCallback(() => {
     suggestMessages(input);
     setInput("");
+    setTimeout(() => {
+      containerRef.current?.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: "instant",
+      });
+    }, 10);
   }, [input]);
 
   const [didAutoScrollTyping, setDidAutoScrollTyping] = useState(false);
@@ -212,6 +220,12 @@ function Chat() {
   useEffect(() => {
     if (currentChat?.agent_typing) {
       if (!didAutoScrollTyping) {
+        setTimeout(() => {
+          containerRef.current?.scrollTo({
+            top: containerRef.current.scrollHeight,
+            behavior: "instant",
+          });
+        }, 10);
         setDidAutoScrollTyping(true);
       }
     } else {
@@ -413,6 +427,7 @@ function Chat() {
           ) : (
             <>
               <ChatInterface
+                id={currentChat.id}
                 messages={
                   currentChat
                     ? (currentChat?.messages as (Message | InChatFeedback)[]) ||
@@ -422,6 +437,7 @@ function Chat() {
                 handleRate={handleRate}
                 typing={!!currentChat?.agent_typing}
                 otherUser={currentChat?.agent || ""}
+                containerRef={containerRef}
               />
               <Separator />
               <div className="flex flex-col gap-2 p-4">

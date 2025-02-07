@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { formatRelative } from "date-fns/formatRelative";
 import { motion } from "framer-motion";
 import { ArrowDownIcon } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "./button";
 import { Separator } from "./separator";
 
@@ -37,15 +37,19 @@ function capitalize(str: string) {
 }
 
 export function ChatInterface({
+  id,
   messages,
   typing,
   otherUser,
   handleRate,
+  containerRef,
 }: {
+  id: string;
   messages: (Message | InChatFeedback)[];
   typing: boolean;
   otherUser: string;
   handleRate: (index: number, rating: number) => void;
+  containerRef: React.RefObject<HTMLDivElement>;
 }) {
   const groupedMessages = useMemo(() => {
     const grouped = messages.reduce((acc, msg, i) => {
@@ -71,20 +75,26 @@ export function ChatInterface({
     return grouped;
   }, [messages]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    const container = containerRef.current;
+
+    if (!container) return;
+
+    if (
+      container.clientHeight + container.scrollTop <
+      container.scrollHeight - 200
+    ) {
+      setShowScrollButton(true);
+    } else {
+      setShowScrollButton(false);
+    }
+  }, [containerRef]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
-    const handleScroll = () => {
-      if (Math.abs(container.scrollTop) > 50) {
-        setShowScrollButton(true);
-      } else {
-        setShowScrollButton(false);
-      }
-    };
 
     container.addEventListener("scroll", handleScroll);
     handleScroll();
@@ -98,6 +108,9 @@ export function ChatInterface({
   });
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
     const updatePosition = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
@@ -108,15 +121,59 @@ export function ChatInterface({
       }
     };
 
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    return () => window.removeEventListener("resize", updatePosition);
+    const resizeObserver = new ResizeObserver(updatePosition);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
   }, []);
+
+  const [lastMessageIndex, setLastMessageIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    if (lastMessageIndex === null) {
+      setLastMessageIndex(messages.length - 1);
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "instant",
+      });
+    } else if (lastMessageIndex < messages.length - 1) {
+      setLastMessageIndex(messages.length - 1);
+
+      if (isFeedback(messages[messages.length - 1])) {
+        container.scrollTo({
+          top: container.scrollTop + 100,
+          behavior: "smooth",
+        });
+      } else {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [messages, containerRef]);
+
+  const [lastId, setLastId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (lastId === null) {
+      setLastId(id);
+    } else if (lastId !== id) {
+      setLastId(id);
+      setLastMessageIndex(null);
+    }
+  });
 
   return (
     <div className="h-full w-full overflow-auto">
       <div
-        className="space-y-4 p-4 flex flex-col-reverse overflow-auto h-full"
+        className="space-y-4 p-4 flex flex-col overflow-auto h-full"
         ref={containerRef}
       >
         <div className="relative">
