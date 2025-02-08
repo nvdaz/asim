@@ -207,31 +207,7 @@ function Chat() {
   const handleSend = useCallback(() => {
     suggestMessages(input);
     setInput("");
-    setTimeout(() => {
-      containerRef.current?.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: "instant",
-      });
-    }, 10);
   }, [input]);
-
-  const [didAutoScrollTyping, setDidAutoScrollTyping] = useState(false);
-
-  useEffect(() => {
-    if (currentChat?.agent_typing) {
-      if (!didAutoScrollTyping) {
-        setTimeout(() => {
-          containerRef.current?.scrollTo({
-            top: containerRef.current.scrollHeight,
-            behavior: "instant",
-          });
-        }, 10);
-        setDidAutoScrollTyping(true);
-      }
-    } else {
-      setDidAutoScrollTyping(false);
-    }
-  }, [currentChat?.agent_typing]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {

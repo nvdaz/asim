@@ -181,8 +181,8 @@ the second and third variations so that simple "yes" or "no" answers are not hel
 all, even slightly. "Yes" or "No" answers should be entirely unhelpful and answer a
 question that was not asked.
 
-If the original message is not a question, add a pertinent follow-up question at the end
-of the message.
+If the original message is not a question, add a pertinent continuation question at the
+end of the message that the sender can use to continue the conversation.
 
 WARNING: If a yes or no answer is helpful (e.g. if the question is "is the sky blue?",
 "yes" is a helpful answer since the sky is blue), then rephrase the question so that a
@@ -191,11 +191,12 @@ color the sky is?", "do you know if the sky is blue?", or "can you tell me what 
 the sky is?".
 
 IMPORTANT: In a <scratchpad> tag, determine whether the original message contains a
-question or not. If it does not, use a <follow-up> tag to think of a follow-up question
-that may be asked after the latest message in the conversation. Append this follow-up
-question to the latest message as the new message to be rephrased. All variations should
-be derived from this combined message. Complete all XML tags before moving on to
-generating the variations.
+question or not. If it does not, use a <continuation> tag to think of a continuation
+question that the sender may with their latest message to keep the conversation going.
+The continuation question should be relevant to the topic of the conversation and should
+be appended after the original message. All variations should be derived from this
+combined message (original message + continuation question). Complete all XML tags
+before moving on to generating the variations.
 """
         ),
         "non-literal-emoji": (

@@ -127,7 +127,10 @@ export function ChatInterface({
     return () => resizeObserver.disconnect();
   }, []);
 
-  const [lastMessageIndex, setLastMessageIndex] = useState<number | null>(null);
+  const [scrollState, setScrollState] = useState<{
+    lastMessageIndex: number;
+    lastHeight: number;
+  } | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -136,28 +139,72 @@ export function ChatInterface({
       return;
     }
 
-    if (lastMessageIndex === null) {
-      setLastMessageIndex(messages.length - 1);
+    setScrollState({
+      lastMessageIndex: messages.length - 1,
+      lastHeight: container.scrollHeight,
+    });
+
+    if (scrollState === null) {
       container.scrollTo({
         top: container.scrollHeight,
         behavior: "instant",
       });
-    } else if (lastMessageIndex < messages.length - 1) {
-      setLastMessageIndex(messages.length - 1);
-
+    } else if (scrollState.lastMessageIndex < messages.length - 1) {
       if (isFeedback(messages[messages.length - 1])) {
         container.scrollTo({
-          top: container.scrollTop + 100,
+          top: scrollState.lastHeight - container.clientHeight + 200,
           behavior: "smooth",
         });
       } else {
         container.scrollTo({
-          top: container.scrollHeight,
+          top: container.scrollHeight - container.clientHeight,
           behavior: "smooth",
         });
       }
     }
-  }, [messages, containerRef]);
+  }, [messages.length, containerRef]);
+
+  const [lastClientHeight, setLastClientHeight] = useState(0);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      if (container.clientHeight !== lastClientHeight) {
+        const d = container.clientHeight - lastClientHeight;
+        const scr = container.scrollTop - d;
+
+        setLastClientHeight(container.clientHeight);
+
+        container.scrollTo({
+          top:
+            container.scrollHeight -
+              container.scrollTop -
+              container.clientHeight <
+            50
+              ? container.scrollHeight
+              : scr,
+          behavior: "instant",
+        });
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [containerRef, lastClientHeight]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (typing) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [typing, containerRef]);
 
   const [lastId, setLastId] = useState<string | null>(null);
 
@@ -166,7 +213,7 @@ export function ChatInterface({
       setLastId(id);
     } else if (lastId !== id) {
       setLastId(id);
-      setLastMessageIndex(null);
+      setScrollState(null);
     }
   });
 
