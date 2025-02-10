@@ -42,7 +42,10 @@ async def create_chat(user: UserData, options: Options | None = None) -> ChatDat
         else "astronomy"
     )
 
-    agent = _fake.first_name()
+    agent = None
+
+    while agent is None or agent == user.name or agent == "Frank":
+        agent = _fake.first_name()
 
     introduction = await generate_topic_message(agent, topic)
 
@@ -149,13 +152,29 @@ async def _generate_agent_message(
                     else "no-objective"
                 )
             case ("objective" | "objective-blunt", "on-suggestion"):
-                next_state = "no-objective" if chat.options.gap else "objective"
+                next_state = (
+                    "no-objective"
+                    if chat.options.gap
+                    or (
+                        len(chat.objectives_used)
+                        >= len(generate_suggestions.ALL_OBJECTIVES)
+                        and "blunt" in chat.options.enabled_objectives
+                    )
+                    else "objective"
+                )
             case ("objective" | "objective-blunt", "on-submit"):
                 next_state = "react"
             case ("react", _):
-                next_state = "no-objective" if chat.options.gap else "objective"
-
-        print("NEXT STATE", next_state)
+                next_state = (
+                    "no-objective"
+                    if chat.options.gap
+                    or (
+                        len(chat.objectives_used)
+                        >= len(generate_suggestions.ALL_OBJECTIVES)
+                        and "blunt" in chat.options.enabled_objectives
+                    )
+                    else "objective"
+                )
 
         assert next_state is not None
 
@@ -163,6 +182,7 @@ async def _generate_agent_message(
             "blunt" not in chat.objectives_used
             and len(chat.messages) > 3
             and len(chat.objectives_used) >= len(generate_suggestions.ALL_OBJECTIVES)
+            and chat.state == "no-objective"
         ):
             objective = "blunt-initial"
             next_state = "objective-blunt"
@@ -211,7 +231,16 @@ async def _generate_agent_message(
             )
 
             if not problem:
-                chat.state = "no-objective" if chat.options.gap else "objective"
+                chat.state = (
+                    "no-objective"
+                    if chat.options.gap
+                    or (
+                        len(chat.objectives_used)
+                        >= len(generate_suggestions.ALL_OBJECTIVES)
+                        and "blunt" in chat.options.enabled_objectives
+                    )
+                    else "objective"
+                )
 
                 feedback = await generate_feedback.explain_message(
                     pers,
