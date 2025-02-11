@@ -188,8 +188,9 @@ end of the message that the sender can use to continue the conversation.
 WARNING: If a yes or no answer is helpful (e.g. if the question is "is the sky blue?",
 "yes" is a helpful answer since the sky is blue), then rephrase the question so that a
 yes or no answer is not helpful. For "is the sky blue?", you could ask "do you know what
-color the sky is?", "do you know if the sky is blue?", or "can you tell me what color
-the sky is?".
+color the sky is?", "do you know if the sky is blue?", or "have you noticed the color of
+the sky?". These questions can be answered with a simple "yes" or "no", but the answer
+would be entirely unhelpful.
 
 First, include a contains_question key in the JSON response to indicate whether the
 original message contains a question or not. If it does not, use the follow_up tag to
@@ -251,7 +252,34 @@ like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the questio
 
     objective_example_prompts = {
         "yes-no-question": """
-<message_to_rephrase>Are there any good spots to eat there?</message_to_rephrase>
+Example 1.
+
+Prior message in the conversation: 'What kinds of food do you like?'
+Original message to generate variations for: 'I really like Italian food.'
+
+{
+    "contains_question": false,
+    "follow_up": "Are there any good Italian restaurants in the area?",
+    "new_original": "I really like Italian food. Are there any good Italian restaurants in the area?"
+    "variations": [
+        {
+            "problem": "Null, because the question can not be answered with a simple 'yes' or 'no'. Instead, it can only be answered by providing some good Italian restaurants.",
+            "content": "I really like Italian food. Any good Italian restaurants around here?"
+        },
+        {
+            "problem": "'do you know' can be answered with 'yea, i do know some', so it could either be asking whether the user knows any good Italian restaurants or it could be asking for specific recommendations.",
+            "content": "I love eating Italian food. Do you know any good Italian restaurants?"
+        },
+        {
+            "problem": "'can i ask' can be answered with 'yea, you can ask', so it could either be asking whether the user can ask about good Italian restaurants or it could be asking for recommendations.",
+            "content": "Italian food is my favorite. Can I ask if there's any good Italian restaurants in the area?"
+        }
+    ]
+}
+
+Example 2.
+
+Original message to generate variations for: 'Are there any good spots to eat there?'
 
 {
     "variations": [
@@ -271,7 +299,7 @@ like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the questio
 }
 """,
         "non-literal-emoji": """
-        Original message to generate variations for: i'm ready for that hike and those views! This trip is really pushing my limits.
+Original message to generate variations for: i'm ready for that hike and those views! This trip is really pushing my limits.
 
 {
     "variations": [

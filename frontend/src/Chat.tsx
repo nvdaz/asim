@@ -22,7 +22,7 @@ import invariant from "tiny-invariant";
 import { Label } from "./components/ui/label";
 import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
 import Contacts from "./contacts";
-import { chatIsLoaded, isContentInChatFeedback } from "./hooks/use-chats";
+import { chatIsLoaded } from "./hooks/use-chats";
 import { useCurrentChat } from "./hooks/use-current-chat";
 import { cn } from "./lib/utils";
 
@@ -240,7 +240,6 @@ function Chat() {
       chatIsLoaded(currentChat) &&
       selectedSuggestion !== null
     ) {
-      const prev = currentChat!.messages[currentChat!.messages.length - 1];
       if (
         !!currentChat.suggestions![selectedSuggestion].problem &&
         currentChat!.options.feedback_mode == "on-suggestion"
@@ -250,18 +249,6 @@ function Chat() {
           description:
             "The message you selected needs improvement. Please read the feedback and try selecting another message.",
         });
-      } else if (
-        currentChat.messages.length > 0 &&
-        isContentInChatFeedback(prev) &&
-        prev.rating === null
-      ) {
-        const { dismiss } = toast({
-          variant: "destructive",
-          description:
-            "Please provide feedback before sending the clarification message.",
-        });
-
-        toastDismiss.current = dismiss;
       } else {
         sendChatMessage(selectedSuggestion);
         setSelectedSuggestion(null);
