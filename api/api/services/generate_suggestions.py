@@ -161,7 +161,8 @@ async def _generate_message_variations(
             """
 The first variation will pose a question clearly and directly, not requiring the other
 person to interpret the question in a certain way to understand what you are asking
-(do not use language like 'Can' or 'Could' for this variation).
+NEVER use language like 'can' or 'could'. Begin with a question word like "What", "How",
+"Where", "When", "Why", "Which", or "Who" to ask the question directly.
 
 The second and third variation poses the question indirectly as a yes or no question,
 which may be misunderstood as simply a yes or no question. The question implies a
@@ -190,13 +191,11 @@ yes or no answer is not helpful. For "is the sky blue?", you could ask "do you k
 color the sky is?", "do you know if the sky is blue?", or "can you tell me what color
 the sky is?".
 
-IMPORTANT: In a <scratchpad> tag, determine whether the original message contains a
-question or not. If it does not, use a <continuation> tag to think of a continuation
-question that the sender may with their latest message to keep the conversation going.
-The continuation question should be relevant to the topic of the conversation and should
-be appended after the original message. All variations should be derived from this
-combined message (original message + continuation question). Complete all XML tags
-before moving on to generating the variations.
+First, include a contains_question key in the JSON response to indicate whether the
+original message contains a question or not. If it does not, use the follow_up tag to
+ask a follow-up question that the sender may use after their original message to keep
+the conversation going. Then, in a new_original key, include the original message first
+appended with the follow-up question if the original message did not contain a question.
 """
         ),
         "non-literal-emoji": (
@@ -209,6 +208,9 @@ should be used figuratively to convey a different meaning or emotion than the or
 
 You must avoid figurative language and metaphors in the message. The emoji should be the only
 element that is not used in a literal sense. AVOID FIGURATIVE LANGUAGE and use direct language.
+
+DO NOT ever use language like 'Can' or 'Could'. If asking a question, use direct question words
+like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the question directly.
 """
         ),
         "non-literal-figurative": (
@@ -220,6 +222,9 @@ understand.
 2. The second and third variations will use a figurative language, an idiom or metaphor or a figurative expression, that is not used in a literal
 sense. The expression should convey a different meaning or emotion than its literal interpretation. Avoid figurative expressions that are too
 similar to the topic of the message. Never use a figurative expression that is literally true in the context of the message.
+
+DO NOT ever use language like 'Can' or 'Could'. If asking a question, use direct question words
+like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the question directly.
     """
         ),
         "blunt-misinterpret": (
@@ -234,6 +239,10 @@ discomfort or frustration about how the message was communicated.
 3. The third variation will interpret the blunt message as rude. This variation should
 confront the perceived rudeness, using a defensive tone to imply that the other person has
 caused them discomfort. The message should sound reasonable to the average person.
+
+
+DO NOT ever use language like 'Can' or 'Could'. If asking a question, use direct question words
+like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the question directly.
     """
         ),
     }
@@ -584,7 +593,11 @@ directly to get the information they were looking for.
 
 {{name}} will address the following problem and take care to not repeat it: {problem}
 
-DO NOT use language like 'Can' or 'Could'.
+DO NOT use language like 'Can' or 'Could'. Clarify what {{name}} is looking for directly
+by using language like "I would like you to tell me...", "Please provide me with...",
+"What are some...", or "What is". Ensure that the clarification uses this kind of
+language only to be as direct as possible.
+
 """,
         "non-literal-emoji": """
 In the response you generate for {{name}}, they should provide a straighforward clarification, and take responsibility/apologize for being unclear.
