@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { ArrowDownIcon } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "./button";
-import { Separator } from "./separator";
 
 export interface Message {
   index?: number;
@@ -333,12 +332,8 @@ function ChatBubble({ content: message, isOutgoing = false }: ChatBubbleProps) {
   );
 }
 
-const FEEDBACK_RESPONSES = ["No", "Neutral", "Yes"];
-
 function FeedbackBubble({
   feedback,
-  handleRate,
-  index,
 }: {
   feedback: InChatFeedback;
   handleRate: (index: number, rating: number) => void;
@@ -368,27 +363,6 @@ function FeedbackBubble({
                 </>
               )}
               <p className="text-sm">{feedback.alternative_feedback}</p>
-              <Separator className="mt-4" />
-              <h3 className="mt-2 font-medium">
-                Do you understand the explanation provided above?
-              </h3>
-              <div className="flex justify-center space-x-4 mt-2">
-                {[3, 2, 1].map((i) => (
-                  <Button
-                    key={i}
-                    onClick={() => handleRate(index, i)}
-                    className={cn(
-                      "h-8 p-2 w-[80px]",
-                      feedback.rating === i
-                        ? "bg-black text-white cursor-default hover:bg-black"
-                        : "bg-gray-100 text-black hover:bg-gray-100"
-                    )}
-                    variant={feedback.rating === i ? "default" : "outline"}
-                  >
-                    {FEEDBACK_RESPONSES[i - 1]}
-                  </Button>
-                ))}
-              </div>
             </div>
           </div>
         </div>

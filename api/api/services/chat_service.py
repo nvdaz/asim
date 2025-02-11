@@ -140,8 +140,6 @@ async def _generate_agent_message(
         chat.agent_typing = True
         mark_changed()
 
-        print("CURRENT STATE", chat.state)
-
         next_state = None
         match (chat.state, chat.options.feedback_mode):
             case ("no-objective", _):
@@ -366,7 +364,7 @@ async def _generate_agent_message(
 
     async with chat_state.transaction() as (chat, mark_changed):
         if len(chat.objectives_used) > len(generate_suggestions.ALL_OBJECTIVES):
-            chat.checkpoint_rate = True
+            # chat.checkpoint_rate = True
             chat.objectives_used = [
                 objective
                 for objective in generate_suggestions.ALL_OBJECTIVES + ["blunt"]
