@@ -11,23 +11,23 @@ async def generate_topic_message(agent: str, topic: str):
     result = await llm.generate(
         schema=GeneratedTopic,
         model=llm.Model.GPT_4o,
-        system="You are introducing a user to a scenario where they are talking to an "
-        "expert about a given topic. The user can ask whatever they want to know about "
-        "the topic to the expert. Generate an introduction to the conversation for the "
-        "user. Respond with a JSON object with a key 'introduction' and a value that "
-        "is the introduction to the conversation.",
-        prompt=f"The person will have the opportunity to chat with {agent}, who is an "
-        f"expert on {topic}. "
+        system="You are facilitating a casual, engaging conversation between a user and an expert on a specific topic. "
+        "The setting is relaxed and informal, allowing for open dialogue and natural curiosity. "
+        "Create a welcoming introduction that sets the tone for this conversation. "
+        "Respond with a JSON object containing an 'introduction' key and the introduction text as its value.",
+        prompt=f"The user will engage in an informal discussion with {agent}, a distinguished expert in {topic}. "
         + "\nExample for topic 'anything space': "
         + GeneratedTopic(
-            introduction="Tufts University is hosting an event where you can ask "
-            f"anything about space to {agent}, who is an expert in the field. "
-            f"Feel free to ask {agent} anything you want to know about space."
+            introduction=f"Meet {agent}, an accomplished expert ready to share their "
+            "knowledge and insights about space. In this casual conversation, you're "
+            "welcome to explore any questions or topics that interest you."
         ).model_dump_json()
         + "\nExample for topic 'sports': "
         + GeneratedTopic(
-            introduction=f"As part of an event, {agent} is on campus at Tufts "
-            f"University. You can ask {agent} anything you want to know about sports."
+            introduction="Today, you will have the opportunity to have a casual chat "
+            f"with {agent}, an experienced professional in the world of sports. Feel "
+            "free to ask questions and discuss any aspects of the subject that spark "
+            "your interest."
         ).model_dump_json(),
     )
 
