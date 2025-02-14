@@ -376,7 +376,15 @@ function Chat() {
           {!currentChat?.introduction_seen ? (
             <div className="flex flex-col items-center justify-center p-4 h-full">
               <div className="flex flex-col gap-2 p-8 max-w-lg items-center">
+                <h2 className="text-lg">Background Information</h2>
                 <p>{currentChat?.introduction}</p>
+                <h2 className="text-lg">Instructions</h2>
+                <p>
+                  Enter your message in the input field to get started. We'll
+                  generate three alternative versions based on your input. Then,
+                  based on your understanding of autistic communication styles,
+                  select the best-phrased message.
+                </p>
                 <Button
                   className="m-4"
                   onClick={() => {
@@ -413,13 +421,8 @@ function Chat() {
                           <div className="flex flex-col gap-2 w-full">
                             {currentChat.suggestions.length == 1 && (
                               <p className="text-secondary-foreground font-medium">
-                                {(
-                                  currentChat?.messages[
-                                    currentChat?.messages.length - 1
-                                  ] as never as InChatFeedback
-                                ).rating !== null
-                                  ? "Send this message to clarify and continue the conversation."
-                                  : "Provide feedback and then send this message to clarify and continue the conversation."}
+                                Send this message to clarify and continue the
+                                conversation.
                               </p>
                             )}
                             {currentChat.suggestions[selectedSuggestion]
@@ -469,8 +472,9 @@ function Chat() {
                         ) : (
                           <div className="div flex flex-col gap-2 w-full align-end">
                             <p className="text-secondary-foreground font-medium">
-                              Select the best message to send and continue the
-                              conversation.
+                              Based on your understanding of autistic
+                              communication styles, select the best-phrased
+                              message below.
                             </p>
                             {currentChat.suggestions.map(({ message }, i) => (
                               <motion.button
@@ -488,14 +492,6 @@ function Chat() {
                                 {message}
                               </motion.button>
                             ))}
-                            <Textarea
-                              value=""
-                              placeholder="Select an option"
-                              ref={inputRef}
-                              rows={1}
-                              className="min-h-[30px] max-h-[120px] resize-none"
-                              disabled
-                            />
                           </div>
                         )
                       ) : (

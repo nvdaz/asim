@@ -102,7 +102,7 @@ async def handle_connection(
             connection.add_action(
                 chat_state, chat_service.checkpoint_rating(chat_state, event["ratings"])
             )
-        elif event['type'] == 'introduction-seen':
+        elif event["type"] == "introduction-seen":
             chat_state = await get_chat_state(ObjectId(event["id"]))
             connection.add_action(
                 chat_state, chat_service.introduction_seen(chat_state)

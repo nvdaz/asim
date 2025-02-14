@@ -355,7 +355,7 @@ function FeedbackBubble({
               {feedback.alternative && (
                 <>
                   <h2 className="mt-4 font-semibold">
-                    As An Alternative, You Could Try:
+                    A Small Tweak to Make Your Message Clearer
                   </h2>
                   <p className="text-sm rounded-md bg-gray-300 p-2 my-1">
                     {feedback.alternative}

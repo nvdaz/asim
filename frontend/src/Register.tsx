@@ -58,7 +58,7 @@ function Register() {
 
   const onSubmit = (data: FormValues) => {
     setDidSubmit(true);
-    
+
     fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
       method: "POST",
       headers: {
@@ -98,8 +98,8 @@ function Register() {
 
   return (
     <div className="flex items-center justify-center w-screen">
-      <div className="max-w-screen-md">
-        <h1 className="text-3xl font-semibold text-center m-8">
+      <div className="max-w-screen-sm">
+        <h1 className="text-3xl font-semibold text-center mt-12 mb-8">
           Complete Your Registration
         </h1>
         <Form {...form}>
@@ -107,6 +107,11 @@ function Register() {
             onSubmit={form.handleSubmit(onSubmit, onError)}
             className="space-y-8 bg-card p-6 rounded-lg shadow-md"
           >
+            <p className="text-gray-800 dark:text-gray-200">
+              Please complete this form to finalize your registration. The
+              information you provide will help us match you with a suitable
+              conversation partner.
+            </p>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* Name Field */}
               <div className="md:col-span-2">
@@ -151,9 +156,9 @@ function Register() {
                 <FormItem>
                   <FormLabel>Topic</FormLabel>
                   <FormDescription>
-                    Something you're genuinely curious about, can hold a
-                    meaningful conversation on, and would like to explore with a
-                    fellow enthusiast.
+                    Something you're genuinely curious about, can engage in a
+                    meaningful conversation about, and would like to explore
+                    with a fellow enthusiast.
                   </FormDescription>
                   <FormControl>
                     <Input {...field} />
