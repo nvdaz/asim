@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from api.schemas.chat import ChatMessage, InChatFeedback
@@ -106,7 +108,7 @@ In {name}'s voice, generate their response to {other_name}'s last message in the
 # scenario is the situation in which the conversation is taking place (e.g. gloucester trip)
 prompt = """
 {scenario}
-It's currently early December 2024.
+It's currently {date}.
 
 {action}
 
@@ -187,6 +189,9 @@ async def generate_message(
 
     scenario = get_scenario(pers, agent_name)
 
+    current_date = datetime.now()
+    formatted_date = current_date.strftime("%a %d %b %Y, %I:%M%p")
+
     prompt_data = prompt.format(
         name=sender_name,
         other_name=recipient_name,
@@ -207,6 +212,7 @@ async def generate_message(
             if user_sent
             else f"{agent_name} uses direct, straightforward language while avoiding pleasantries. {agent_name} isn't very expressive and is not overly friendly. avoid over-optimism. Do not use figurative languages or emojis."
         ),
+        date=formatted_date,
     ).strip()
 
     response = await llm.generate(
