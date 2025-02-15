@@ -126,10 +126,7 @@ export function ChatInterface({
     return () => resizeObserver.disconnect();
   }, []);
 
-  const [scrollState, setScrollState] = useState<{
-    lastMessageIndex: number;
-    lastHeight: number;
-  } | null>(null);
+  const [lastMessageIndex, setLastMessageIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -138,28 +135,33 @@ export function ChatInterface({
       return;
     }
 
-    setScrollState({
-      lastMessageIndex: messages.length - 1,
-      lastHeight: container.scrollHeight,
-    });
+    setLastMessageIndex(messages.length - 1);
 
-    if (scrollState === null) {
+    if (lastMessageIndex === null) {
       container.scrollTo({
         top: container.scrollHeight,
         behavior: "instant",
       });
-    } else if (scrollState.lastMessageIndex < messages.length - 1) {
-      if (isFeedback(messages[messages.length - 1])) {
-        container.scrollTo({
-          top: scrollState.lastHeight - container.clientHeight + 200,
-          behavior: "smooth",
-        });
-      } else {
-        container.scrollTo({
-          top: container.scrollHeight - container.clientHeight,
-          behavior: "smooth",
-        });
+    } else if (lastMessageIndex < messages.length - 1) {
+      const lastElement = container.children[container.children.length - 1];
+
+      if (!lastElement || !(lastElement instanceof HTMLElement)) {
+        return;
       }
+
+      setTimeout(() => {
+        if (isFeedback(messages[messages.length - 1])) {
+          container.scrollTo({
+            top: lastElement.offsetTop - container.clientHeight + 100,
+            behavior: "smooth",
+          });
+        } else {
+          container.scrollTo({
+            top: container.scrollHeight - container.clientHeight,
+            behavior: "smooth",
+          });
+        }
+      }, 10);
     }
   }, [messages.length, containerRef]);
 
@@ -212,81 +214,79 @@ export function ChatInterface({
       setLastId(id);
     } else if (lastId !== id) {
       setLastId(id);
-      setScrollState(null);
+      setLastMessageIndex(null);
     }
   });
 
   return (
     <div className="h-full w-full overflow-auto">
       <div
-        className="space-y-4 p-4 flex flex-col overflow-auto h-full"
+        className="space-y-4 p-4 flex flex-col overflow-auto h-full relative"
         ref={containerRef}
       >
-        <div className="relative">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{
-              opacity: showScrollButton ? 1 : 0,
-              y: showScrollButton ? 0 : 20,
-            }}
-            transition={{
-              duration: 0.3,
-              ease: "easeOut",
-            }}
-            className="fixed bottom-6 right-6 z-50"
-            style={{
-              top: `calc(${containerPosition.top}px - 4rem)`,
-              left: `calc(${containerPosition.left}px - 4rem)`,
-              position: "fixed",
-              marginRight: "1.5rem",
-              pointerEvents: showScrollButton ? "auto" : "none",
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{
+            opacity: showScrollButton ? 1 : 0,
+            y: showScrollButton ? 0 : 20,
+          }}
+          transition={{
+            duration: 0.3,
+            ease: "easeOut",
+          }}
+          className="fixed bottom-6 right-6 z-50"
+          style={{
+            top: `calc(${containerPosition.top}px - 4rem)`,
+            left: `calc(${containerPosition.left}px - 4rem)`,
+            position: "fixed",
+            marginRight: "1.5rem",
+            pointerEvents: showScrollButton ? "auto" : "none",
+          }}
+        >
+          <Button
+            size="icon"
+            className="rounded-full h-8 w-8"
+            onClick={() => {
+              const container = containerRef.current;
+              container?.scrollTo({
+                top: container.scrollHeight,
+                behavior: "smooth",
+              });
             }}
           >
-            <Button
-              size="icon"
-              className="rounded-full h-8 w-8"
-              onClick={() => {
-                const container = containerRef.current;
-                container?.scrollTo({
-                  top: container.scrollHeight,
-                  behavior: "smooth",
-                });
-              }}
-            >
-              <ArrowDownIcon />
-            </Button>
-          </motion.div>
-          {groupedMessages.map((group, index) => (
-            <Fragment key={index}>
-              <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 mt-2">
-                {capitalize(formatRelative(group[0].created_at, new Date()))}
-              </div>
-              {group.map((msg, index) =>
-                isFeedback(msg) ? (
-                  <FeedbackBubble
-                    key={index}
-                    feedback={msg}
-                    handleRate={handleRate}
-                    index={msg.index!}
-                  />
-                ) : (
-                  <ChatBubble
-                    key={index}
-                    content={msg.content}
-                    sender={msg.sender}
-                    avatarUrl={msg.avatarUrl}
-                    isOutgoing={msg.sender !== otherUser}
-                  />
-                )
-              )}
-            </Fragment>
-          ))}
-          {typing && (
-            <div className="justify-end p-3">
-              <TypingIndicator />
+            <ArrowDownIcon />
+          </Button>
+        </motion.div>
+        {groupedMessages.map((group, index) => (
+          <Fragment key={index}>
+            <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 mt-2">
+              {capitalize(formatRelative(group[0].created_at, new Date()))}
             </div>
-          )}
-        </div>
+            {group.map((msg, index) =>
+              isFeedback(msg) ? (
+                <FeedbackBubble
+                  key={index}
+                  feedback={msg}
+                  handleRate={handleRate}
+                  index={msg.index!}
+                />
+              ) : (
+                <ChatBubble
+                  key={index}
+                  content={msg.content}
+                  sender={msg.sender}
+                  avatarUrl={msg.avatarUrl}
+                  isOutgoing={msg.sender !== otherUser}
+                />
+              )
+            )}
+          </Fragment>
+        ))}
+        {typing && (
+          <div className="justify-end p-3">
+            <TypingIndicator />
+          </div>
+        )}
       </div>
     </div>
   );
