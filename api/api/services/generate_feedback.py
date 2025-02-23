@@ -40,10 +40,9 @@ styles and some may prefer straightforward or no use of emojis to avoid confusio
 
 """,
         ("non-literal-emoji", False): """
-{user} used an emoji in a clear and direct way, adding a visual element to their
-message that enhances the meaning in a way that does not cause confusion. Briefly
-mention people have different communication styles and some may prefer straightforward
-or no use of emojis to avoid confusion.
+{user} used an emoji clearly and directly without causing confusion. Briefly mention
+people have different communication styles and some may prefer straightforward or no
+use of emojis to avoid confusion.
 """,
         ("non-literal-figurative", True): """
 {user} used figurative language that could be misinterpreted as literal. Explain
@@ -192,6 +191,13 @@ class FeedbackOutput(BaseModel):
     feedback: str
 
 
+class PositiveFeedbackOutput(BaseModel):
+    title: str
+    praise: str
+    problems: str
+    conclusion: str
+
+
 async def explain_message(
     pers: UserPersonalizationOptions,
     agent: str,
@@ -220,8 +226,7 @@ was intended. Mention that people have different communication styles, and some,
         ("yes-no-question", False): """
 {user} asked a clear and direct question, avoiding the use of a yes-or-no question
 that could be misinterpreted. This phrasing is unlikely to confuse {agent} as its
-intended meaning is clear. Briefly mention people have different communication styles
-and some may prefer direct language to avoid confusion.
+intended meaning is clear.
 """,
         ("non-literal-emoji", True): """
 {user} used an emoji that could be interpreted in different ways, and {agent} understood
@@ -236,11 +241,10 @@ be especially prone to varied meanings. Being mindful of this can help ensure th
 intended message is received clearly.
 """,
         ("non-literal-emoji", False): """
-{user} used an emoji in a clear and direct way, adding a visual element to their
-message without causing confusion. The intended meaning of the emoji is unlikely to be
-confused by {agent} as it aligns with the message’s tone and context. Briefly mention
-people have different communication styles and some may prefer straightforward or no
-use of emojis to avoid confusion.
+{user} used an emoji in a clear and direct way, which helped convey their message
+without causing confusion. . The intended meaning of the emoji is unlikely to be
+confused by {agent} as it aligns with the message’s tone and context. Also explain how
+the other options could have been misinterpreted due to the specific emojis used.
 """,
         ("non-literal-figurative", True): """
 {user} used figurative language that could be interpreted by {agent} in many ways,
@@ -258,8 +262,8 @@ minimize misunderstandings.
         ("non-literal-figurative", False): """
 {user} used clear and direct language to convey their message, avoiding the use of
 figurative language that could be misinterpreted. This direct language is more likely
-to be understood as intended. Briefly mention people have different communication styles
-and some may prefer straightforward language to avoid confusion.
+to be understood as intended. Also explain how the other optoins could have been
+misinterpreted due to the use of figurative language.
 """,
         ("blunt-misinterpret", True): """
 Begin by mentioning how {user}'s latest message was confrontational towards {agent}.
@@ -277,9 +281,7 @@ directness from another.
         ("blunt-misinterpret", False): """
 {user} responded empathetically to {agent}'s blunt language, considering that their
 blunt language was not intended to be rude. {user}'s message is clear and direct, and it
-is not confrontational to blunt language. Briefly mention that {user} should consider
-resonding in a more neutral way since people may have different communication styles,
-and some may naturally sound blunt.
+is not confrontational to blunt language.
 """,
     }
 
@@ -331,27 +333,42 @@ Sample reaction of the confused recipient: "sounds great, frank! but i noticed t
 At the end is a model output to help you out:
 Sample original message that was clear: "What books would you recommend, Joseph?"
 
+Message: "Is there a good book you know of?" | Problem: 'Is there' was likely intended to elicit specific book recommendations, but it could also be seen as a yes-or-no question where the other person may just say whether they know of a good book or not, which is not the intended meaning of the message.
+Message: "Have you read any good books lately?" | Problem: 'Have you read' was likely intended to ask for specific book recommendations, but it could be seen as a yes-or-no question where the other person may just say whether they have read any good books or not, which is not the intended meaning of the message.
+
 {
-    "title": "Clear and Direct 🎯",
-    "feedback": "Frank, your question worked well because it directly asked Joseph for book recommendations, making your intent clear. In comparison, asking "Is there a good book you know of?" could be interpreted as asking for confirmation with a response like "Yes, there is," OR as a request for specific recommendations. Similarly, "Have you read any good books lately?" could prompt a response like "I have," OR lead Joseph to share book titles. Both interpretations are valid for these suggestions, but your clear and direct question avoided potential ambiguity and encouraged useful recommendations. Keep using straightforward language for effective communication!"
+    "title": "Clear Emoji Choice 🎯",
+    "praise": "Great job directly asking for book recommendations, Joseph!",
+    "problems": "The other options could be interpreted as yes-or-no questions rather than requests for specific book recommendations. 'Is there a good book...' could be seen as asking only if the other person knows of a good book, and 'Have you read any good books...' could be interpreted as asking if the other person has read any good books recently.",
+    "conclusion": "Keep up the good work!"
 }
 """,
         "non-literal-emoji": """
 At the end is a model output to help you out:
 Sample original message that was clear: "Great idea, Joseph! Let's explore more seafood places in Gloucester. 🦞 We have beach barbecue, whale watching, and fresh seafood on our list. I want to visit some historical sites too. This trip will be amazing!"
 
+Message: "That sounds great! 🚀" | Problem: '🚀' was likely intended to convey excitement or a sense of adventure, but it could be interpreted as suggesting space-related activities, which is not the intended meaning of the message.
+Message: "Sounds like a plan! ️‍🔥" | Problem: '️‍🔥' was likely intended to show enthusiasm or agreement, but it could be interpreted as suggesting an actual fire, which is not the intended meaning of the message.
+
 {
-    "title": "Good Emoji Usage 🎨",
-    "feedback": "Frank, your choice of '🦞' fit the context of exploring seafood spots, adding clarity without causing confusion. Unlike '🚀,' which might suggest space-related activities, or '️‍🔥,' which could imply an actual fire, your message stayed focused and relevant. This thoughtful approach aligned well with Joseph's expectations, resulting in a positive and engaging response."
+    "title": "Clear Emoji Choice 🎯",
+    "praise": "Nice work using the lobster emoji 🦞 to represent seafood places in Gloucester!",
+    "problems": "The other options used emojis that could cause confusion - the rocket 🚀 was likely intended to convey excitement but could have also been interpreted as space travel, and the fire ️‍🔥 could imply danger rather than enthusiasm.",
+    "conclusion": "Keep avoiding ambiguous emojis to ensure clear communication!"
 }
 """,
         "non-literal-figurative": """
 At the end is a model output to help you out:
-Sample original message that was clear: "Let's meet there at 6pm, and we can enjoy the sunset after dinner 🌅"
+Sample original message that was clear: "Let's meet there at 6pm, and we can enjoy the sunset after dinner"
+
+Message: "Let's meet at 6pm, then we'll be able to soak up the sunset while eating." | Problem: 'Soak up the sunset' was likely meant to suggest enjoying the sunset, but it could be interpreted as physically soaking in the sun, which is not the intended meaning of the message.
+Message: "How about 6pm? That way we'll be able to catch the sunset." | Problem: 'Catch the sunset' was likely meant to mean watching the sunset, but it could be interpreted as physically catching the sun, which is not the intended meaning of the message.
 
 {
     "title": "Clear Invitation to Enjoy Sunset 🌅",
-    "feedback": "Frank, your message was clear and straightforward. Kaitlin responded with a relevant question about whale watching, showing she understood your plan to meet at 6pm and enjoy the sunset. The other suggestions like 'paint the sky' and 'chase the sun' might have confused Kaitlin, making her think of actual activities like painting or running. Your choice avoided these potential misunderstandings, making your plan clear and easy to follow."
+    "praise": "Great job using 'enjoy the sunset' to clearly convey your plan to watch the sunset after dinner!",
+    "problems": "The other options could be misinterpreted due to the use of figurative language. The phrase 'soak up the sunset' was likely intended to convey enjoying the sunset, but it could also be interpreted as physically soaking in the sun, which might have caused confusion. Similarly, 'catch the sunset' could be seen as physically catching the sun, rather than watching the sunset.",
+    "conclusion": "Keep up using clear and direct language to avoid confusion!"
 }
         """,
         "blunt-misinterpret": """
@@ -359,9 +376,15 @@ At the end is a model output to help you out:
 Sample blunt message: "We need to book the whale tour now. Check your schedule."
 Sample constructive response: "I understand the urgency. I'll check my calendar right away and get back to you."
 
+Message: "Why are you being so pushy?" | Problem: The response could escalate tension beacuse the prior message was blunt, which was interpreted as rude, however, it is likely that the sender did not intend to be rude and was just being straightforward.
+Message: "You're being too demanding." | Problem: The response could escalate tension beacuse the prior message was blunt, which was interpreted as rude, however, it is likely that the sender did not intend to be rude and was just being straightforward.
+
+
 {
     "title": "Positive Response to Direct Communication 🤝",
-    "feedback": "Your response acknowledged the urgency while maintaining a cooperative tone. Remember that some people naturally communicate in a direct, blunt way without intending to be rude. Unlike responses like 'Why are you being so pushy?' which can escalate tension, you focused on the task while understanding different communication styles. This approach helped maintain a positive interaction and showed your willingness to cooperate. Keep up the good work!"
+    "praise": "Your response acknowledged the urgency while maintaining a cooperative tone.",
+    "problems": "Some people naturally communicate in a direct, blunt way without intending to be rude. Of the other options, 'Why are you being so pushy?' can escalate tension because it likely misinterprets the sender's directness as rudeness. 'You're being too demanding.' similarly escalates tension by interpreting the sender's bluntness as a negative trait.",
+    "conclusion": "Keep up the good work!"
 }
 """,
     }
@@ -376,10 +399,16 @@ Sample constructive response: "I understand the urgency. I'll check my calendar 
         user=pers.name, agent=agent, last3=last3
     )
 
-    system_prompt_template = """
+    json_description = (
+        'Respond with a JSON object with keys "title" and "feedback" containing your feedback.'
+        if problem is not None
+        else "Respond with a JSON object with keys 'title', 'praise', 'problems', and 'conclusion'."
+    )
+
+    system_prompt_template = f"""
 As a helpful communication guide, you provide communication assistance and feedback.
 
-Respond with a JSON object with keys "title" and "feedback" containing your feedback.
+{json_description}
 """
 
     system = system_prompt_template.format(
@@ -421,20 +450,17 @@ Remember, explain to {pers.name} what elements of the original message are {"con
 Now, based on {agent}'s response, explain to {pers.name} why their original message was interpreted in the intened way by {agent}.
 Use {agent}'s response to extract their likely thought process and ground your explanation in it.
 
-Compare it to the following suggestions, which were problematic:
+Here is information about the two alternative message options, and the corresponding problem with each of them:
 {suggestions_str}
 
 Make sure to:
-1. In your explanation, refer to the key aspect from each problematic suggestion using quotation marks.
-2. Explain, in detail, why the problematic suggestions (refer to them as the other suggestions) were {"confrontational" if objective == "blunt-misinterpret" else "confusing"} and how {agent} might have interpreted them.
-3. Briefly say that the message {pers.name} selected was a good choice because they avoided the issues present in the other suggestions.
+1. In the praise key, begin by praising {pers.name} for their clear message which was interpreted correctly by {agent} (few words, one sentence max).
+2. In the problems key, copy ONLY the problem from each of the alternative message options given above, and append them without breaking reading flow. Do NOT omit any information. Add something like this in the beginning "The other options could have been misinterpreted as..." for context.
+3. In the conclusion key, summarize the feedback and suggest that {pers.name} keep up the good work (few words, one sentence).
 4. Use simple, friendly, and straightforward language.
-5. Limit your answer to less than 100 words.
-6. Provide feedback, but NEVER provide alternative messages.
+5. Do not use newlines in your feedback
 
 Secondly, provide a title with less than 50 characters that accurately summarizes your feedback alongside an emoji.
-
-Remember, explain to {pers.name} what elements of the original message make it a clear message for {agent}.
 """
     )
 
@@ -472,14 +498,31 @@ Reinforce the main points of the feedback to ensure {user} understands it.
         example=example,
     )
 
-    out = await llm.generate(
-        schema=FeedbackOutput,
-        model=llm.Model.GPT_4o,
-        system=system,
-        prompt=prompt,
-    )
+    if problem is not None:
+        out = await llm.generate(
+            schema=FeedbackOutput,
+            model=llm.Model.GPT_4o,
+            system=system,
+            prompt=prompt,
+        )
 
-    return Feedback(title=out.title, body=out.feedback)
+        return Feedback(title=out.title, body=out.feedback)
+    else:
+        out = await llm.generate(
+            schema=PositiveFeedbackOutput,
+            model=llm.Model.GPT_4o,
+            system=system,
+            prompt=prompt,
+        )
+
+        return Feedback(
+            title=out.title,
+            body=out.praise.strip()
+            + "\n\n"
+            + out.problems.strip()
+            + "\n\n"
+            + out.conclusion.strip(),
+        )
 
 
 class FeedbackContentOnly(BaseModel):

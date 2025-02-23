@@ -25,6 +25,7 @@ async def generate_agent_message(
         objective_prompt = None
 
     return await message_generation.generate_message(
+        scenario=chat.scenario,
         pers=pers,
         user_sent=False,
         agent_name=chat.agent,

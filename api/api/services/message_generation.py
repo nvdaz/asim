@@ -137,21 +137,12 @@ def get_personalization_options(
         return input_data
 
 
-def get_scenario(data: UserPersonalizationOptions, agent_name: str) -> str:
-    scenario = (
-        f"{data.name} is eager to dive deeper into {data.topic}. "
-        f"{agent_name} is an enthusiast in {data.topic} and {data.name}'s "
-        f"friend. In this conversation, {data.name} will talk to {agent_name} about "
-        f"{data.topic}."
-    )
-    return scenario
-
-
 class Message(BaseModel):
     message: str
 
 
 async def generate_message(
+    scenario: str,
     pers: UserPersonalizationOptions,
     agent_name: str,
     user_sent: bool,
@@ -187,8 +178,6 @@ async def generate_message(
         ),
     )
 
-    scenario = get_scenario(pers, agent_name)
-
     current_date = datetime.now()
     formatted_date = current_date.strftime("%a %d %b %Y, %I:%M%p")
 
@@ -203,14 +192,14 @@ async def generate_message(
         ),
         action=action,
         specific_instructions=(
-            f"Make sure to: 1. Keep {sender_name}'s response short (1-4 lines), natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them."
+            f"Make sure to: 1. Keep {sender_name}'s response short (1-4 lines) but friendly, natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. 3. Don't act like you know all the information about {recipient_name} (by not saying I know about you that...), as if your interests matched naturally with them."
             if not user_sent
-            else f"Make sure to: 1. Keep {sender_name}'s response short (1-4 lines) natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. "
+            else f"Make sure to: 1. Keep {sender_name}'s response short (1-4 lines) but friendly, natural-sounding and use small letters, as done in an SMS message. 2. Slowly unfold the conversation, so don't talk about many different things in one message. "
         ),
         agent_style=(
             f"{pers.name} is personable and friendly without being overly enthusiastic. They speak naturally and human-like."
             if user_sent
-            else f"{agent_name} uses direct, straightforward language while avoiding pleasantries. {agent_name} isn't very expressive and is not overly friendly. avoid over-optimism. Do not use figurative languages or emojis."
+            else f"{agent_name} is personable and friendly without being overly enthusiastic. They speak naturally and human-like. They do not use figurative language or emojis."
         ),
         date=formatted_date,
     ).strip()

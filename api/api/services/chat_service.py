@@ -27,7 +27,10 @@ from api.services import (
     generate_suggestions,
     message_generation,
 )
-from api.services.topic_generation import generate_topic_message
+from api.services.topic_generation import (
+    generate_scenario_message,
+    generate_topic_message,
+)
 
 _fake = faker.Faker()
 
@@ -47,7 +50,9 @@ async def create_chat(user: UserData, options: Options | None = None) -> ChatDat
     while agent is None or agent == user.name or agent == "Frank":
         agent = _fake.first_name()
 
+    assert user.name is not None
     introduction = await generate_topic_message(agent, topic)
+    scenario = await generate_scenario_message(user.name, agent, topic)
 
     base_chat = BaseChat(
         user_id=user.id,
@@ -60,6 +65,7 @@ async def create_chat(user: UserData, options: Options | None = None) -> ChatDat
             if objective not in options.enabled_objectives
         ],
         introduction=introduction,
+        scenario=scenario,
     )
 
     chat = await chats.create(base_chat)
@@ -224,7 +230,7 @@ async def _generate_agent_message(
             assert chat.last_suggestions is not None
             assert objective is not None
 
-            context = message_generation.format_messages_context_long(
+            context = message_generation.format_messages_context_short(
                 chat.messages, chat.agent
             )
 
@@ -278,6 +284,7 @@ async def _generate_agent_message(
 
                 async def generate_feedback_suggestions():
                     follow_up = await message_generation.generate_message(
+                        scenario=chat.scenario,
                         pers=pers,
                         user_sent=True,
                         agent_name=chat.agent,
@@ -398,6 +405,7 @@ async def _suggest_messages(chat_state: ChatState, user: UserData, prompt_messag
 
         if chat.options.suggestion_generation == "random":
             base_message = await message_generation.generate_message(
+                scenario=chat.scenario,
                 pers=pers,
                 agent_name=chat.agent,
                 user_sent=True,

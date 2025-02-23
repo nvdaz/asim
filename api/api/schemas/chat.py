@@ -88,6 +88,7 @@ class BaseChat(BaseModel):
     events: list[ChatEvent] = []
     checkpoint_rate: bool = False
     introduction: str = "**NO INTRODUCTION GENERATED**"
+    scenario: str = "**NO SCENARIO GENERATED**"
     introduction_seen: bool = False
 
 

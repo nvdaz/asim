@@ -216,31 +216,31 @@ like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the questio
         ),
         "non-literal-figurative": (
             """
-1. The first variation will use a literal expression that conveys the intended meaning of
-the message clearly and directly. The message should be straightforward and easy to
+1. The first variation will use a literal expression that conveys the intended meaning
+of the message clearly and directly. The message should be straightforward and easy to
 understand.
 
-2. The second and third variations will use a figurative language, an idiom or metaphor or a figurative expression, that is not used in a literal
-sense. The expression should convey a different meaning or emotion than its literal interpretation. Avoid figurative expressions that are too
-similar to the topic of the message. Never use a figurative expression that is literally true in the context of the message.
+2. The second and third variations will use subtle figurative language, like an idiom,
+metaphor or other figurative expression. The expression should convey a different
+meaning or emotion than its literal interpretation. Avoid figurative expressions that
+are too similar to the topic of the message. Use figurative language that would be
+commonly used in everyday conversation, but still have some mild ambiguity.
+Never use a figurative expression that is literally true in the context of the message.
 
-DO NOT ever use language like 'Can' or 'Could'. If asking a question, use direct question words
-like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the question directly.
+DO NOT ever use language like 'Can' or 'Could'. If asking a question, use direct
+question words like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the
+question directly.
     """
         ),
         "blunt-misinterpret": (
             """
-1. The first variation will interpret the blunt and direct message neutrally, understanding that the bluntness is not intended to be rude.
+1. The first variation will interpret the blunt/direct message neutrally, understanding that the directness is not intended to be rude.
 This message variation should be clear and neutral, without being confrontational or overly enthusiastic.
 
-2. The second variation will interpret the blunt message as rude. This variation should directly
-confront the perceived rudeness by questioning the other person’s tone or intent, expressing
-discomfort or frustration about how the message was communicated.
+2. The second variation will interpret the blunt/direct message as rude/too straightforward. The content and phrasing of this message should
+be such that it questions the other person’s tone or intent, expressing discomfort or frustration about how the message was communicated.
 
-3. The third variation will interpret the blunt message as rude. This variation should
-confront the perceived rudeness, using a defensive tone to imply that the other person has
-caused them discomfort. The message should sound reasonable to the average person.
-
+3. The third variation, although different from the second one, will also interpret the blunt/direct message as rude/too straightforward. The content and phrasing of this message should be such that it questions the other person’s tone or intent, expressing discomfort or frustration about how the message was communicated.
 
 DO NOT ever use language like 'Can' or 'Could'. If asking a question, use direct question words
 like "What", "How", "Where", "When", "Why", "Which", or "Who" to ask the question directly.
@@ -346,8 +346,8 @@ The problem key should be filled first by describing the intended meaning of the
 Remember, the variations should have different text from each other and the original message!
 """,
         "blunt-misinterpret": """
-Blunt message: You need to get this done by the end of the day or we're going to have a problem.
-Message to generate variations for: Ok, will get the report done.
+Blunt/direct/straightforward message: You need to get this done by the end of the day or we're going to have a problem.
+Message to generate variations for: Ok, I will get the report done.
 
 {
     "variations": [
@@ -561,26 +561,20 @@ Finally, use a XML tag "scratchpad" to come up with potential responses that {{n
 The misinterpretation should make sense, be convincing, and not make {{name}} seem completely clueless or unintelligent.
 """,
         "blunt-initial": f"""
-Note that {{name}} will subtly come off as blunt in their response, causing the other
-person to interpret the tone of their message as rude/blunt. {{name}} does not consider that
-the other person may be sensitive to direct language. Hence, uses blunt tone and language
-because it is the most straightforward way to communicate.
+Come up with {{name}}'s response. Note that {{name}} will clearly come off as blunt/too direct or straightforward in their response, possibly causing the other
+person to think they are being rude. {{name}} does not consider that
+the other person may be sensitive to blunt/too straightforward or direct language.
 
-Examples:
-1. I need you to get this done by the end of the day or we're going to have a problem.
+Here are some examples of blunt/too direct or straightforward messages:
+1. I need you to get this done by the end of the day or we're going to have a problem. (bluntness level 9)
 
-2. Are you going to finish that report today or not? I need to know now.
+2. Are you going to finish that report today or not? I need to know now. (bluntness level 8)
 
-3. Just get it done and let me know when it's finished.
+3. Just get it done and let me know when it's finished. (bluntness level 8)
 
-Before outputting the first curly in the JSON response, include a XML tag called "metadata" that states:
-"The following is a model response that is intentionally blunt and direct. It comes off as rude to someone who isn't familiar with autistic communication styles."
-Then, include a XML tag called "intended_objective" describing a specific thing that {{name}} needs the other person to do or understand immediately.
-And include an XML tag "rude_interpretation" describing how the objective can be interpreted as rude if it is mentioned in a certain way.
-Finally, use a XML tag "scratchpad" to come up with potential phrasings that {{name}} can use to be blunt in their response. Come up with at least 3 different phrasings or more until you find one that (1) is direct and to the point, (2) would be interpreted as rude by someone unfamiliar with autistic communication styles, (3) fits the context of the conversation, and (4) is not intentionally rude. After each candidate message, analyze why it is or isn't a good fit depending on the criteria given. Repeat this process iteratively until you find a suitable response.
-The blunt phrase should come off as rude to someone who isn't familiar with autistic communication styles, but it is not intentionally rude.
-Keep {{name}}'s response to the point and avoid adding softening language and pleasantries. {{name}} should be firm but not rude--task-oriented and straightforward.
-IMPORTANT: {{name}} must come off as blunt/direct in their response. If their response is not like this, the response is incorrect.
+Keep {{name}}'s response to the point and avoid adding softening language and pleasantries.
+Also include a key 'bluntness_rating' in the JSON response too indicate how blunt/too straightforward or direct the response is, where 0 is not blunt at all and 10 is extremely blunt.  The content and phrasing of the response should be such that its bluntness rating is at least 9/10.
+IMPORTANT: {{name}} must come off as blunt/too straightforward or direct in their response. If their response is not like this, the response is incorrect.
 """,
         "blunt-misinterpret": f"""
 Note that {{name}} misinterprets a slightly confrontational or hesitant phrase in the other person's message as confrontational. Because of this misinterpretation, {{name}} responds defensively, implying that the other person has misunderstood their previous message and is being unnecessarily aggressive.
