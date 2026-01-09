@@ -34,7 +34,7 @@ class Model(str, Enum):
 async def _generate_unchecked(
     model: Model, prompt: str, system: str, temperature: float | None = None
 ) -> str:
-    params = {
+    body = {
         "model": model.value,
         "system": system,
         "query": prompt,
@@ -42,11 +42,12 @@ async def _generate_unchecked(
         "temperature": temperature,
         "cache_match_thresh": 1.1,
     }
+    body = {k: v for k, v in body.items() if v is not None}
 
-    headers = {"x-api-key": _LLM_KEY}
+    headers = {"request_type": "call", "x-api-key": _LLM_KEY}
 
     def make_request():
-        response = requests.get(_LLM_URI, headers=headers, params=params)
+        response = requests.post(_LLM_URI, headers=headers, json=body)
         response.raise_for_status()
         return response.json()
 
