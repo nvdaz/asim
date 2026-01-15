@@ -4,8 +4,8 @@ NeuroBridge simulates an AI conversation partner that communicates in a direct a
 
 ## Key Features
 
-### Simulation of Scenarios
-NeuroBridge centers the conversation around four common communication scenarios that may pose a challenge in mixed-neurotype settings:
+### Simulation
+NeuroBridge centers the simulated conversation around four common communication scenarios that may pose a challenge in mixed-neurotype settings:
 - **Indirect speech acts** (implicit requests vs literal questions)
 - **Figurative expressions** (idioms/metaphors interpreted literally vs interpreted figuratively)
 - **Emojis with variable interpretations** (emojis with fluid meaning dependent on context)
@@ -49,7 +49,7 @@ npm start
 ## Publication
 **NeuroBridge: Using Generative AI to Bridge Cross-neurotype Communication Differences with Neurotypical Perspective-taking**  
 *Proceedings of the 27th International ACM SIGACCESS Conference on Computers and Accessibility (ASSETS 2025)*  
-** Best Student Paper 🏆  
+**Best Student Paper 🏆**  
 PDF: https://rukhshan23.github.io/assets-2025.pdf
 
 ### Citation
