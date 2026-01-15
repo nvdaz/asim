@@ -2,7 +2,7 @@
 
 NeuroBridge simulates an AI conversation partner that communicates in a direct and literal manner, a style common among some autistic individuals. The system delivers scenario-specific feedback that helps neurotypical users interpret this communication style and choose responses that are clearer and more appropriate
 
-##Key Features
+## Key Features
 
 ### Simulation of Scenarios
 NeuroBridge centers the conversation around four common communication scenarios that may pose a challenge in mixed-neurotype settings:
