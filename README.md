@@ -39,7 +39,7 @@ variable REACT_APP_API_HOST.
 
 For backend, follow the instructions in [api/README.md ](./api/README.md).
 
-### Development
+## Development
 
 ``` sh
 cd frontend
