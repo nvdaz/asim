@@ -12,6 +12,7 @@ from api.services.auth import (
     init_user,
     login_user,
 )
+from api.services.cohort import InvalidCohortToken, create_cohort, create_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -49,3 +50,29 @@ async def internal_create_magic_link(
     _: CurrentInternalAuth, init_chats: list[Options]
 ) -> str:
     return await create_magic_link(init_chats)
+
+
+class CreateCohortOptions(BaseModel):
+    name: str
+    init_chats: list[Options]
+
+
+@router.post("/internal-create-cohort")
+async def internal_create_cohort(
+    _: CurrentInternalAuth, options: CreateCohortOptions
+) -> str:
+    cohort = await create_cohort(options.name, options.init_chats)
+    return cohort.secret
+
+
+class RedeemInviteOptions(BaseModel):
+    cohort_secret: str
+
+
+@router.post("/redeem-invite")
+async def redeem_invite(options: RedeemInviteOptions) -> LoginOptions:
+    try:
+        magic = await create_user(options.cohort_secret)
+        return LoginOptions(magic_link=magic)
+    except InvalidCohortToken as e:
+        raise HTTPException(status_code=400, detail="Invalid cohort token") from e

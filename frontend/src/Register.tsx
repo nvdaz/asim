@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import invariant from "tiny-invariant";
 import { useAuth } from "./components/auth-provider";
 import { useToast } from "./hooks/use-toast";
+import { AnimatePresence } from "framer-motion";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -169,7 +170,7 @@ function Register() {
             />
 
             {/* Submit Button */}
-            <div className="flex justify-center">
+            <div className="flex justify-center flex-col items-center">
               <Button
                 type="submit"
                 className="w-full py-3 rounded-lg"
@@ -177,6 +178,16 @@ function Register() {
               >
                 Complete Registration
               </Button>
+              <AnimatePresence>
+                {didSubmit && (
+                  <p
+                    key="submitting"
+                    className="text-sm text-gray-500 mt-2 animate-pulse"
+                  >
+                    Submitting... Just a moment while we set up your account!
+                  </p>
+                )}
+              </AnimatePresence>
             </div>
           </form>
         </Form>

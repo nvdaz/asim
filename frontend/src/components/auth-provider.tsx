@@ -24,7 +24,7 @@ export const AuthProviderContext =
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [auth, setAuth] = useState<Auth | null>(() => {
-    const auth = localStorage.getItem("auth");
+    const auth = sessionStorage.getItem("auth");
     try {
       return auth ? JSON.parse(auth) : null;
     } catch {
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     auth,
     setAuth: (auth: Auth) => {
-      localStorage.setItem("auth", JSON.stringify(auth));
+      sessionStorage.setItem("auth", JSON.stringify(auth));
       setAuth(auth);
     },
   };

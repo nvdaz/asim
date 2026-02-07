@@ -16,6 +16,7 @@ class UserPersonalizationOptions(BaseModel):
 
 class BaseUserData(BaseModel):
     name: str | None = None
+    cohort: PyObjectId | None = None
     init_chats: list[Options] = []
     personalization: UserPersonalizationOptions | None = None
 
