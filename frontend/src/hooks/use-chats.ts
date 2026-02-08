@@ -1,9 +1,9 @@
-import { useAuth } from "@/components/auth-provider";
 import { useCallback, useEffect, useRef, useState } from "react";
-import useWebsocket, { ReadyState } from 'react-use-websocket';
-import invariant from 'tiny-invariant';
+import useWebsocket, { ReadyState } from "react-use-websocket";
+import invariant from "tiny-invariant";
+import { useAuth } from "@/components/auth-provider";
 
-type Message = {
+export type Message = {
   sender: string;
   content: string;
   created_at: string;
@@ -16,17 +16,17 @@ type Feedback = {
   alternative_feedback: string;
 };
 
-type InChatFeedback = {
+export type InChatFeedback = {
   feedback: Feedback;
   created_at: string;
   rating: number | null;
-}
+};
 
 type Suggestion = {
-  message: string
-  objective?: string
-  feedback?: Feedback
-  problem: string | null
+  message: string;
+  objective?: string;
+  feedback?: Feedback;
+  problem: string | null;
 };
 
 type ChatLoading = {
@@ -35,7 +35,7 @@ type ChatLoading = {
   last_updated: string;
   agent_typing?: boolean;
   unread?: boolean;
-}
+};
 
 type ChatLoaded = {
   id: string;
@@ -50,11 +50,12 @@ type ChatLoaded = {
   checkpoint_rate: boolean;
   introduction: string;
   introduction_seen: boolean;
+  gap: boolean;
   options: {
     feedback_mode: "on-submit" | "on-suggestion";
     suggestion_generation: "random" | "content-inspired";
   };
-}
+};
 
 export type Chat = ChatLoading | ChatLoaded;
 
@@ -62,7 +63,9 @@ export function chatIsLoaded(chat: Chat): chat is ChatLoaded {
   return "messages" in chat;
 }
 
-export function isContentInChatFeedback(content: Message | InChatFeedback): content is InChatFeedback {
+export function isContentInChatFeedback(
+  content: InChatFeedback | Message,
+): content is InChatFeedback {
   return "feedback" in content;
 }
 
@@ -75,19 +78,21 @@ function useChatSocket<S, R>({
   const { token } = useAuth();
 
   const {
-    sendJsonMessage: sendSocketMessage, lastMessage: lastSocketMessage, readyState,
+    sendJsonMessage: sendSocketMessage,
+    lastMessage: lastSocketMessage,
+    readyState,
   } = useWebsocket(`${import.meta.env.VITE_API_URL}/conversations/ws`, {
     onOpen: () => {
       sendSocketMessage({ token });
     },
     retryOnError: true,
-    reconnectInterval: (lastAttemptNumber) => Math.min(16000, 2 ** lastAttemptNumber * 1000),
+    reconnectInterval: (lastAttemptNumber) =>
+      Math.min(16000, 2 ** lastAttemptNumber * 1000),
     reconnectAttempts: 10,
     shouldReconnect: () => {
       return !didUnmount.current;
-    }
+    },
   });
-
 
   useEffect(() => {
     didUnmount.current = false;
@@ -110,7 +115,7 @@ function useChatSocket<S, R>({
   return {
     isConnected: readyState === ReadyState.OPEN,
     isError: false,
-    sendMessage
+    sendMessage,
   };
 }
 
@@ -169,18 +174,18 @@ type SendRateFeedback = {
   id: string;
   index: number;
   rating: number;
-}
+};
 
 type SendCheckpointRate = {
   type: "checkpoint-rating";
   id: string;
   ratings: { [key: string]: number };
-}
+};
 
 type SendIntroductionSeen = {
   type: "introduction-seen";
   id: string;
-}
+};
 
 type Send =
   | SendChatMessage
@@ -193,7 +198,11 @@ type Send =
   | SendCheckpointRate
   | SendIntroductionSeen;
 
-export function useChats({ onChatCreated }: { onChatCreated: (id: string) => void }) {
+export function useChats({
+  onChatCreated,
+}: {
+  onChatCreated: (id: string) => void;
+}) {
   const [chats, setChats] = useState<{ [key: string]: Chat }>({});
   const { user } = useAuth();
 
@@ -203,7 +212,7 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
         message.chats.reduce((acc: { [key: string]: Chat }, chat: Chat) => {
           acc[chat.id] = chat;
           return acc;
-        }, {})
+        }, {}),
       );
     } else if (message.type === "sync-chat") {
       if (!(message.chat.id in chats)) {
@@ -237,7 +246,11 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
         }
         chat.messages = [
           ...chat.messages,
-          { sender: user!.name!, content, created_at: new Date().toISOString() },
+          {
+            sender: user!.name!,
+            content,
+            created_at: new Date().toISOString(),
+          },
         ];
         chat.suggestions = undefined;
         return { ...chats, [id]: chat };
@@ -245,7 +258,7 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
 
       sendMessage({ type: "send-message", id, index });
     },
-    [sendMessage]
+    [sendMessage],
   );
 
   const createChat = useCallback(() => {
@@ -256,7 +269,7 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
     (id: string) => {
       sendMessage({ type: "load-chat", id });
     },
-    [sendMessage]
+    [sendMessage],
   );
 
   const suggestMessages = useCallback(
@@ -271,9 +284,9 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
           },
         };
       });
-    }, [sendMessage]
+    },
+    [sendMessage],
   );
-
 
   const markRead = useCallback(
     (id: string) => {
@@ -282,14 +295,15 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
       });
       sendMessage({ type: "mark-read", id });
     },
-    [sendMessage]
+    [sendMessage],
   );
 
   const sendViewSuggestion = useCallback(
     (id: string, index: number) => {
       sendMessage({ type: "view-suggestion", id, index });
     },
-    [sendMessage]);
+    [sendMessage],
+  );
 
   const handleRate = useCallback(
     (id: string, index: number, rating: number) => {
@@ -299,30 +313,37 @@ export function useChats({ onChatCreated }: { onChatCreated: (id: string) => voi
         const feedback = chat.messages![index] as InChatFeedback;
         feedback.rating = rating;
         return { ...chats, [id]: chat };
-      })
+      });
       sendMessage({ type: "rate-feedback", id, index, rating });
-    }, [sendMessage]);
+    },
+    [sendMessage],
+  );
 
-  const handleCheckpointRate = useCallback((id: string, ratings: { [key: string]: number }) => {
-    setChats((chats) => {
-      const chat = chats[id];
-      invariant(chatIsLoaded(chat));
-      chat.checkpoint_rate = false;
-      return { ...chats, [id]: chat };
-    });
-    sendMessage({ type: "checkpoint-rating", id, ratings })
+  const handleCheckpointRate = useCallback(
+    (id: string, ratings: { [key: string]: number }) => {
+      setChats((chats) => {
+        const chat = chats[id];
+        invariant(chatIsLoaded(chat));
+        chat.checkpoint_rate = false;
+        return { ...chats, [id]: chat };
+      });
+      sendMessage({ type: "checkpoint-rating", id, ratings });
+    },
+    [sendMessage],
+  );
 
-  }, [sendMessage]);
-
-  const handleIntroductionSeen = useCallback((id: string) => {
-    setChats((chats) => {
-      const chat = chats[id];
-      invariant(chatIsLoaded(chat));
-      chat.introduction_seen = true;
-      return { ...chats, [id]: chat };
-    });
-    sendMessage({ type: "introduction-seen", id });
-  }, [sendMessage]);
+  const handleIntroductionSeen = useCallback(
+    (id: string) => {
+      setChats((chats) => {
+        const chat = chats[id];
+        invariant(chatIsLoaded(chat));
+        chat.introduction_seen = true;
+        return { ...chats, [id]: chat };
+      });
+      sendMessage({ type: "introduction-seen", id });
+    },
+    [sendMessage],
+  );
 
   return {
     isConnected,

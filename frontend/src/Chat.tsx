@@ -1,3 +1,8 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUp, ChevronLeft, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import invariant from "tiny-invariant";
 import { useAuth } from "@/components/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,15 +15,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loading } from "@/components/ui/loading";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, ChevronLeft, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import invariant from "tiny-invariant";
 import { Label } from "./components/ui/label";
 import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
 import Contacts from "./contacts";
@@ -143,13 +144,13 @@ function Chat() {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [input, setInput] = useState("");
   const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(
-    null
+    null,
   );
   const navigate = useNavigate();
   const toastDismiss = useRef<() => void>(() => {});
 
   const [latestMessageIndex, setLatestMessageIndex] = useState<number | null>(
-    null
+    null,
   );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -159,8 +160,6 @@ function Chat() {
       navigate("/");
     }
   }, [token]);
-
-  invariant(user, token);
 
   useEffect(() => {
     if (
@@ -285,6 +284,10 @@ function Chat() {
     setInput("");
   }, [currentChat?.id]);
 
+  if (!token) {
+    return null;
+  }
+
   if (!isConnected) {
     return (
       <div className="container relative h-full flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 px-8">
@@ -335,7 +338,7 @@ function Chat() {
       <div
         className={cn(
           currentChat ? "lg:w-[400px] hidden" : "w-full",
-          "overflow-hidden bg-secondary lg:block"
+          "overflow-hidden bg-secondary lg:block",
         )}
       >
         <Contacts
@@ -347,27 +350,37 @@ function Chat() {
       </div>
       <div className={cn(!currentChat && "hidden", "w-full")}>
         <div className="flex flex-col h-full">
-          <div className="flex flex-row items-center p-2 h-16">
-            <Button
-              variant="ghost"
-              onClick={() => setCurrentChatId(null)}
-              size="icon"
-              className="mr-4 lg:hidden"
-            >
-              <ChevronLeft />
-            </Button>
-            {currentChat && currentChat.agent ? (
-              <>
-                <Avatar>
-                  <AvatarFallback>{currentChat.agent[0]}</AvatarFallback>
-                </Avatar>
-                <h2 className="p-4 font-semibold">{currentChat.agent}</h2>
-              </>
-            ) : (
-              <>
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <Skeleton className="h-6 w-40 mx-4 my-4" />
-              </>
+          <div className="flex flex-row items-center justify-between p-2 h-16">
+            <div className="flex flex-row items-center">
+              <Button
+                variant="ghost"
+                onClick={() => setCurrentChatId(null)}
+                size="icon"
+                className="mr-4 lg:hidden"
+              >
+                <ChevronLeft />
+              </Button>
+              {currentChat && currentChat.agent ? (
+                <>
+                  <Avatar>
+                    <AvatarFallback>{currentChat.agent[0]}</AvatarFallback>
+                  </Avatar>
+                  <h2 className="p-4 font-semibold">{currentChat.agent}</h2>
+                </>
+              ) : (
+                <>
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-6 w-40 mx-4 my-4" />
+                </>
+              )}
+            </div>
+            {currentChat && chatIsLoaded(currentChat) && (
+              <ProgressBar
+                messages={currentChat.messages}
+                agent={currentChat.agent}
+                gap={currentChat.gap}
+                className="w-48 mr-4"
+              />
             )}
           </div>
           <Separator />
