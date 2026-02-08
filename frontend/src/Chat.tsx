@@ -125,7 +125,7 @@ function ChatFeedbackDialog({
 }
 
 function Chat() {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const {
     isConnected,
     isError,
