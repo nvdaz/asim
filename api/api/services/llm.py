@@ -92,7 +92,7 @@ async def generate(
 ) -> SchemaType: ...
 
 
-@retry(wait=wait_random_exponential(), stop=stop_after_attempt(3))
+@retry(wait=wait_random_exponential(), stop=stop_after_attempt(5))
 async def generate(
     schema: type[SchemaType] | TypeAdapter[SchemaType] | None,
     model: Model,
